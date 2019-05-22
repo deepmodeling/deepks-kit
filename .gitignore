@@ -1,0 +1,11 @@
+*~
+*.pb
+*.out
+*log
+log*
+tmp*
+data_*_*
+*.raw
+__pycache__
+checkpoint
+model.ckpt.*
