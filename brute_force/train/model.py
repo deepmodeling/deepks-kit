@@ -30,8 +30,8 @@ class Reader(object):
         self.tr_data_mo_vir = tmp_coeff[:,:,1,:].reshape([nframes,-1])
         self.tr_data_e_occ = tmp_ener[:,:,0,:].reshape([nframes,-1])
         self.tr_data_e_vir = tmp_ener[:,:,1,:].reshape([nframes,-1])
-        self.tr_data_e_occ -= np.tile(np.reshape(self.tr_data_e_occ[:,0], [-1,1]), (1, self.tr_data_e_occ.shape[1]))
-        self.tr_data_e_vir -= np.tile(np.reshape(self.tr_data_e_occ[:,0], [-1,1]), (1, self.tr_data_e_occ.shape[1]))
+        # self.tr_data_e_occ -= np.tile(np.reshape(self.tr_data_e_occ[:,0], [-1,1]), (1, self.tr_data_e_occ.shape[1]))
+        # self.tr_data_e_vir -= np.tile(np.reshape(self.tr_data_e_occ[:,0], [-1,1]), (1, self.tr_data_e_occ.shape[1]))
         self.train_size_all = self.tr_data_emp2.shape[0]
         # print(np.shape(self.inputs_train))
     
@@ -96,7 +96,7 @@ class Model(object):
         self.decay_rate = config.decay_rate
         self.display_in_training = config.display_in_training
         self.resnet = config.resnet
-
+        self.with_ener = config.with_ener
 
     def test_error (self, t_emp2, t_dist, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
         ret = self.sess.run([self.l2_loss, self.emp2], 
@@ -193,9 +193,11 @@ class Model(object):
             print ("epoch: %3u, ab_err: %.4e, lr: %.4e" % (epoch_used, error, current_lr))
 
         # training
+        train_time = 0
         while epoch_used < reader.num_epoch:
-            d_emp2, d_dist, d_mo_occ, d_mo_vir, d_e_occ, d_e_vir = reader.sample_train()
             # exec training op
+            tic = time.time()
+            d_emp2, d_dist, d_mo_occ, d_mo_vir, d_e_occ, d_e_vir = reader.sample_train()
             self.sess.run([self.train_op], 
                           feed_dict={self.emp2_ref: d_emp2,
                                      self.dist: d_dist,
@@ -204,17 +206,23 @@ class Model(object):
                                      self.e_occ: d_e_occ,
                                      self.e_vir: d_e_vir,
                                      self.is_training: True})
+            train_time += time.time() - tic
             sample_used += reader.get_batch_size()
+            # update number of epochs used, test and display if required
             if (sample_used // reader.get_train_size()) > epoch_used:
                 epoch_used = sample_used // reader.get_train_size()
                 if epoch_used % self.n_displayepoch == 0:
                     save_path = saver.save(self.sess, os.getcwd() + "/" + "model.ckpt")
+                    tic = time.time()
                     error = self.test_error(d_emp2, d_dist, d_mo_occ, d_mo_vir, d_e_occ, d_e_vir)
                     error_a = self.test_error(ta_emp2, ta_dist, ta_mo_occ, ta_mo_vir, ta_e_occ, ta_e_vir)
+                    test_time = time.time() - tic
                     current_lr = self.sess.run(tf.to_double(self.learning_rate))
                     if self.display_in_training:
-                        print ("epoch: %3u, ab_err: %.4e, ab_err_all: %.4e, lr: %.4e" % (epoch_used, error, error_a, current_lr))
+                        print ("epoch: %8u  ab_err: %.2e  ab_err_all: %.2e  lr: %.2e  trn_time %4.1f  tst_time %4.2f"
+                               % (epoch_used, error, error_a, current_lr, train_time, test_time))                        
                         sys.stdout.flush()
+                    train_time = 0
 
         # finalize
         end_time = time.time()
@@ -294,7 +302,10 @@ class Model(object):
             e_vir = self.scale_var(e_vir, stat[6], stat[7], 'e_vir')
         # test_ener = self.build_atom_net(mo_occ, mo_vir, reuse, seed)
         # sys_ener = tf.reduce_sum(test_ener, axis = 1, name = 'o_ener_' + suffix)
-        sys_ener = self.build_system_net(dist, mo_occ, mo_vir, e_occ, e_vir, reuse, seed)
+        sys_ener = self.build_system_net(dist, mo_occ, mo_vir, e_occ, e_vir,
+                                         with_ener = self.with_ener,
+                                         reuse = reuse,
+                                         seed = seed)
         sys_ener = tf.identity(sys_ener, name = 'sys_ener_' + suffix)
         # l2 loss
         return sys_ener
@@ -304,7 +315,8 @@ class Model(object):
                          mo_occ, 
                          mo_vir, 
                          e_occ, 
-                         e_vir, 
+                         e_vir,
+                         with_ener = True,
                          reuse = None, 
                          seed = None, 
                          use_ds_layer = True):        
@@ -316,9 +328,12 @@ class Model(object):
             # mo_vir = self.ds_layer(mo_vir, filter_neuron, name = 'mo_vir', reuse = reuse, seed = seed)
             # e_vir  = self.ds_layer(e_vir,  filter_neuron, name = 'e_vir',  reuse = reuse, seed = seed)        
         dist = tf.reshape(dist, [-1,1])
-        mo_atom = tf.concat([dist, mo_occ, mo_vir, e_occ, e_vir], 1)
+        if with_ener :
+            print ('# build with ener')
+            mo_atom = tf.concat([dist, mo_occ, mo_vir, e_occ, e_vir], 1)
+        else :
+            mo_atom = tf.concat([mo_occ, mo_vir], 1)
         # mo_atom = tf.concat([e_occ, e_vir], 1)
-        # mo_atom = tf.concat([mo_occ, mo_vir], 1)
         # normalize input
         # build hidden layers
         layer = self._one_layer(mo_atom, 

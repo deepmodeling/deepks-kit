@@ -19,6 +19,7 @@ class Config(object):
     data_path = '../../data.sub10/'
     resnet = False
     graph_file = None
+    with_ener = True
     
     display_in_training = True
 
@@ -38,6 +39,7 @@ def print_conf (config, nthreads) :
     print ("# decay_rate        " + str(config.decay_rate))
     print ("# resnet            " + str(config.resnet))
     print ("# graph_file        " + str(config.graph_file))
+    print ("# with ener         " + str(config.with_ener))
 
 def main():
     parser = argparse.ArgumentParser(
@@ -58,6 +60,8 @@ def main():
                         help='the decay steps.')
     parser.add_argument('--decay-rate', type=float, default = 0.96,
                         help='the decay rate.')
+    parser.add_argument('--with-ener', action = 'store_true',
+                        help='if use energy level information.')
     parser.add_argument('--resnet', action = 'store_true',
                         help='try using resNet if two neighboring layers are of the same size.')
     args = parser.parse_args()
@@ -73,6 +77,7 @@ def main():
     config.decay_steps = args.decay_steps
     config.decay_rate = args.decay_rate
     config.resnet = args.resnet
+    config.with_ener = args.with_ener
     reset_batch_size (config)
     print_conf (config, args.numb_threads)
 

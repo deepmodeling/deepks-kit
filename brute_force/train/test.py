@@ -32,24 +32,27 @@ def load_graph(frozen_graph_filename,
         )
     return graph
 
-def test_e (sess, t_dist, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
+def test_e (sess, with_ener, t_dist, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
     graph = sess.graph
 
+    if with_ener :
+        input_dist = graph.get_tensor_by_name ('load/input_dist:0')
+        input_e_occ = graph.get_tensor_by_name ('load/input_e_occ:0')
+        input_e_vir = graph.get_tensor_by_name ('load/input_e_vir:0')
     input_mo_occ = graph.get_tensor_by_name ('load/input_mo_occ:0')
     input_mo_vir = graph.get_tensor_by_name ('load/input_mo_vir:0')
-    input_dist = graph.get_tensor_by_name ('load/input_dist:0')
-    input_e_occ = graph.get_tensor_by_name ('load/input_e_occ:0')
-    input_e_vir = graph.get_tensor_by_name ('load/input_e_vir:0')
     o_sys_ener= graph.get_tensor_by_name ('load/o_sys_ener:0')
 
-    feed_dict_test = {input_dist: t_dist,
-                      input_mo_occ: t_mo_occ,
-                      input_mo_vir: t_mo_vir,
-                      input_e_occ: t_e_occ,
-                      input_e_vir: t_e_vir}
-    # feed_dict_test = {input_mo_occ: t_mo_occ,
-    #                   input_mo_vir: t_mo_vir,
-    #                   }
+    if with_ener:
+        feed_dict_test = {input_dist: t_dist,
+                          input_mo_occ: t_mo_occ,
+                          input_mo_vir: t_mo_vir,
+                          input_e_occ: t_e_occ,
+                          input_e_vir: t_e_vir}
+    else :
+        feed_dict_test = {input_mo_occ: t_mo_occ,
+                          input_mo_vir: t_mo_vir,
+        }
 
     data_ret = sess.run ([o_sys_ener], 
                          feed_dict = feed_dict_test)
@@ -79,6 +82,8 @@ def _main () :
                         help="Frozen models file to test")
     parser.add_argument("-d", "--data", default='data', type=str,
                         help="The data for test")
+    parser.add_argument("-e", "--with-ener", action = 'store_true',
+                        help="The use ener")
     args = parser.parse_args()
 
     models = args.models    
@@ -95,8 +100,9 @@ def _main () :
     tr_data_mo_vir = tmp_coeff[:,:,1,:].reshape([nframes,-1])
     tr_data_e_occ = tmp_ener[:,:,0,:].reshape([nframes,-1])
     tr_data_e_vir = tmp_ener[:,:,1,:].reshape([nframes,-1])
-    tr_data_e_occ -= np.tile(np.reshape(tr_data_e_occ[:,0], [-1,1]), (1, tr_data_e_occ.shape[1]))
-    tr_data_e_vir -= np.tile(np.reshape(tr_data_e_occ[:,0], [-1,1]), (1, tr_data_e_occ.shape[1]))
+    # tr_data_e_occ -= np.tile(np.reshape(tr_data_e_occ[:,0], [-1,1]), (1, tr_data_e_occ.shape[1]))
+    # tr_data_e_vir -= np.tile(np.reshape(tr_data_e_occ[:,0], [-1,1]), (1, tr_data_e_occ.shape[1]))
+
     # tr_data_emp2 = np.loadtxt(os.path.join(data_path,'e_mp2.raw')).reshape([-1, 1])
     # nframes = tr_data_emp2.shape[0]
     # tr_data_dist = np.loadtxt(os.path.join(data_path,'dist.raw')).reshape([-1])
@@ -112,7 +118,8 @@ def _main () :
 
     graph = load_graph (models)
     with tf.Session(graph = graph) as sess:        
-        ee = test_e (sess, 
+        ee = test_e (sess,
+                     args.with_ener,
                      tr_data_dist, 
                      tr_data_mo_occ, 
                      tr_data_mo_vir,
