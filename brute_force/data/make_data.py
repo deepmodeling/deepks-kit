@@ -206,7 +206,7 @@ def get_nao (ele, basis) :
 
 
 def dump_data(ele1, ele2, dist, ehf, emp2, e_data, c_data) :
-    dir_name = ele1 + '_' + ele2
+    dir_name = 'data_' + ele1 + '_' + ele2
     nframe = e_data.shape[0]
     os.makedirs(dir_name, exist_ok = True)
     np.savetxt(os.path.join(dir_name, 'dist.raw'), np.reshape(dist, [nframe,1])) 
@@ -251,11 +251,11 @@ def gen_alchemy (ele_list,
                       all_c_data)
             
 def _main() :
-    max_basis = get_nao('He', 'ccpvdz')
-    # gen_alchemy(['H', 'Li', 'B', 'N', 'F'], np.arange(0.7,2.0,0.02), 'Ne', max_nao)
+    max_basis = get_nao('Ne', 'ccpvdz')
+    gen_alchemy(['H', 'He', 'Li', 'B', 'N', 'F'], np.arange(0.7,2.0,0.02), max_basis)
     # gen_alchemy(['H', 'He'], np.arange(0.7,2.0,0.02), 'Ne', max_nao)
     # gen_alchemy(['H'], np.arange(0.7,2.0,0.02), 'Ne', max_nao)
-    gen_alchemy(['H','He'], np.arange(0.7,2.0,0.02), max_basis)
+    # gen_alchemy(['H','He'], np.arange(0.7,2.0,0.02), max_basis)
     # gen_alchemy(['H'], [0.12], max_basis)
 
     # e_occ, e_vir, s_occ, s_vir \
