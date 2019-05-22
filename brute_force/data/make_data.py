@@ -221,7 +221,14 @@ def gen_alchemy (ele_list,
                  max_nbasis,
                  mol_basis = 'cc-pvdz') :
     nele = len(ele_list)
-    # norb = max_nao * 2  # alpha and beta spins
+    # this program gen a mole with 2 atoms!
+    natoms = 2
+    neig = max_nbasis * natoms * 2      # 2: alpha and beta
+    meta = np.array([2, 2, neig, natoms, max_nbasis], dtype = int)
+    np.savetxt('system.meta', 
+               meta, 
+               fmt = '%d',
+               header = 'a_b o_v neig natm max_nbas')
     for ii in range(nele) :
         for jj in range(ii, nele) :
             print('making ' + ele_list[ii] + ' ' + ele_list[jj])
