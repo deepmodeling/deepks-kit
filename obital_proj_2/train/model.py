@@ -148,7 +148,8 @@ class Model(object):
         self.sess = sess
         # copy from config
         self.data_path = config.data_path
-        self.n_neuron = config.n_neuron
+        self.n_neuron_flt = config.n_neuron_flt
+        self.n_neuron_fit = config.n_neuron_fit
         self.n_displayepoch = config.n_displayepoch
         self.starter_learning_rate = config.starter_learning_rate
         self.decay_steps = config.decay_steps
@@ -389,13 +390,13 @@ class Model(object):
                          meta,
                          reuse = None, 
                          seed = None):
-        filter_neuron = [5,5,5]
-        n_filter = filter_neuron[-1]
+
+        n_filter = self.n_neuron_flt[-1]
         # n_vec_dof = self.nvec_dof
         # nvec_dof = natm * nproj
         n_vec_dof = meta[0] * meta[4]
         # nframes x nocc -> (nframes x nocc) x M
-        e_occ, weight_l2_occ = self.ds_layer(e_occ, filter_neuron, name = 'occ', reuse = reuse, seed = seed)
+        e_occ, weight_l2_occ = self.ds_layer(e_occ, self.n_neuron_flt, name = 'occ', reuse = reuse, seed = seed)
         # nframe x nocc x M
         e_occ = tf.reshape(e_occ, [-1, meta[2], n_filter])
         # nframe x nocc x nvec_dof
@@ -406,7 +407,7 @@ class Model(object):
         prod_occ = tf.reshape(prod_occ, [-1, n_filter * n_vec_dof])
         #
         # nframes x nvir -> (nframes x nvir) x M
-        e_vir, weight_l2_vir = self.ds_layer(e_vir, filter_neuron, name = 'vir', reuse = reuse, seed = seed)
+        e_vir, weight_l2_vir = self.ds_layer(e_vir, self.n_neuron_flt, name = 'vir', reuse = reuse, seed = seed)
         # nframe x nvir x M
         e_vir = tf.reshape(e_vir, [-1, meta[3], n_filter])
         # nframe x nvir x nvec_dof
@@ -427,22 +428,22 @@ class Model(object):
 
         weight_l2 = 0
         layer,l2 = self._one_layer(mo_atom, 
-                                   self.n_neuron[0], 
+                                   self.n_neuron_fit[0], 
                                    name='layer_0', 
                                    reuse = reuse, 
                                    seed = seed)
         weight_l2 += l2
-        for ii in range(1,len(self.n_neuron)) :
-            if self.resnet and self.n_neuron[ii] == self.n_neuron[ii-1]:
+        for ii in range(1,len(self.n_neuron_fit)) :
+            if self.resnet and self.n_neuron_fit[ii] == self.n_neuron_fit[ii-1]:
                 tl,l2 = self._one_layer(layer, 
-                                         self.n_neuron[ii], 
+                                         self.n_neuron_fit[ii], 
                                          name='layer_'+str(ii), 
                                          reuse = reuse, 
                                          with_dt = True, 
                                          seed = seed)
             else :
                 tl,l2 = self._one_layer(layer, 
-                                         self.n_neuron[ii], 
+                                         self.n_neuron_fit[ii], 
                                          name='layer_'+str(ii), 
                                          reuse = reuse, 
                                          with_dt = False, 

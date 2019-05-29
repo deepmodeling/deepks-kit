@@ -12,7 +12,8 @@ class Config(object):
     # use Batch Normalization or not
     useBN = False#True
     num_epoch = 3000
-    n_neuron = [240, 120, 60, 30]
+    n_neuron_flt = [5, 10, 10]
+    n_neuron_fit = [120, 120, 120]
     starter_learning_rate = 0.003
     decay_steps = 10
     decay_rate = 0.96
@@ -34,7 +35,8 @@ def reset_batch_size (config) :
 
 def print_conf (config, nthreads) :
     print ("# num_threads       %d" % nthreads)
-    print ("# neurons           " + str(config.n_neuron))
+    print ("# neurons_flt       " + str(config.n_neuron_flt))
+    print ("# neurons_fit       " + str(config.n_neuron_fit))
     print ("# batch size        " + str(config.batch_size))
     print ("# num_epoch         " + str(config.num_epoch))
     print ("# lr_0              " + str(config.starter_learning_rate))
@@ -52,8 +54,10 @@ def main():
                         help='the number of threads.')
     parser.add_argument('-d','--data-path', type=str, nargs = '+',
                         help='the path to data file data.raw.')
-    parser.add_argument('-n','--neurons', type=int, default = [240, 120, 60, 30], nargs='+',
-                        help='the number of neurons in each hidden layer.')
+    parser.add_argument('-n','--neurons-flt', type=int, default = [5, 10, 20], nargs='+',
+                        help='the number of neurons in filter net.')
+    parser.add_argument('-N','--neurons-fit', type=int, default = [100, 100, 100, 100], nargs='+',
+                        help='the number of neurons in fitting net.')
     parser.add_argument('-b','--batch-size', type=int, default = 64,
                         help='the batch size.')
     parser.add_argument('-e','--numb-epoches', type=int, default = 3000,
@@ -76,7 +80,8 @@ def main():
 
     config = Config()
     config.data_path = args.data_path
-    config.n_neuron = args.neurons
+    config.n_neuron_flt = args.neurons_flt
+    config.n_neuron_fit = args.neurons_fit
     config.batch_size = args.batch_size
     config.num_epoch = args.numb_epoches
     config.starter_learning_rate = args.starter_lr
