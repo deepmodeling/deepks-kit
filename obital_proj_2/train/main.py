@@ -20,7 +20,8 @@ class Config(object):
     resnet = False
     graph_file = None
     with_ener = True
-    reg_weight = 0
+    reg_weight_flt = 0
+    reg_weight_fit = 0
     
     display_in_training = True
 
@@ -41,7 +42,8 @@ def print_conf (config, nthreads) :
     print ("# decay_rate        " + str(config.decay_rate))
     print ("# resnet            " + str(config.resnet))
     print ("# graph_file        " + str(config.graph_file))
-    print ("# reg_weight        " + str(config.reg_weight))
+    print ("# reg_weight_flt    " + str(config.reg_weight_flt))
+    print ("# reg_weight_fit    " + str(config.reg_weight_fit))
 
 def main():
     parser = argparse.ArgumentParser(
@@ -62,8 +64,10 @@ def main():
                         help='the decay steps.')
     parser.add_argument('--decay-rate', type=float, default = 0.96,
                         help='the decay rate.')
-    parser.add_argument('-w','--reg-weight', type=float, default = 0.00,
-                        help='regularization weight.')
+    parser.add_argument('-w','--reg-weight-flt', type=float, default = 0.00,
+                        help='regularization weight of filter net.')
+    parser.add_argument('-W','--reg-weight-fit', type=float, default = 0.00,
+                        help='regularization weight of fitting net.')
     parser.add_argument('--resnet', action = 'store_true',
                         help='try using resNet if two neighboring layers are of the same size.')
     args = parser.parse_args()
@@ -79,7 +83,8 @@ def main():
     config.decay_steps = args.decay_steps
     config.decay_rate = args.decay_rate
     config.resnet = args.resnet
-    config.reg_weight = args.reg_weight
+    config.reg_weight_flt = args.reg_weight_flt
+    config.reg_weight_fit = args.reg_weight_fit
     reset_batch_size (config)
     print_conf (config, args.numb_threads)
 

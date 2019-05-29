@@ -156,7 +156,8 @@ class Model(object):
         self.display_in_training = config.display_in_training
         self.resnet = config.resnet
         self.with_ener = config.with_ener
-        self.reg_weight = config.reg_weight
+        self.reg_weight_flt = config.reg_weight_flt
+        self.reg_weight_fit = config.reg_weight_fit
 
     def test_error (self, t_meta, t_emp2, t_dist, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
         ret = self.sess.run([self.l2_loss, self.emp2], 
@@ -329,7 +330,7 @@ class Model(object):
         ee_diff_norm = ee_diff * ee_diff
         l2_loss = tf.reduce_mean(tf.square(ener_ref - ener), 
                                  name='l2_loss_' + suffix)
-        return l2_loss + self.reg_weight * w_l2
+        return l2_loss + w_l2
 
     
     def scale_var(self, 
@@ -462,7 +463,10 @@ class Model(object):
         #                         [-1],
         #                         name='o_sys_ener')
         test_ener = tf.reduce_sum(yy_, axis = 1, name = 'o_sys_ener')
-        return test_ener, weight_l2 + weight_l2_vir + weight_l2_occ
+
+        w_l2 = self.reg_weight_flt * (weight_l2_vir + weight_l2_occ) + self.reg_weight_fit * weight_l2
+
+        return test_ener, w_l2
         
 
     def ds_layer(self, 
