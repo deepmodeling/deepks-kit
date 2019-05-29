@@ -147,7 +147,7 @@ def proj(mol,
         test_mol.basis = test_basis
         test_mol.spin = mendeleev.element(test_name).atomic_number % 2
         test_mol.build(0,0)
-        proj = gto.intor_cross('int1e_nuc_sph', mol, test_mol)        
+        proj = gto.intor_cross('int1e_ovlp_sph', mol, test_mol)        
         n_proj = proj.shape[1]
         proj_coeff = np.matmul(mo, proj)
         res.append(proj_coeff)
