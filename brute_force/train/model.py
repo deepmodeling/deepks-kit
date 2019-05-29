@@ -7,8 +7,6 @@ import numpy as np
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
 
-natoms = 2
-
 class Reader(object):
     def __init__(self, config, seed = None):
         # copy from config
@@ -19,6 +17,12 @@ class Reader(object):
 
     def prepare(self):
         self.index_count_all = 0
+        sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
+        assert(sys_meta[0] == 2)
+        assert(sys_meta[1] == 2)
+        self.neig = sys_meta[2]
+        self.natm = sys_meta[3]
+        self.max_nbas = sys_meta[4]
         self.tr_data_emp2 = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
         nframes = self.tr_data_emp2.shape[0]
         self.tr_data_dist = np.loadtxt(os.path.join(self.data_path,'dist.raw')).reshape([-1])
@@ -26,6 +30,8 @@ class Reader(object):
         assert(nframes == self.tr_data_dist.shape[0])
         tmp_coeff = np.loadtxt(os.path.join(self.data_path,'mo_coeff.raw')).reshape([nframes,2,2,-1])
         tmp_ener  = np.loadtxt(os.path.join(self.data_path,'mo_ener.raw')) .reshape([nframes,2,2,-1])
+        assert(tmp_coeff.shape[3] == self.neig * self.natm * self.max_nbas)
+        assert(tmp_ener .shape[3] == self.neig)
         self.tr_data_mo_occ = tmp_coeff[:,:,0,:].reshape([nframes,-1])
         self.tr_data_mo_vir = tmp_coeff[:,:,1,:].reshape([nframes,-1])
         self.tr_data_e_occ = tmp_ener[:,:,0,:].reshape([nframes,-1])
@@ -83,6 +89,9 @@ class Reader(object):
     def e_dim(self):
         return self.tr_data_e_occ.shape[1]
 
+    def get_meta(self): 
+        return self.neig, self.natm, self.max_nbas
+
 
 class Model(object):
     def __init__(self, config, sess):
@@ -118,10 +127,7 @@ class Model(object):
         reader.prepare()
         self.mo_dim = reader.mo_dim()
         self.e_dim = reader.e_dim()
-        self.natoms = natoms
-        self.ntests = natoms
-        # self.nao2 = self.mo_dim // (self.natoms * self.ntests)
-        self.mo_dim_test = self.mo_dim // self.ntests
+        self.neig, self.natm, self.max_nbas = reader.get_meta()
         
         # placeholders
         self.dist = tf.placeholder(tf.float64, [None], name='input_dist')
@@ -320,13 +326,39 @@ class Model(object):
                          reuse = None, 
                          seed = None, 
                          use_ds_layer = True):        
+        print('# build with neig x mol_nbas = %d x %d' % (self.neig, self.natm * self.max_nbas))
         if use_ds_layer :
             filter_neuron = [5,10,10]
+            mol_nbas = self.natm * self.max_nbas
+            # (nframes x 2) x neig x mol_nbas
+            mo_occ = tf.reshape(mo_occ, [-1, self.neig, mol_nbas])
+            mo_vir = tf.reshape(mo_vir, [-1, self.neig, mol_nbas])                        
+            for ii in range(mol_nbas) :
+                # (nframes x 2) x neig x 1
+                mo_occ_cut = tf.slice(mo_occ, [0, 0, ii], [-1, self.neig, 1])
+                mo_vir_cut = tf.slice(mo_vir, [0, 0, ii], [-1, self.neig, 1])
+                # (nframes x 2) x neig 
+                mo_occ_cut = tf.reshape(mo_occ_cut, [-1, self.neig])
+                mo_vir_cut = tf.reshape(mo_vir_cut, [-1, self.neig])
+                # (nframes x 2) x neig -> (nframes x 2) x filter_out
+                mo_occ_cut = self.ds_layer(mo_occ_cut, filter_neuron, name = 'occ_' + 'posi_' + str(ii), reuse = reuse, seed = seed)
+                mo_vir_cut = self.ds_layer(mo_vir_cut, filter_neuron, name = 'vir_' + 'posi_' + str(ii), reuse = reuse, seed = seed)
+                if ii == 0 :
+                    mo_occ_out = mo_occ_cut
+                    mo_vir_out = mo_vir_cut
+                else :
+                    mo_occ_out = tf.concat([mo_occ_out, mo_occ_cut], axis = 1)
+                    mo_vir_out = tf.concat([mo_vir_out, mo_vir_cut], axis = 1)
+            # (nframes x 2) x mol_nbas x filter_out -> nframe x (2 x mol_nbas x filter_out)
+            mo_occ = tf.reshape(mo_occ_out, [-1, 2 * mol_nbas * filter_neuron[-1]])
+            mo_vir = tf.reshape(mo_vir_out, [-1, 2 * mol_nbas * filter_neuron[-1]])                
             # mo_occ = self.ds_layer(mo_occ, filter_neuron, name = 'occ', reuse = reuse, seed = seed)
             # mo_occ = self.ds_layer(mo_occ, filter_neuron, name = 'mo_occ', reuse = reuse, seed = seed)
             # e_occ  = self.ds_layer(e_occ,  filter_neuron, name = 'e_occ',  reuse = reuse, seed = seed)
             # mo_vir = self.ds_layer(mo_vir, filter_neuron, name = 'mo_vir', reuse = reuse, seed = seed)
             # e_vir  = self.ds_layer(e_vir,  filter_neuron, name = 'e_vir',  reuse = reuse, seed = seed)        
+
+        print('# build with neig x mol_nbas = %d x %d' % (self.neig, self.natm * self.max_nbas))            
         dist = tf.reshape(dist, [-1,1])
         if with_ener :
             print ('# build with ener')
@@ -421,6 +453,7 @@ class Model(object):
                  xx, 
                  filter_neuron,
                  filter_resnet_dt=True,
+                 reduce_i = True,
                  activation_fn=tf.nn.tanh, 
                  stddev=1.0,
                  bavg=0.0,
@@ -459,7 +492,8 @@ class Model(object):
                 else :
                     xyz_scatter = activation_fn(tf.matmul(xyz_scatter, w) + b)
             xyz_scatter = tf.reshape(xyz_scatter, (-1, xx_shape[1], n_filter))
-            xyz_scatter = tf.reduce_sum(xyz_scatter, axis = 1)
+            if reduce_i :
+                xyz_scatter = tf.reduce_sum(xyz_scatter, axis = 1)
             return xyz_scatter
 
 

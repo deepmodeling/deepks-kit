@@ -205,8 +205,12 @@ def get_nao (ele, basis) :
     return test_mol.nao    
 
 
-def dump_data(ele1, ele2, dist, ehf, emp2, e_data, c_data) :
+def dump_data(ele1, ele2, meta, dist, ehf, emp2, e_data, c_data) :
     dir_name = 'data_' + ele1 + '_' + ele2
+    np.savetxt(os.path.join(dir_name, 'system.raw'), 
+               meta, 
+               fmt = '%d',
+               header = 'a_b o_v neig natm max_nbas')
     nframe = e_data.shape[0]
     os.makedirs(dir_name, exist_ok = True)
     np.savetxt(os.path.join(dir_name, 'dist.raw'), np.reshape(dist, [nframe,1])) 
@@ -221,17 +225,15 @@ def gen_alchemy (ele_list,
                  max_nbasis,
                  mol_basis = 'cc-pvdz') :
     nele = len(ele_list)
-    # this program gen a mole with 2 atoms!
+    # make meta data
     natoms = 2
     neig = max_nbasis * natoms * 2      # 2: alpha and beta
     meta = np.array([2, 2, neig, natoms, max_nbasis], dtype = int)
-    np.savetxt('system.meta', 
-               meta, 
-               fmt = '%d',
-               header = 'a_b o_v neig natm max_nbas')
     for ii in range(nele) :
         for jj in range(ii, nele) :
             print('making ' + ele_list[ii] + ' ' + ele_list[jj])
+            # this program gen a mole with 2 atoms!
+            # make data for system
             ndist = len(relposi_list)
             all_e_hf = np.zeros(ndist)
             all_e_mp2 = np.zeros(ndist)
@@ -251,6 +253,7 @@ def gen_alchemy (ele_list,
             all_e_data = np.array(all_e_data)
             all_c_data = np.array(all_c_data)
             dump_data(ele_list[ii], ele_list[jj], 
+                      meta,
                       relposi_list,
                       all_e_hf, 
                       all_e_mp2, 
@@ -259,7 +262,8 @@ def gen_alchemy (ele_list,
             
 def _main() :
     max_basis = get_nao('Ne', 'ccpvdz')
-    gen_alchemy(['H', 'He', 'Li', 'B', 'N', 'F'], np.arange(0.7,2.0,0.02), max_basis)
+    # gen_alchemy(['H', 'He', 'Li', 'B', 'N', 'F'], np.arange(0.7,2.0,0.02), max_basis)
+    gen_alchemy(['H'], np.arange(0.7,2.0,0.02), max_basis)
     # gen_alchemy(['H', 'He'], np.arange(0.7,2.0,0.02), 'Ne', max_nao)
     # gen_alchemy(['H'], np.arange(0.7,2.0,0.02), 'Ne', max_nao)
     # gen_alchemy(['H','He'], np.arange(0.7,2.0,0.02), max_basis)
