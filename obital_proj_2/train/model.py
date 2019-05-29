@@ -156,6 +156,7 @@ class Model(object):
         self.display_in_training = config.display_in_training
         self.resnet = config.resnet
         self.with_ener = config.with_ener
+        self.reg_weight = config.reg_weight
 
     def test_error (self, t_meta, t_emp2, t_dist, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
         ret = self.sess.run([self.l2_loss, self.emp2], 
@@ -328,7 +329,7 @@ class Model(object):
         ee_diff_norm = ee_diff * ee_diff
         l2_loss = tf.reduce_mean(tf.square(ener_ref - ener), 
                                  name='l2_loss_' + suffix)
-        return l2_loss + 0.001 * w_l2
+        return l2_loss + self.reg_weight * w_l2
 
     
     def scale_var(self, 
@@ -387,7 +388,7 @@ class Model(object):
                          meta,
                          reuse = None, 
                          seed = None):
-        filter_neuron = [5,10,10]
+        filter_neuron = [5,5,5]
         n_filter = filter_neuron[-1]
         # n_vec_dof = self.nvec_dof
         # nvec_dof = natm * nproj
@@ -421,7 +422,7 @@ class Model(object):
         # nframe x natm x 2 x M x nproj
         mo_atom = tf.transpose(mo_atom, [0, 3, 1, 2, 4])
         # (nframe x natm) x (2 x M x nproj)
-        mo_atom = tf.reshape(mo_atom, [-1, 2 * n_filter * self.nproj])        
+        mo_atom = tf.reshape(mo_atom, [-1, 2 * n_filter * self.nproj])
 
         weight_l2 = 0
         layer,l2 = self._one_layer(mo_atom, 
