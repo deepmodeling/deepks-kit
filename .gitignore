@@ -9,3 +9,5 @@ data_*_*
 __pycache__
 checkpoint
 model.ckpt.*
+*bk[0-9]
+*bk
