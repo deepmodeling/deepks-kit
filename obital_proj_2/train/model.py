@@ -441,6 +441,7 @@ class Model(object):
                                          reuse = reuse, 
                                          with_dt = True, 
                                          seed = seed)
+                layer += tl
             else :
                 tl,l2 = self._one_layer(layer, 
                                          self.n_neuron_fit[ii], 
@@ -448,7 +449,7 @@ class Model(object):
                                          reuse = reuse, 
                                          with_dt = False, 
                                          seed = seed) 
-            layer += tl
+                layer = tl
             weight_l2 += l2
         # build final layer
         yy_,l2 = self._final_layer(layer, 
