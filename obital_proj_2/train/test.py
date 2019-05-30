@@ -46,7 +46,8 @@ def test_e (sess, sys_meta, t_mo_occ, t_mo_vir, t_e_occ, t_e_vir) :
                       input_mo_occ: t_mo_occ,
                       input_mo_vir: t_mo_vir,
                       input_e_occ: t_e_occ,
-                      input_e_vir: t_e_vir}
+                      input_e_vir: t_e_vir, 
+    }
 
     data_ret = sess.run ([o_sys_ener], 
                          feed_dict = feed_dict_test)
@@ -68,22 +69,10 @@ def compute_std (forces) :
         avg_std = np.sqrt (avg_std / float(ncomps))
         stds.append (avg_std)
     return np.array (stds)
-    
 
-def _main () :
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--models", default='frozen_model.pb', type=str,
-                        help="Frozen models file to test")
-    parser.add_argument("-d", "--data", default='data', type=str,
-                        help="The data for test")
-    parser.add_argument("-e", "--with-ener", action = 'store_true',
-                        help="The use ener")
-    args = parser.parse_args()
 
-    models = args.models    
-    data_path = args.data
-
-    sys_meta = np.loadtxt(os.path.join(args.data,'system.raw'), dtype = int).reshape([-1])
+def test_sys (data_path, models) :
+    sys_meta = np.loadtxt(os.path.join(data_path,'system.raw'), dtype = int).reshape([-1])
     natm = sys_meta[0]
     nao = sys_meta[1]
     nocc = sys_meta[2]
@@ -99,18 +88,6 @@ def _main () :
     tr_data_e_occ = np.loadtxt(os.path.join(data_path,'ener_occ.raw')).reshape([nframes,nocc]).reshape([-1])
     tr_data_e_vir = np.loadtxt(os.path.join(data_path,'ener_vir.raw')).reshape([nframes,nvir]).reshape([-1])
 
-    # tr_data_emp2 = np.loadtxt(os.path.join(data_path,'e_mp2.raw')).reshape([-1])
-    # nframes = tr_data_emp2.shape[0]
-    # tr_data_dist = np.loadtxt(os.path.join(data_path,'dist.raw')).reshape([-1])
-    # tr_data_dist = np.ones(tr_data_dist.shape)
-    # assert(nframes == tr_data_dist.shape[0])
-    # tmp_coeff = np.loadtxt(os.path.join(data_path,'mo_coeff.raw')).reshape([nframes,2,2,-1])
-    # tmp_ener  = np.loadtxt(os.path.join(data_path,'mo_ener.raw')) .reshape([nframes,2,2,-1])
-    # tr_data_mo_occ = tmp_coeff[:,:,0,:].reshape([nframes,-1])
-    # tr_data_mo_vir = tmp_coeff[:,:,1,:].reshape([nframes,-1])
-    # tr_data_e_occ = tmp_ener[:,:,0,:].reshape([nframes,-1])
-    # tr_data_e_vir = tmp_ener[:,:,1,:].reshape([nframes,-1])
-
     graph = load_graph (models)
     with tf.Session(graph = graph) as sess:        
         ee = test_e (sess,                     
@@ -122,13 +99,39 @@ def _main () :
         
     ee = np.reshape(ee, [-1,1])
     tr_data_emp2 = tr_data_emp2.reshape([-1,1])
-    print('# ener std: ' + str(np.std(tr_data_emp2)))
-    ret = np.concatenate((tr_data_emp2, ee), axis = 1)
-    np.savetxt('test.out', ret)
 
-    diff = ee - tr_data_emp2
-    diff2 = diff*diff
-    print(np.sqrt(np.average(diff * diff)))
+    return ee, tr_data_emp2
+
+
+def _main () :
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--models", default='frozen_model.pb', type=str,
+                        help="Frozen models file to test")
+    parser.add_argument("-d", "--data", default='data', type=str, nargs = '+',
+                        help="The data for test")
+    parser.add_argument("-e", "--with-ener", action = 'store_true',
+                        help="The use ener")
+    parser.add_argument("-o", "--output", default = 'test.out', type = str,
+                        help="The output file")
+    args = parser.parse_args()
+
+    models = args.models    
+
+    data_path = args.data
+    ptr = []
+    for ii in data_path :
+        ee, tr_data_emp2 = test_sys(ii, models)
+        print('# sys %s ener std: %f' %(ii, np.std(tr_data_emp2)))
+        diff = ee - tr_data_emp2
+        diff2 = diff*diff
+        print(np.sqrt(np.average(diff * diff)))
+        ret = np.concatenate((tr_data_emp2, ee), axis = 1)
+        if len(ptr) == 0 :
+            ptr = ret
+        else:
+            ptr = np.concatenate([ptr, ret], axis = 0)
+    np.savetxt(args.output, ptr)
+
 
 
 if __name__ == '__main__':
