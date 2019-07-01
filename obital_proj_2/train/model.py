@@ -399,32 +399,42 @@ class Model(object):
         e_occ, weight_l2_occ = self.ds_layer(e_occ, self.n_neuron_flt, name = 'occ', reuse = reuse, seed = seed)
         # nframe x nocc x M
         e_occ = tf.reshape(e_occ, [-1, meta[2], n_filter])
-        # nframe x nocc x nvec_dof
-        mo_occ = tf.reshape(mo_occ, [-1, meta[2], n_vec_dof])
-        # nframe x M x nvec_dof
+        # nframe x nocc x (natm x nproj)
+        mo_occ = tf.reshape(mo_occ, [-1, meta[2], meta[0] * meta[4]])
+        # nframe x M x (natm x nproj)
         prod_occ = tf.matmul(e_occ, mo_occ, transpose_a = True)
-        # nframe x (M x nvec_dof)
-        prod_occ = tf.reshape(prod_occ, [-1, n_filter * n_vec_dof])
+        # nframe x M x natm x nproj
+        prod_occ = tf.reshape(prod_occ, [-1, n_filter, meta[0], meta[4]])
+        # nframe x natm x M x nproj
+        prod_occ = tf.transpose(prod_occ, [0, 2, 1, 3])
+        # (nframe x natm) x M x nproj
+        prod_occ = tf.reshape(prod_occ, [-1, n_filter, meta[4]])
+        # (nframe x natm) x M x M
+        prod_occ = tf.matmul(prod_occ, prod_occ, transpose_b = True)
+        # (nframe x natm) x (M x M)        
+        prod_occ = tf.reshape(prod_occ, [-1, n_filter * n_filter])
         #
-        # nframes x nvir -> (nframes x nvir) x M
+        # nframes x nocc -> (nframes x nocc) x M
         e_vir, weight_l2_vir = self.ds_layer(e_vir, self.n_neuron_flt, name = 'vir', reuse = reuse, seed = seed)
         # nframe x nvir x M
         e_vir = tf.reshape(e_vir, [-1, meta[3], n_filter])
-        # nframe x nvir x nvec_dof
-        mo_vir = tf.reshape(mo_vir, [-1, meta[3], n_vec_dof])
-        # nframe x M x nvec_dof
+        # nframe x nvir x (natm x nproj)
+        mo_vir = tf.reshape(mo_vir, [-1, meta[3], meta[0] * meta[4]])
+        # nframe x M x (natm x nproj)
         prod_vir = tf.matmul(e_vir, mo_vir, transpose_a = True)
-        # nframe x (M x nvec_dof)
-        prod_vir = tf.reshape(prod_vir, [-1, n_filter * n_vec_dof])
+        # nframe x M x natm x nproj
+        prod_vir = tf.reshape(prod_vir, [-1, n_filter, meta[0], meta[4]])
+        # nframe x natm x M x nproj
+        prod_vir = tf.transpose(prod_vir, [0, 2, 1, 3])
+        # (nframe x natm) x M x nproj
+        prod_vir = tf.reshape(prod_vir, [-1, n_filter, meta[4]])
+        # (nframe x natm) x M x M
+        prod_vir = tf.matmul(prod_vir, prod_vir, transpose_b = True)
+        # (nframe x natm) x (M x M)        
+        prod_vir = tf.reshape(prod_vir, [-1, n_filter * n_filter])
         #
-        # nframe x (2 x M x (natm x nproj))
+        # (nframe x natm) x (2 x M x M)
         mo_atom = tf.concat([prod_occ, prod_vir], 1)
-        # nframe x 2 x M x natm x nproj
-        mo_atom = tf.reshape(mo_atom, [-1, 2, n_filter, meta[0], meta[4]])
-        # nframe x natm x 2 x M x nproj
-        mo_atom = tf.transpose(mo_atom, [0, 3, 1, 2, 4])
-        # (nframe x natm) x (2 x M x nproj)
-        mo_atom = tf.reshape(mo_atom, [-1, 2 * n_filter * self.nproj])
 
         weight_l2 = 0
         layer,l2 = self._one_layer(mo_atom, 
