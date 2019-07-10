@@ -154,6 +154,7 @@ def proj(mol,
     res = np.array(res)
     if verbose:
         print('shape of coeff data          ', res.shape)
+    # res : natm x nocc/nvir x nproj
     return res, proj_coeff.shape[-1]
 
 
@@ -189,6 +190,7 @@ def make_data(mole_anames,
     c_proj_occ = np.transpose(c_proj_occ, [1,0,2])
     c_proj_vir = np.transpose(c_proj_vir, [1,0,2])
     mol_meta.append(nproj)
+    # mole_meta:  [natm, nao, nocc, nvir, nproj]
     return ehf, emp2, e_data, (c_proj_occ, c_proj_vir), mol_meta
 
 
@@ -208,7 +210,7 @@ def dump_data(ele1, ele2, meta, dist, ehf, emp2, e_data, c_data) :
     np.savetxt(os.path.join(dir_name, 'system.raw'), 
                meta, 
                fmt = '%d',
-               header = 'natm nao nocc nvir')
+               header = 'natm nao nocc nvir nproj')
     nframe = e_data[0].shape[0]
     natm = meta[0]
     nao = meta[1]
