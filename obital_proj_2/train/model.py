@@ -403,6 +403,7 @@ class Model(object):
         mo_occ = tf.reshape(mo_occ, [-1, meta[2], meta[0] * meta[4]])
         # nframe x M x (natm x nproj)
         prod_occ = tf.matmul(e_occ, mo_occ, transpose_a = True)
+        prod_occ = prod_occ / tf.to_double(meta[2])
         # nframe x M x natm x nproj
         prod_occ = tf.reshape(prod_occ, [-1, n_filter, meta[0], meta[4]])
         # nframe x natm x M x nproj
@@ -411,6 +412,7 @@ class Model(object):
         prod_occ = tf.reshape(prod_occ, [-1, n_filter, meta[4]])
         # (nframe x natm) x M x M
         prod_occ = tf.matmul(prod_occ, prod_occ, transpose_b = True)
+        prod_occ = prod_occ / tf.to_double(meta[4])
         # (nframe x natm) x (M x M)        
         prod_occ = tf.reshape(prod_occ, [-1, n_filter * n_filter])
         #
@@ -422,6 +424,7 @@ class Model(object):
         mo_vir = tf.reshape(mo_vir, [-1, meta[3], meta[0] * meta[4]])
         # nframe x M x (natm x nproj)
         prod_vir = tf.matmul(e_vir, mo_vir, transpose_a = True)
+        prod_vir = prod_vir / tf.to_double(meta[3])
         # nframe x M x natm x nproj
         prod_vir = tf.reshape(prod_vir, [-1, n_filter, meta[0], meta[4]])
         # nframe x natm x M x nproj
@@ -430,6 +433,7 @@ class Model(object):
         prod_vir = tf.reshape(prod_vir, [-1, n_filter, meta[4]])
         # (nframe x natm) x M x M
         prod_vir = tf.matmul(prod_vir, prod_vir, transpose_b = True)
+        prod_vir = prod_vir / tf.to_double(meta[4])
         # (nframe x natm) x (M x M)        
         prod_vir = tf.reshape(prod_vir, [-1, n_filter * n_filter])
         #
@@ -437,15 +441,17 @@ class Model(object):
         mo_atom = tf.concat([prod_occ, prod_vir], 1)
 
         weight_l2 = 0
-        layer,l2 = self._one_layer(mo_atom, 
+        sum_l2 = 0
+        layer,l2,sl2 = self._one_layer(mo_atom, 
                                    self.n_neuron_fit[0], 
                                    name='layer_0', 
                                    reuse = reuse, 
                                    seed = seed)
         weight_l2 += l2
+        sum_l2 += sl2
         for ii in range(1,len(self.n_neuron_fit)) :
             if self.resnet and self.n_neuron_fit[ii] == self.n_neuron_fit[ii-1]:
-                tl,l2 = self._one_layer(layer, 
+                tl,l2,sl2 = self._one_layer(layer, 
                                          self.n_neuron_fit[ii], 
                                          name='layer_'+str(ii), 
                                          reuse = reuse, 
@@ -453,7 +459,7 @@ class Model(object):
                                          seed = seed)
                 layer += tl
             else :
-                tl,l2 = self._one_layer(layer, 
+                tl,l2,sl2 = self._one_layer(layer, 
                                          self.n_neuron_fit[ii], 
                                          name='layer_'+str(ii), 
                                          reuse = reuse, 
@@ -461,14 +467,16 @@ class Model(object):
                                          seed = seed) 
                 layer = tl
             weight_l2 += l2
+            sum_l2 += sl2
         # build final layer
-        yy_,l2 = self._final_layer(layer, 
+        yy_,l2,sl2 = self._final_layer(layer, 
                                 1, 
                                 activation_fn = None, 
                                 name='layer_sys_ener', 
                                 reuse = reuse, 
                                 seed = seed)
         weight_l2 += l2
+        sum_l2 += sl2
         # (nframe x natm) x 1
         yy_ = tf.reshape(yy_, [-1, meta[0]])
         # test_ener = tf.reshape (yy_,
@@ -476,7 +484,7 @@ class Model(object):
         #                         name='o_sys_ener')
         test_ener = tf.reduce_sum(yy_, axis = 1, name = 'o_sys_ener')
 
-        w_l2 = self.reg_weight_flt * (weight_l2_vir + weight_l2_occ) + self.reg_weight_fit * weight_l2
+        w_l2 = self.reg_weight_flt * (weight_l2_vir + weight_l2_occ) + self.reg_weight_fit * weight_l2 / sum_l2
 
         return test_ener, w_l2
         
@@ -495,6 +503,7 @@ class Model(object):
         outputs_size = [1] + filter_neuron
         n_filter = outputs_size[-1]
         weight_l2 = 0
+        numb_sum = 0
         with tf.variable_scope(name, reuse=reuse):
             for ii in range(1, len(outputs_size)):
                 w = tf.get_variable('matrix_'+str(ii), 
@@ -505,13 +514,15 @@ class Model(object):
                                     [1, outputs_size[ii]], 
                                     tf.float64,
                                     tf.random_normal_initializer(stddev=stddev, mean = bavg, seed = seed))
-                weight_l2 += tf.reduce_mean(tf.square(w)) + tf.reduce_mean(tf.square(b))
+                weight_l2 += tf.reduce_sum(tf.square(w)) + tf.reduce_sum(tf.square(b))
+                numb_sum += outputs_size[ii-1] * outputs_size[ii] + outputs_size[ii]
                 if filter_resnet_dt :
                     idt = tf.get_variable('idt_'+str(ii), 
                                           [1, outputs_size[ii]], 
                                           tf.float64,
                                           tf.random_normal_initializer(stddev=0.001, mean = 1.0, seed = seed))
-                    weight_l2 += tf.reduce_mean(tf.square(idt))
+                    weight_l2 += tf.reduce_sum(tf.square(idt))
+                    numb_sum += outputs_size[ii]
                 if outputs_size[ii] == outputs_size[ii-1]:
                     if filter_resnet_dt :
                         xyz_scatter += activation_fn(tf.matmul(xyz_scatter, w) + b) * idt
@@ -525,7 +536,7 @@ class Model(object):
                 else :
                     xyz_scatter = activation_fn(tf.matmul(xyz_scatter, w) + b)
             xyz_scatter = tf.reshape(xyz_scatter, (-1, n_filter))
-        return xyz_scatter, weight_l2
+        return xyz_scatter, weight_l2 / tf.to_double(numb_sum)
 
 
     def _one_layer(self, 
@@ -539,6 +550,7 @@ class Model(object):
                    seed=None,
                    with_dt = False):
         weight_l2 = 0
+        numb_sum = 0
         with tf.variable_scope(name, reuse=reuse):
             shape = inputs.get_shape().as_list()
             initer_w = tf.random_normal_initializer(stddev=stddev/np.sqrt(shape[1]+outputs_size), seed = seed)
@@ -551,7 +563,8 @@ class Model(object):
                                 [outputs_size], 
                                 tf.float64,
                                 initer_b)
-            weight_l2 += tf.reduce_mean(tf.square(w)) + tf.reduce_mean(tf.square(b))
+            weight_l2 += tf.reduce_sum(tf.square(w)) + tf.reduce_sum(tf.square(b))
+            numb_sum += shape[1] * outputs_size + outputs_size
             hidden = tf.matmul(inputs, w) + b
             if activation_fn != None and with_dt :
                 initer_t = tf.random_normal_initializer(stddev=0.001, mean = 0.1, seed = seed)
@@ -559,14 +572,15 @@ class Model(object):
                                          [outputs_size],
                                          tf.float64,
                                          initer_t)
-                weight_l2 += tf.reduce_mean(tf.square(timestep))
+                weight_l2 += tf.reduce_sum(tf.square(timestep))
+                numb_sum += outputs_size
         if activation_fn != None:
             if with_dt :
-                return activation_fn(hidden) * timestep, weight_l2
+                return activation_fn(hidden) * timestep, weight_l2, tf.to_double(numb_sum)
             else :
-                return activation_fn(hidden), weight_l2
+                return activation_fn(hidden), weight_l2, tf.to_double(numb_sum)
         else:
-            return hidden, weight_l2
+            return hidden, weight_l2, tf.to_double(numb_sum)
 
 
     def _final_layer(self, 
@@ -586,9 +600,10 @@ class Model(object):
                                 tf.float64,
                                 initer_w)
             hidden = tf.matmul(inputs, w)
-            weight_l2 = tf.reduce_mean(tf.square(w))
+            weight_l2 = tf.reduce_sum(tf.square(w))
+            numb_sum = shape[1] * outputs_size
         if activation_fn != None:
-            return activation_fn(hidden)
+            return activation_fn(hidden), weight_l2, numb_sum
         else:
-            return hidden, weight_l2
+            return hidden, weight_l2, numb_sum
     
