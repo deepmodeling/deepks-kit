@@ -354,7 +354,7 @@ class Model(object):
                                   dtype = tf.float64,
                                   trainable = False,
                                   initializer = tf.constant_initializer(scale))
-            mo_occ = (mo_occ - t_mo_occ_a) * t_mo_occ_s
+            mo_occ = (mo_occ - t_mo_occ_a) / t_mo_occ_s # changed by Yixiao, from * to /
         return mo_occ
     
 
@@ -477,7 +477,7 @@ class Model(object):
                                 seed = seed)
         weight_l2 += l2
         sum_l2 += sl2
-        # (nframe x natm) x 1
+        # (nframe x natm) x 1 -> nframe x natom
         yy_ = tf.reshape(yy_, [-1, meta[0]])
         # test_ener = tf.reshape (yy_,
         #                         [-1],
