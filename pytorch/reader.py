@@ -2,11 +2,10 @@ import os,time,sys
 import numpy as np
 
 class Reader(object):
-    def __init__(self, data_path, batch_size, seed = None):
+    def __init__(self, data_path, batch_size):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
-        np.random.seed(seed)
 
     def prepare(self):
         self.index_count_all = 0
@@ -19,15 +18,15 @@ class Reader(object):
         self.nproj = self.meta[4]
         self.tr_data_emp2 = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
         nframes = self.tr_data_emp2.shape[0]
-        self.tr_data_dist = np.loadtxt(os.path.join(self.data_path,'dist.raw')).reshape([-1])
-        self.tr_data_dist = np.ones(self.tr_data_dist.shape)
-        assert(nframes == self.tr_data_dist.shape[0])
         self.tr_data_mo_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
         self.tr_data_mo_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
         self.tr_data_e_occ = np.loadtxt(os.path.join(self.data_path,'ener_occ.raw')).reshape([nframes, self.nocc])
         self.tr_data_e_vir = np.loadtxt(os.path.join(self.data_path,'ener_vir.raw')).reshape([nframes, self.nvir])
         self.train_size_all = nframes
         # print(np.shape(self.inputs_train))
+        if self.train_size_all < self.batch_size:
+            self.batch_size = self.train_size_all
+            print(data_path, f"reset batch size to {self.batch_size}")
     
     def _sample_train_all(self):
         self.index_count_all += self.batch_size
@@ -36,7 +35,6 @@ class Reader(object):
             self.index_count_all = self.batch_size
             ind = np.random.choice(self.train_size_all, self.train_size_all, replace=False)
             self.tr_data_emp2 = self.tr_data_emp2[ind]
-            self.tr_data_dist = self.tr_data_dist[ind]
             self.tr_data_mo_occ = self.tr_data_mo_occ[ind]
             self.tr_data_mo_vir = self.tr_data_mo_vir[ind]
             self.tr_data_e_occ = self.tr_data_e_occ[ind]
@@ -44,7 +42,6 @@ class Reader(object):
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
             self.tr_data_emp2[ind], \
-            1./self.tr_data_dist[ind], \
             self.tr_data_mo_occ[ind], \
             self.tr_data_mo_vir[ind], \
             self.tr_data_e_occ[ind], \
@@ -56,11 +53,10 @@ class Reader(object):
     def sample_all(self) :
         return \
             self.tr_data_emp2, \
-            1./self.tr_data_dist, \
-            self.tr_data_mo_occ[:], \
-            self.tr_data_mo_vir[:], \
-            self.tr_data_e_occ[:], \
-            self.tr_data_e_vir[:]
+            self.tr_data_mo_occ, \
+            self.tr_data_mo_vir, \
+            self.tr_data_e_occ, \
+            self.tr_data_e_vir
 
     def get_train_size(self) :
         return self.train_size_all
@@ -69,7 +65,7 @@ class Reader(object):
         return self.batch_size
 
     def get_data(self):
-        return 1./self.tr_data_dist, self.tr_data_mo_occ, self.tr_data_mo_vir, self.tr_data_e_occ, self.tr_data_e_vir
+        return self.tr_data_mo_occ, self.tr_data_mo_vir, self.tr_data_e_occ, self.tr_data_e_vir
 
     # def get_meta(self): 
     #     return self.natm, self.nao, self.nocc, self.nvir, self.nproj
@@ -81,14 +77,14 @@ class Reader(object):
 
 
 class GroupReader(object) :
-    def __init__ (self,path_list, batch_size, seed = None) :
+    def __init__ (self, path_list, batch_size) :
         self.path_list = path_list
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size, seed))
+            self.readers.append(Reader(ii, batch_size))
         # prepare all systems
         for ii in self.readers:
             ii.prepare()
@@ -97,6 +93,17 @@ class GroupReader(object) :
         for ii in self.readers :
             self.nframes.append(ii.get_nframes())
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
+        self._sample_used = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._sample_used > self.get_train_size():
+            self._sample_used = 0
+            raise StopIteration
+        self._sample_used += self.batch_size
+        return self.sample_train()
 
     def sample_idx(self) :
         return np.random.choice(np.arange(self.nsystems), p = self.sys_prob)
