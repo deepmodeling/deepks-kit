@@ -13,8 +13,11 @@ def eval_sample(model, sample, loss_fn=nn.MSELoss()):
     return loss
 
 def train(model, g_reader, n_epoch, 
-            start_lr=0.0003, decay_steps=10, decay_rate=0.96, 
-            display_epoch=1, ckpt_file=None):
+            test_reader=None,
+            start_lr=0.01, decay_steps=100, decay_rate=0.96, 
+            display_epoch=100, ckpt_file=None):
+    if test_reader is None:
+        test_reader = g_reader
     optimizer = optim.Adam(model.parameters(), lr=start_lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     loss_fn = nn.MSELoss()
@@ -23,7 +26,7 @@ def train(model, g_reader, n_epoch,
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
     trn_loss = eval_sample(model, g_reader.sample_train()).item()
-    tst_loss = eval_sample(model, g_reader.sample_all()).item()
+    tst_loss = eval_sample(model, test_reader.sample_all()).item()
     tst_time = time() - tic
     print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {start_lr:>.2e}  {0:>8.2f}  {tst_time:>8.2f}")
 
@@ -41,18 +44,20 @@ def train(model, g_reader, n_epoch,
             trn_loss = loss.item()
             trn_time = time() - tic
             tic = time()
-            tst_loss = eval_sample(model, g_reader.sample_all()).item()
+            tst_loss = eval_sample(model, test_reader.sample_all()).item()
             tst_time = time() - tic
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {scheduler.get_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
-        if ckpt_file:
-            torch.save(model.state_dict(), ckpt_file)
+            if ckpt_file:
+                torch.save(model.state_dict(), ckpt_file)
         
         scheduler.step()
 
 
 if __name__ == "__main__":
-    from model import QCNet
+    from model import QCNet 
     from reader import GroupReader
-    model = QCNet([5,10,10], [120,120,120]).double().to(DEVICE)
     g_reader = GroupReader(["/data1/yixiaoc/work/deep.qc/data/wanghan/data_B_B"], 32)
-    train(model, g_reader, 10)
+    model = QCNet([40,40,40], [40,40,40], 
+                    e_stat=g_reader.compute_ener_stat(), 
+                    use_resnet=True).double().to(DEVICE)
+    train(model, g_reader, 1000)

@@ -143,7 +143,7 @@ class GroupReader(object) :
     def compute_ener_stat(self) :
         all_e = np.array([])
         for ii in self.readers :
-            tmp0, tmp1, tmp2, e_occ, e_vir = ii.get_data()
+            _, _, e_occ, e_vir = ii.get_data()
             e_occ = e_occ.reshape([-1])
             e_vir = e_vir.reshape([-1])
             all_e = np.concatenate((all_e, e_occ, e_vir))
