@@ -15,10 +15,10 @@ def parse_xyz(filename, basis='ccpvtz', verbose=False):
     mol.atom = xyz_str
     mol.basis  = basis
     try:
-        mol.build(unit="Ang")
+        mol.build(0,0,unit="Ang")
     except RuntimeError as e:
         mol.spin = 1
-        mol.build(unit="Ang")
+        mol.build(0,0,unit="Ang")
     return mol  
 
 
@@ -28,22 +28,21 @@ def proj(mol,
          test_basis, 
          verbose = False) :
     natm = mol.natm
-    mole_coords = mol.atom_coords()
+    mole_coords = mol.atom_coords(unit="Ang")
     res = []
     for ii in range(natm):
         test_mol = gto.Mole()
         if verbose :
-            test_mol.verbose = 5
+            test_mol.verbose = 4
         else :
             test_mol.verbose = 0
-        test_mol.output = 'test.log'
         test_mol.atom = '%d %f %f %f' % (test_ele_num,
                                          mole_coords[ii][0],
                                          mole_coords[ii][1],
                                          mole_coords[ii][2])
         test_mol.basis = test_basis
         test_mol.spin = test_ele_num % 2
-        test_mol.build(0,0)
+        test_mol.build(0,0,unit="Ang")
         proj = gto.intor_cross('int1e_ovlp_sph', mol, test_mol)        
         n_proj = proj.shape[1]
         proj_coeff = np.matmul(mo, proj)
@@ -152,6 +151,7 @@ def main():
     all_c_vir = np.concatenate(all_c_vir)
 
     dump_data(args.dump_dir, meta, all_e_hf, all_e_mp2, (all_e_occ, all_e_vir), (all_c_occ, all_c_vir))
+    print("done")
 
 if __name__ == "__main__":
     main()

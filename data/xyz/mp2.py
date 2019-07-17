@@ -18,10 +18,10 @@ def parse_xyz(filename, basis='ccpvtz', verbose=False):
     mol.atom = xyz_str
     mol.basis  = basis
     try:
-        mol.build(unit="Ang")
+        mol.build(0,0,unit="Ang")
     except RuntimeError as e:
         mol.spin = 1
-        mol.build(unit="Ang")
+        mol.build(0,0,unit="Ang")
     return mol  
 
 
