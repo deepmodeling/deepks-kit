@@ -25,8 +25,8 @@ class Reader(object):
         self.nproj = self.meta[4]
         self.tr_data_emp2 = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
         nframes = self.tr_data_emp2.shape[0]
-        self.tr_data_dist = np.loadtxt(os.path.join(self.data_path,'dist.raw')).reshape([-1])
-        self.tr_data_dist = np.ones(self.tr_data_dist.shape)
+        # self.tr_data_dist = np.loadtxt(os.path.join(self.data_path,'dist.raw')).reshape([-1])
+        self.tr_data_dist = np.ones(self.tr_data_emp2.shape)
         assert(nframes == self.tr_data_dist.shape[0])
         self.tr_data_mo_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes,self.nocc*self.natm*self.nproj])
         self.tr_data_mo_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes,self.nvir*self.natm*self.nproj])

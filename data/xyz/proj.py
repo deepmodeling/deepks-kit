@@ -75,7 +75,7 @@ def dump_data(dir_name, meta, ehf, emp2, e_data, c_data) :
     np.savetxt(os.path.join(dir_name, 'system.raw'), 
                meta.reshape(1,-1), 
                fmt = '%d',
-               header = 'natm nao nocc nvir')
+               header = 'natm nao nocc nvir nproj')
     nframe = e_data[0].shape[0]
     natm = meta[0]
     nao = meta[1]
