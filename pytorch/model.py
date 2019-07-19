@@ -92,6 +92,12 @@ class QCNet(nn.Module):
     """
     def __init__(self, n_neuron_filter, n_neuron_fit, e_stat=None, use_resnet=False):
         super().__init__()
+        self._init_params = {
+            "n_neuron_filter": n_neuron_filter,
+            "n_neuron_fit": n_neuron_fit,
+            "e_stat": e_stat,
+            "use_resnet": use_resnet
+        }
         self.dnet_occ = Descriptor(n_neuron_filter)
         self.dnet_vir = Descriptor(n_neuron_filter)
         self.fitnet = DenseNet([2*n_neuron_filter[-1]**2] + n_neuron_fit, use_resnet=use_resnet, with_dt=True)
@@ -115,3 +121,16 @@ class QCNet(nn.Module):
         e_corr = torch.sum(e_atom, dim=[1,2])
         return e_corr
 
+    def save(self, filename):
+        dump_dict = {
+            "state_dict": self.state_dict(),
+            "init_params": self._init_params
+        }
+        torch.save(dump_dict, filename)
+    
+    @staticmethod
+    def load(filename):
+        checkpoint = torch.load(filename, map_location="cpu")
+        model = QCNet(**checkpoint["init_params"])
+        model.load_state_dict(checkpoint['state_dict'])
+        return model

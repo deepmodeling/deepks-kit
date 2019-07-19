@@ -26,7 +26,7 @@ class Reader(object):
         # print(np.shape(self.inputs_train))
         if self.train_size_all < self.batch_size:
             self.batch_size = self.train_size_all
-            print(data_path, f"reset batch size to {self.batch_size}")
+            print(self.data_path, f"reset batch size to {self.batch_size}")
     
     def _sample_train_all(self):
         self.index_count_all += self.batch_size

@@ -48,16 +48,16 @@ def train(model, g_reader, n_epoch,
             tst_time = time() - tic
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {scheduler.get_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
             if ckpt_file:
-                torch.save(model.state_dict(), ckpt_file)
+                model.save(ckpt_file)
         
         scheduler.step()
 
 
-if __name__ == "__main__":
-    from model import QCNet 
-    from reader import GroupReader
-    g_reader = GroupReader(["/data1/yixiaoc/work/deep.qc/data/wanghan/data_B_B"], 32)
-    model = QCNet([40,40,40], [40,40,40], 
-                    e_stat=g_reader.compute_ener_stat(), 
-                    use_resnet=True).double().to(DEVICE)
-    train(model, g_reader, 1000)
+# if __name__ == "__main__":
+#     from model import QCNet 
+#     from reader import GroupReader
+#     g_reader = GroupReader(["/data1/yixiaoc/work/deep.qc/data/wanghan/data_B_B"], 32)
+#     model = QCNet([40,40,40], [40,40,40], 
+#                     e_stat=g_reader.compute_ener_stat(), 
+#                     use_resnet=True).double().to(DEVICE)
+#     train(model, g_reader, 1000)
