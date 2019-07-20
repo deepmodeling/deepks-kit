@@ -14,11 +14,11 @@ def eval_sample(model, sample, loss_fn=nn.MSELoss()):
 
 def train(model, g_reader, n_epoch, 
             test_reader=None,
-            start_lr=0.01, decay_steps=100, decay_rate=0.96, 
+            start_lr=0.01, decay_steps=100, decay_rate=0.96, weight_decay=0.0,
             display_epoch=100, ckpt_file=None):
     if test_reader is None:
         test_reader = g_reader
-    optimizer = optim.Adam(model.parameters(), lr=start_lr)
+    optimizer = optim.Adam(model.parameters(), lr=start_lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     loss_fn = nn.MSELoss()
 

@@ -34,10 +34,12 @@ def main():
                         help='the decay rate')
     parser.add_argument('-D', '--display_epoch', type=int, default=100,
                         help=r'display training condition in every % epoches')
-    parser.add_argument('-S', '--ckpt-file', type=str, default='model.pth',
+    parser.add_argument('-S', '--ckpt-file', default='model.pth',
                         help='the file to save parameter file during training in display epoch')
     parser.add_argument('-R', '--restart-file', default=None,
                         help='the restart file to be load before training, if given, would ignore other net settings')
+    parser.add_argument('-W','--weight-decay', type=float, default = 0.0,
+                        help='the factor of weight decay (L2 reg) in training')
     add_bool_arg(parser, "resnet", default=True,
                         help='try using ResNet if two neighboring layers are of the same size')
     args = parser.parse_args()
@@ -53,7 +55,7 @@ def main():
     model = model.double().to(DEVICE)
     train(model, g_reader, args.num_epoches,
             test_reader=test_reader, 
-            start_lr=args.start_lr, decay_steps=args.decay_steps, decay_rate=args.decay_rate,
+            start_lr=args.start_lr, decay_steps=args.decay_steps, decay_rate=args.decay_rate, weight_decay=args.weight_decay,
             display_epoch=args.display_epoch, ckpt_file=args.ckpt_file)
 
 
