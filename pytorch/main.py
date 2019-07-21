@@ -18,19 +18,21 @@ def main():
                         help='the path to testing data .raw files')
     parser.add_argument('-d','--data-path', type=str, nargs = '+',
                         help='the path to training data .raw files')
-    parser.add_argument('-n','--neurons-filter', type=int, default = [40, 40, 40], nargs='+',
+    parser.add_argument('-n','--neurons-filter', type=int, default=[40, 40, 40], nargs='+',
                         help='the number of neurons in filter net')
-    parser.add_argument('-N','--neurons-fit', type=int, default = [100, 100, 100, 100], nargs='+',
+    parser.add_argument('-N','--neurons-fit', type=int, default=[100, 100, 100, 100], nargs='+',
                         help='the number of neurons in fitting net')
-    parser.add_argument('-b','--batch-size', type=int, default = 64,
+    parser.add_argument('-s','--shell-sections', type=int, default=None, nargs='*',
+                        help='the number of neurons in fitting net')
+    parser.add_argument('-b','--batch-size', type=int, default=64,
                         help='the batch size')
-    parser.add_argument('-e','--num-epoches', type=int, default = 3000,
+    parser.add_argument('-e','--num-epoches', type=int, default=3000,
                         help='the number of epoches')
-    parser.add_argument('-l','--start-lr', type=float, default = 0.005,
+    parser.add_argument('-l','--start-lr', type=float, default=0.005,
                         help='the starting learning rate')
-    parser.add_argument('--decay-steps', type=int, default = 200,
+    parser.add_argument('--decay-steps', type=int, default=200,
                         help='the decay steps')
-    parser.add_argument('--decay-rate', type=float, default = 0.96,
+    parser.add_argument('--decay-rate', type=float, default=0.96,
                         help='the decay rate')
     parser.add_argument('-D', '--display_epoch', type=int, default=100,
                         help=r'display training condition in every % epoches')
@@ -38,7 +40,7 @@ def main():
                         help='the file to save parameter file during training in display epoch')
     parser.add_argument('-R', '--restart-file', default=None,
                         help='the restart file to be load before training, if given, would ignore other net settings')
-    parser.add_argument('-W','--weight-decay', type=float, default = 0.0,
+    parser.add_argument('-W','--weight-decay', type=float, default=0.0,
                         help='the factor of weight decay (L2 reg) in training')
     add_bool_arg(parser, "resnet", default=True,
                         help='try using ResNet if two neighboring layers are of the same size')
@@ -50,6 +52,7 @@ def main():
         model = QCNet.load(args.restart_file)
     else:
         model = QCNet(args.neurons_filter, args.neurons_fit, 
+                        shell_sections=args.shell_sections,
                         e_stat=g_reader.compute_ener_stat(), 
                         use_resnet=args.resnet)
     model = model.double().to(DEVICE)
