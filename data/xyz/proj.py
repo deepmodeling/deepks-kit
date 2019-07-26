@@ -3,6 +3,7 @@ from pyscf import gto
 import os
 import sys
 import argparse
+import mendeleev
 
 
 def parse_xyz(filename, basis='ccpvtz', verbose=False):
@@ -24,7 +25,7 @@ def parse_xyz(filename, basis='ccpvtz', verbose=False):
 
 def proj(mol, 
          mo, 
-         test_ele_num, 
+         test_name, 
          test_basis, 
          verbose = False) :
     natm = mol.natm
@@ -36,12 +37,12 @@ def proj(mol,
             test_mol.verbose = 4
         else :
             test_mol.verbose = 0
-        test_mol.atom = '%d %f %f %f' % (test_ele_num,
+        test_mol.atom = '%s %f %f %f' % (test_name,
                                          mole_coords[ii][0],
                                          mole_coords[ii][1],
                                          mole_coords[ii][2])
-        test_mol.basis = test_basis
-        test_mol.spin = test_ele_num % 2
+        test_mol.basis = gto.basis.load(test_basis, test_name)
+        test_mol.spin = mendeleev.element(test_name).atomic_number % 2
         test_mol.build(0,0,unit="Ang")
         proj = gto.intor_cross('int1e_ovlp_sph', mol, test_mol)        
         n_proj = proj.shape[1]
@@ -94,11 +95,11 @@ def dump_data(dir_name, meta, ehf, emp2, e_data, c_data) :
     np.savetxt(os.path.join(dir_name, 'coeff_vir.raw'), c_data[1].reshape([nframe, -1]))
 
 
-def proj_frame(xyz_file, mo_dir, dump_dir=None, test_ele_num=10, test_basis="ccpvtz", verbose=False):
+def proj_frame(xyz_file, mo_dir, dump_dir=None, test_name="Ne", test_basis="ccpvtz", verbose=False):
     mol = parse_xyz(xyz_file)
     meta, ehf, emp2, e_data, c_data = load_data(mo_dir)
-    c_proj_occ,nproj = proj(mol, c_data[0], test_ele_num, test_basis, verbose)
-    c_proj_vir,nproj = proj(mol, c_data[1], test_ele_num, test_basis, verbose)
+    c_proj_occ,nproj = proj(mol, c_data[0], test_name, test_basis, verbose)
+    c_proj_vir,nproj = proj(mol, c_data[1], test_name, test_basis, verbose)
 
     # [natm, nframe, nocc, nproj] -> [nframe, nocc, natm, nproj]
     # [natm, nframe, nvir, nproj] -> [nframe, nvir, natm, nproj]
@@ -119,8 +120,8 @@ def main():
     parser.add_argument("-f", "--mo-dir", nargs="+", help="input mo folder(s), must of same number with xyz files")
     parser.add_argument("-d", "--dump-dir", default=".", help="dir of dumped files, if not specified, use current folder")
     parser.add_argument("-v", "--verbose", action='store_true', help="output calculation information")
-    parser.add_argument("-E", "--ele-num", type=int, default=10, help="element number to use as test orbitals")
-    parser.add_argument("-B", "--basis", default="ccpvtz", help="atom basis to use as test orbitals")
+    parser.add_argument("-E", "--element", default="Ne", help="element symbol to use as test orbitals")
+    parser.add_argument("-B", "--basis", default="ccpvtz", help="atom basis to use as test orbitals, could be a string or a file path")
     args = parser.parse_args()
 
     assert len(args.xyz_file) == len(args.mo_dir)
@@ -132,7 +133,7 @@ def main():
     all_c_occ = []
     all_c_vir = []
     for xf, md in zip(args.xyz_file, args.mo_dir):
-        meta, e_hf, e_mp2, e_data, c_data = proj_frame(xf, md, test_ele_num=args.ele_num, test_basis=args.basis, verbose=args.verbose)
+        meta, e_hf, e_mp2, e_data, c_data = proj_frame(xf, md, test_name=args.element, test_basis=args.basis, verbose=args.verbose)
         if oldmeta is not None:
             assert all(oldmeta == meta), "all frames has to be in the same system thus meta has to be equal!"
         oldmeta = meta
