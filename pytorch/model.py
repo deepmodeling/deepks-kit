@@ -131,7 +131,7 @@ class QCNet(nn.Module):
     """
     def __init__(self, n_neuron_filter, n_neuron_fit, shell_sections=None, e_stat=None, use_resnet=False):
         super().__init__()
-        self._init_params = {
+        self._init_args = {
             "n_neuron_filter": n_neuron_filter,
             "n_neuron_fit": n_neuron_fit,
             "shell_sections": shell_sections,
@@ -171,13 +171,13 @@ class QCNet(nn.Module):
     def save(self, filename):
         dump_dict = {
             "state_dict": self.state_dict(),
-            "init_params": self._init_params
+            "init_args": self._init_args
         }
         torch.save(dump_dict, filename)
     
     @staticmethod
     def load(filename):
         checkpoint = torch.load(filename, map_location="cpu")
-        model = QCNet(**checkpoint["init_params"])
+        model = QCNet(**checkpoint["init_args"])
         model.load_state_dict(checkpoint['state_dict'])
         return model
