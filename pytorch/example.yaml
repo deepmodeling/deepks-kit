@@ -1,0 +1,24 @@
+# args to be passed to model construction
+model_args: 
+  n_neuron_filter: [40, 40, 40] # essential
+  n_neuron_fit: [100, 100, 100, 100] # essential
+  shell_sections: null
+  use_resnet: true
+# args to be passed to training procedure
+train_args:
+  n_epoch: 10000 # essential
+  start_lr: 0.005
+  decay_steps: 200
+  decay_rate: 0.96
+  weight_decay: 0.0
+  display_epoch: 100
+  ckpt_file: 'model.pth'
+# args used to construct data loader
+data_args:
+  train_path: # essential
+    - 'path/to/train/data/1'
+    - 'path/to/train/data/2'
+  test_path:
+    - 'path/to/test/data/1'
+    - 'path/to/test/data/2'
+  batch_size: 64 # essential
