@@ -18,27 +18,15 @@ class Reader(object):
         self.nproj = self.meta[4]
         self.tr_data_emp2 = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
         nframes = self.tr_data_emp2.shape[0]
-        
-        self.tr_data_coeff_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_coeff_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
-        self.tr_data_rinv_occ = 5.0 \
-                                * np.loadtxt(os.path.join(self.data_path,'rinv_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_rinv_vir = 5.0 \
-                                * np.loadtxt(os.path.join(self.data_path,'rinv_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
-        self.tr_data_r2_occ = 0.01 \
-                                * np.loadtxt(os.path.join(self.data_path,'r2_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_r2_vir = 0.01 \
-                                * np.loadtxt(os.path.join(self.data_path,'r2_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])        
-        
-        self.tr_data_mo_occ = np.stack([self.tr_data_coeff_occ, self.tr_data_rinv_occ, self.tr_data_r2_occ], axis=-1)
-        self.tr_data_mo_vir = np.stack([self.tr_data_coeff_vir, self.tr_data_rinv_vir, self.tr_data_r2_vir], axis=-1)
+        self.tr_data_mo_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
+        self.tr_data_mo_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
         self.tr_data_e_occ = np.loadtxt(os.path.join(self.data_path,'ener_occ.raw')).reshape([nframes, self.nocc])
         self.tr_data_e_vir = np.loadtxt(os.path.join(self.data_path,'ener_vir.raw')).reshape([nframes, self.nvir])
         self.train_size_all = nframes
         # print(np.shape(self.inputs_train))
         if self.train_size_all < self.batch_size:
             self.batch_size = self.train_size_all
-            print('#', self.data_path, f"reset batch size to {self.batch_size}")
+            print(self.data_path, f"reset batch size to {self.batch_size}")
     
     def _sample_train_all(self):
         self.index_count_all += self.batch_size
@@ -136,10 +124,6 @@ class GroupReader(object) :
             idx = self.sample_idx()
         return \
             self.readers[idx].sample_all()
-    
-    def sample_all_batch(self, idx=None):
-        all_data = self.sample_all(idx)
-        return zip(*[np.array_split(all_data[i], self.batch_size, axis=0) for i in range(len(all_data))])
 
     def get_train_size(self) :
         return np.sum(self.nframes)

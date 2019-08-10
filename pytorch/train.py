@@ -26,7 +26,7 @@ def train(model, g_reader, n_epoch,
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
     trn_loss = eval_sample(model, g_reader.sample_train()).item()
-    tst_loss = eval_sample(model, test_reader.sample_all()).item()
+    tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
     tst_time = time() - tic
     print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {start_lr:>.2e}  {0:>8.2f}  {tst_time:>8.2f}")
 
@@ -44,7 +44,7 @@ def train(model, g_reader, n_epoch,
             trn_loss = loss.item()
             trn_time = time() - tic
             tic = time()
-            tst_loss = eval_sample(model, test_reader.sample_all()).item()
+            tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
             tst_time = time() - tic
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {scheduler.get_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
             if ckpt_file:

@@ -1,7 +1,8 @@
 # args to be passed to model construction
 model_args: 
-  n_neuron_filter: [40, 40, 40] # essential
-  n_neuron_fit: [100, 100, 100, 100] # essential
+  n_neuron_f: [50, 50, 50] # essential
+  n_neuron_d: [50, 50, 50] # essential
+  n_neuron_e: [100, 100, 100, 100] # essential
   shell_sections: null
   use_resnet: true
 # args to be passed to training procedure

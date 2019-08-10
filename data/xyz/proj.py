@@ -27,6 +27,7 @@ def proj(mol,
          mo, 
          test_name, 
          test_basis, 
+         intor = 'ovlp',
          verbose = False) :
     natm = mol.natm
     mole_coords = mol.atom_coords(unit="Ang")
@@ -44,7 +45,7 @@ def proj(mol,
         test_mol.basis = gto.basis.load(test_basis, test_name)
         test_mol.spin = mendeleev.element(test_name).atomic_number % 2
         test_mol.build(0,0,unit="Ang")
-        proj = gto.intor_cross('int1e_ovlp_sph', mol, test_mol)        
+        proj = gto.intor_cross(f'int1e_{intor}_sph', mol, test_mol)        
         n_proj = proj.shape[1]
         proj_coeff = np.matmul(mo, proj)
         res.append(proj_coeff)
@@ -95,11 +96,11 @@ def dump_data(dir_name, meta, ehf, emp2, e_data, c_data) :
     np.savetxt(os.path.join(dir_name, 'coeff_vir.raw'), c_data[1].reshape([nframe, -1]))
 
 
-def proj_frame(xyz_file, mo_dir, dump_dir=None, test_name="Ne", test_basis="ccpvtz", verbose=False):
+def proj_frame(xyz_file, mo_dir, dump_dir=None, test_name="Ne", test_basis="ccpvtz", intor='ovlp', verbose=False):
     mol = parse_xyz(xyz_file)
     meta, ehf, emp2, e_data, c_data = load_data(mo_dir)
-    c_proj_occ,nproj = proj(mol, c_data[0], test_name, test_basis, verbose)
-    c_proj_vir,nproj = proj(mol, c_data[1], test_name, test_basis, verbose)
+    c_proj_occ,nproj = proj(mol, c_data[0], test_name, test_basis, intor, verbose)
+    c_proj_vir,nproj = proj(mol, c_data[1], test_name, test_basis, intor, verbose)
 
     # [natm, nframe, nocc, nproj] -> [nframe, nocc, natm, nproj]
     # [natm, nframe, nvir, nproj] -> [nframe, nvir, natm, nproj]
@@ -122,6 +123,7 @@ def main():
     parser.add_argument("-v", "--verbose", action='store_true', help="output calculation information")
     parser.add_argument("-E", "--element", default="Ne", help="element symbol to use as test orbitals")
     parser.add_argument("-B", "--basis", default="ccpvtz", help="atom basis to use as test orbitals, could be a string or a file path")
+    parser.add_argument("-I", "--intor", default="ovlp", help="intor string used to calculate int1e")
     args = parser.parse_args()
 
     assert len(args.xyz_file) == len(args.mo_dir)
@@ -133,7 +135,11 @@ def main():
     all_c_occ = []
     all_c_vir = []
     for xf, md in zip(args.xyz_file, args.mo_dir):
-        meta, e_hf, e_mp2, e_data, c_data = proj_frame(xf, md, test_name=args.element, test_basis=args.basis, verbose=args.verbose)
+        meta, e_hf, e_mp2, e_data, c_data = proj_frame(xf, md, 
+                                                        test_name=args.element, 
+                                                        test_basis=args.basis, 
+                                                        intor=args.intor,
+                                                        verbose=args.verbose)
         if oldmeta is not None:
             assert all(oldmeta == meta), "all frames has to be in the same system thus meta has to be equal!"
         oldmeta = meta

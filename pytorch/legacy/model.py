@@ -1,17 +1,5 @@
 import torch
 import torch.nn as nn 
-import inspect
-
-
-def log_args(name):
-    def decorator(func):
-        def warpper(self, *args, **kwargs):
-            args_dict = inspect.getcallargs(func, self, *args, **kwargs)
-            del args_dict['self']
-            setattr(self, name, args_dict)
-            func(self, *args, **kwargs)
-        return warpper
-    return decorator
 
 
 class DenseNet(nn.Module):
@@ -53,39 +41,40 @@ class DenseNet(nn.Module):
 class Descriptor(nn.Module):
     r"""module to calculate descriptor from given (projected) molecular orbitals and (baseline) energy
     
-    The descriptor is given by 
-    $ d_{I,i,l} = (1/N_orbit_j) * (1/N_proj) * \sum_{j, a} <i|f|R_I,a><R_I,a|f|j> g_l(e_j) $.
+    The descriptor is given by $ d_I = (1 / N_orbit) * (1 / N_proj) 
+                                        * \sum_{i, j, a} g(e_i) <i|R_I,a><R_I,a|j>g^T(e_j) 
+                                     = (1 / N_proj) * u \dot u^T $.
 
     Args:
         n_neuron: the shape of layers used in the filter network, input size not included
     
     Shape:
         input:
-            mo_i: n_frame x n_orbit_i x n_atom x n_proj
-            e_i:  n_frame x n_orbit_i
-            mo_j: n_frame x n_orbit_j x n_atom x n_proj
-            e_j:  n_frame x n_orbit_j
+            mo: n_frame x n_orbit x n_atom x n_proj
+            e:  n_frame x n_orbit
         output:
-            d: n_frame x n_atom x n_orbit_i x n_filter
+            d: n_frame x n_atom x (n_filter x n_filter)
     """
     def __init__(self, n_neuron):
         super().__init__()
         self.filter = DenseNet([1] + n_neuron)
     
-    def forward(self, mo_i, e_i, mo_j, e_j):
-        nf, no_i, na, np = mo_i.shape
-        nf, no_j, na, np = mo_j.shape
-        g_j = self.filter(e_j.unsqueeze(-1)) # n_frame x n_orbit_j x n_filter
-        u_j = torch.einsum("nof,noap->napf", g_j, mo_j) / no_j # n_frame x n_atom x n_proj x n_filter
-        d = mo_i.transpose(1,2) @ u_j / np # n_frame x n_atom x n_orbit_i x n_filter
-        return d
+    def forward(self, mo, e):
+        nf, no, na, np = mo.shape
+        g = self.filter(e.unsqueeze(-1)) # n_frame x n_orbit x n_filter
+        # u = (g.transpose(1,2) @ mo.reshape(nf, no, -1)) # n_frame x n_filter x (n_atom x n_proj)
+        # u = u.reshape(nf, -1, na, np).transpose(1,2) # n_frame x n_atom x n_filter x n_proj
+        u = torch.einsum("nof,noap->nafp", g, mo) / no # n_frame x n_atom x n_filter x n_proj
+        d = u @ u.transpose(-2,-1) / np # n_frame x n_atom x n_filter x n_filter
+        return d.flatten(-2)
 
 
 class ShellDescriptor(nn.Module):
     r"""module to calculate descriptor for each shell from (projected) MO and (baseline) energy
     
     For each shell the descriptor is given by 
-    $ d_I = (1 / N_orbit) * (1 / N_shell) * \sum_{j, a} <i|f|R_I,a><R_I,a|f|j> g_l(e_j) $. 
+    $ d_I = (1 / N_orbit) * (1 / N_shell) * \sum_{i, j, a} g(e_i) <i|R_I,a><R_I,a|j>g^T(e_j) 
+          = (1 / N_shell) * u \dot u^T $.
 
     Args:
         n_neuron: the shape of layers used in the filter network, input size not included
@@ -93,29 +82,27 @@ class ShellDescriptor(nn.Module):
     
     Shape:
         input:
-            mo_i: n_frame x n_orbit_i x n_atom x n_proj
-            e_i:  n_frame x n_orbit_i
-            mo_j: n_frame x n_orbit_j x n_atom x n_proj
-            e_j:  n_frame x n_orbit_j
+            mo: n_frame x n_orbit x n_atom x n_proj
+            e:  n_frame x n_orbit
         output:
-            d: n_frame x n_atom x n_orbit_i x (n_filter x n_shell)
+            d: n_frame x n_atom x (n_filter x n_filter x n_shell)
     """
     def __init__(self, n_neuron, shell_sections):
         super().__init__()
         self.filter = DenseNet([1] + n_neuron)
         self.sections = shell_sections
     
-    def forward(self, mo_i, e_i, mo_j, e_j):
-        nf, no_i, na, np = mo_i.shape
-        nf, no_j, na, np = mo_j.shape
+    def forward(self, mo, e):
+        nf, no, na, np = mo.shape
         assert sum(self.sections) == np
-        g_j = self.filter(e_j.unsqueeze(-1)) # n_frame x n_orbit_j x n_filter
-        u_j = torch.einsum("nof,noap->napf", g_j, mo_j) / no_j # n_frame x n_atom x n_proj x n_filter
-        u_j_list = torch.split(u_j, self.sections, dim=-2) # [n_frame x n_atom x n_ao_in_shell x n_filter] list
-        mo_i_list = torch.split(mo_i.transpose(1,2), self.sections, dim=-1) # [n_frame x n_atom x n_orbit x n_ao_in_shell] list
-        d_list = [mos @ us / ns for mos, us, ns in zip(mo_i_list, u_j_list, self.sections)] 
-        d = torch.cat(d_list, dim=-1) # n_frame x n_atom x n_orbit_i x (n_filter x n_shell)
-        return d
+        g = self.filter(e.unsqueeze(-1)) # n_frame x n_orbit x n_filter
+        # u = (g.transpose(1,2) @ mo.reshape(nf, no, -1)) # n_frame x n_filter x (n_atom x n_proj)
+        # u = u.reshape(nf, -1, na, np).transpose(1,2) # n_frame x n_atom x n_filter x n_proj
+        u = torch.einsum("nof,noap->nafp", g, mo) / no # n_frame x n_atom x n_filter x n_proj
+        u_list = torch.split(u, self.sections, dim=-1) # [n_frame x n_atom x n_filter x n_ao_in_shell] list
+        d_list = [us @ us.transpose(-2,-1) / ns for us, ns in zip(u_list, self.sections)] 
+        d = torch.stack(d_list, dim=-1) # n_frame x n_atom x n_filter x n_filter x n_shell
+        return d.flatten(-3)
 
 
 class QCNet(nn.Module):
@@ -142,22 +129,26 @@ class QCNet(nn.Module):
         output:
             e_corr: n_frame
     """
-    @log_args('_init_args')
-    def __init__(self, n_neuron_f, n_neuron_d, n_neuron_e, shell_sections=None, e_stat=None, use_resnet=False):
+    def __init__(self, n_neuron_filter, n_neuron_fit, shell_sections=None, e_stat=None, use_resnet=False):
         super().__init__()
-        self.fnet_occ = DenseNet([3] + n_neuron_f + [1], use_resnet=use_resnet, with_dt=True)
-        self.fnet_vir = DenseNet([3] + n_neuron_f + [1], use_resnet=use_resnet, with_dt=True)
+        self._init_args = {
+            "n_neuron_filter": n_neuron_filter,
+            "n_neuron_fit": n_neuron_fit,
+            "shell_sections": shell_sections,
+            "e_stat": e_stat,
+            "use_resnet": use_resnet
+        }
         if shell_sections is None:
-            self.dnet_occ = Descriptor(n_neuron_d)
-            self.dnet_vir = Descriptor(n_neuron_d)
-            self.enet = DenseNet([2 * n_neuron_d[-1]] + n_neuron_e, 
+            self.dnet_occ = Descriptor(n_neuron_filter)
+            self.dnet_vir = Descriptor(n_neuron_filter)
+            self.fitnet = DenseNet([2 * n_neuron_filter[-1]**2] + n_neuron_fit, 
                                     use_resnet=use_resnet, with_dt=True)
         else:
-            self.dnet_occ = ShellDescriptor(n_neuron_d, shell_sections)
-            self.dnet_vir = ShellDescriptor(n_neuron_d, shell_sections)
-            self.enet = DenseNet([2 * n_neuron_d[-1] * len(shell_sections)] + n_neuron_e, 
+            self.dnet_occ = ShellDescriptor(n_neuron_filter, shell_sections)
+            self.dnet_vir = ShellDescriptor(n_neuron_filter, shell_sections)
+            self.fitnet = DenseNet([2 * n_neuron_filter[-1]**2 * len(shell_sections)] + n_neuron_fit, 
                                     use_resnet=use_resnet, with_dt=True)
-        self.final_layer = nn.Linear(n_neuron_e[-1], 1, bias=False)
+        self.final_layer = nn.Linear(n_neuron_fit[-1], 1, bias=False)
         if e_stat is not None:
             self.scale_e = True
             e_avg, e_std = e_stat
@@ -170,13 +161,11 @@ class QCNet(nn.Module):
         if self.scale_e:
             e_occ = (e_occ - self.e_avg) / self.e_std
             e_vir = (e_vir - self.e_avg) / self.e_std
-        f_occ = self.fnet_occ(mo_occ).squeeze(-1)
-        f_vir = self.fnet_vir(mo_vir).squeeze(-1)
-        d_occ = self.dnet_occ(f_occ, e_occ, f_occ, e_occ) # n_frame x n_atom x n_occ x n_filter
-        d_vir = self.dnet_vir(f_occ, e_occ, f_vir, e_vir) # n_frame x n_atom x n_occ x n_filter
-        d_all = torch.cat([d_occ, d_vir], dim=-1) # n_frame x n_atom x n_occ x 2 n_filter
-        e_all = self.final_layer(self.enet(d_all)) # n_frame x n_atom x n_occ x 1
-        e_corr = torch.sum(e_all, dim=[1,2,3])
+        d_occ = self.dnet_occ(mo_occ, e_occ) # n_frame x n_atom x n_filter^2
+        d_vir = self.dnet_vir(mo_vir, e_vir) # n_frame x n_atom x n_filter^2
+        d_atom = torch.cat([d_occ, d_vir], dim=-1) # n_frame x n_atom x (2 x n_filter^2 [x n_shell])
+        e_atom = self.final_layer(self.fitnet(d_atom)) # n_frame x n_atom x 1
+        e_corr = torch.sum(e_atom, dim=[1,2])
         return e_corr
 
     def save(self, filename):

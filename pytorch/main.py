@@ -23,7 +23,7 @@ def main():
 
     data_args = argdict['data_args']
     g_reader = GroupReader(data_args['train_path'], data_args['batch_size'])
-    test_reader = GroupReader(data_args['test_path'], 1) if 'test_path' in data_args else None
+    test_reader = GroupReader(data_args['test_path'], data_args['batch_size']) if 'test_path' in data_args else None
     
     if args.restart is not None:
         model = QCNet.load(args.restart)
