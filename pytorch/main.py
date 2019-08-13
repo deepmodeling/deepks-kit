@@ -31,7 +31,7 @@ def main():
         model = QCNet(**argdict['model_args'], e_stat=g_reader.compute_ener_stat())
     model = model.double().to(DEVICE)
 
-    train(model, g_reader, **argdict['train_args'])
+    train(model, g_reader, test_reader=test_reader, **argdict['train_args'])
 
 
 if __name__ == "__main__":
