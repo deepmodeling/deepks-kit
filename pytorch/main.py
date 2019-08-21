@@ -22,13 +22,15 @@ def main():
     argdict = load_yaml(args.input)
 
     data_args = argdict['data_args']
-    g_reader = GroupReader(data_args['train_path'], data_args['batch_size'])
-    test_reader = GroupReader(data_args['test_path'], data_args['batch_size']) if 'test_path' in data_args else None
+    g_reader = GroupReader(data_args['train_paths'], data_args['batch_size'])
+    test_reader = GroupReader(data_args['test_paths'], data_args['batch_size']) if 'test_paths' in data_args else None
     
     if args.restart is not None:
         model = QCNet.load(args.restart)
     else:
-        model = QCNet(**argdict['model_args'], e_stat=g_reader.compute_ener_stat())
+        model = QCNet(**argdict['model_args'], 
+                        e_stat=g_reader.compute_ener_stat(),
+                        c_stat=g_reader.compute_coeff_stat())
     model = model.double().to(DEVICE)
 
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])

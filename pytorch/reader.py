@@ -21,9 +21,9 @@ class Reader(object):
         
         self.tr_data_coeff_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
         self.tr_data_coeff_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
-        self.tr_data_rinv_occ = 5.0 \
+        self.tr_data_rinv_occ = 10.0 \
                                 * np.loadtxt(os.path.join(self.data_path,'rinv_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_rinv_vir = 5.0 \
+        self.tr_data_rinv_vir = 10.0 \
                                 * np.loadtxt(os.path.join(self.data_path,'rinv_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
         self.tr_data_r2_occ = 0.01 \
                                 * np.loadtxt(os.path.join(self.data_path,'r2_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
@@ -138,8 +138,13 @@ class GroupReader(object) :
             self.readers[idx].sample_all()
     
     def sample_all_batch(self, idx=None):
-        all_data = self.sample_all(idx)
-        return zip(*[np.array_split(all_data[i], self.batch_size, axis=0) for i in range(len(all_data))])
+        if idx is not None:
+            all_data = self.sample_all(idx)
+            n_split = all_data[0].shape[0] // self.batch_size
+            yield from zip(*[np.array_split(all_data[i], n_split, axis=0) for i in range(len(all_data))])
+        else:
+            for i in range(self.nsystems):
+                yield from self.sample_all_batch(i)
 
     def get_train_size(self) :
         return np.sum(self.nframes)
@@ -164,3 +169,16 @@ class GroupReader(object) :
             e_vir = e_vir.reshape([-1])
             all_e = np.concatenate((all_e, e_occ, e_vir))
         return np.average(all_e), np.std(all_e)
+
+    def compute_coeff_stat(self) :
+        avg_list = []
+        var_list = []
+        for ii in self.readers :
+            mo_occ, mo_vir, _, _ = ii.get_data()
+            mo_all = np.concatenate((mo_occ, mo_vir), axis=1)
+            assert len(mo_all.shape) == 5
+            avg_list.append(np.mean(mo_all, axis=(0,1,2,3)))
+            var_list.append(np.var(mo_all, axis=(0,1,2,3)))
+        return \
+            np.average(avg_list, weights=self.nframes, axis=0), \
+            np.sqrt(np.average(var_list, weights=self.nframes, axis=0))
