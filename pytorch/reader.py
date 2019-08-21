@@ -2,10 +2,11 @@ import os,time,sys
 import numpy as np
 
 class Reader(object):
-    def __init__(self, data_path, batch_size):
+    def __init__(self, data_path, batch_size, ec_scale=1.0):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
+        self.ec_scale = ec_scale
 
     def prepare(self):
         self.index_count_all = 0
@@ -16,8 +17,10 @@ class Reader(object):
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
         self.nproj = self.meta[4]
-        self.tr_data_emp2 = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
-        nframes = self.tr_data_emp2.shape[0]
+        self.tr_data_ec = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
+        nframes = self.tr_data_ec.shape[0]
+        self.tr_data_ec_ij = np.loadtxt(os.path.join(self.data_path, 'ec_ij.raw')).reshape([nframes, self.nocc, self.nocc])
+        self.tr_data_ec_i = self.ec_scale * self.tr_data_ec_ij.sum(axis=1)
         
         self.tr_data_coeff_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
         self.tr_data_coeff_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
@@ -46,14 +49,14 @@ class Reader(object):
             # shuffle the data
             self.index_count_all = self.batch_size
             ind = np.random.choice(self.train_size_all, self.train_size_all, replace=False)
-            self.tr_data_emp2 = self.tr_data_emp2[ind]
+            self.tr_data_ec_i = self.tr_data_ec_i[ind]
             self.tr_data_mo_occ = self.tr_data_mo_occ[ind]
             self.tr_data_mo_vir = self.tr_data_mo_vir[ind]
             self.tr_data_e_occ = self.tr_data_e_occ[ind]
             self.tr_data_e_vir = self.tr_data_e_vir[ind]
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
-            self.tr_data_emp2[ind], \
+            self.tr_data_ec_i[ind], \
             self.tr_data_mo_occ[ind], \
             self.tr_data_mo_vir[ind], \
             self.tr_data_e_occ[ind], \
@@ -64,7 +67,7 @@ class Reader(object):
 
     def sample_all(self) :
         return \
-            self.tr_data_emp2, \
+            self.tr_data_ec_i, \
             self.tr_data_mo_occ, \
             self.tr_data_mo_vir, \
             self.tr_data_e_occ, \
@@ -85,18 +88,19 @@ class Reader(object):
         return self.meta
 
     def get_nframes(self) :
-        return self.tr_data_emp2.shape[0]
+        return self.tr_data_ec.shape[0]
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size) :
+    def __init__ (self, path_list, batch_size, ec_scale=1.0) :
         self.path_list = path_list
         self.batch_size = batch_size
+        self.ec_scale = ec_scale
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size))
+            self.readers.append(Reader(ii, batch_size, ec_scale))
         # prepare all systems
         for ii in self.readers:
             ii.prepare()

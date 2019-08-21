@@ -21,9 +21,8 @@ def main():
     args = parser.parse_args()
     argdict = load_yaml(args.input)
 
-    data_args = argdict['data_args']
-    g_reader = GroupReader(data_args['train_paths'], data_args['batch_size'])
-    test_reader = GroupReader(data_args['test_paths'], data_args['batch_size']) if 'test_paths' in data_args else None
+    g_reader = GroupReader(argdict['train_paths'], **argdict['data_args'])
+    test_reader = GroupReader(argdict['test_paths'], **argdict['data_args']) if 'test_paths' in argdict else None
     
     if args.restart is not None:
         model = QCNet.load(args.restart)
