@@ -17,26 +17,15 @@ class Reader(object):
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
         self.nproj = self.meta[4]
-        self.tr_data_ec = np.loadtxt(os.path.join(self.data_path,'e_mp2.raw')).reshape([-1])
+        self.tr_data_ec = np.load(os.path.join(self.data_path,'e_mp2.npy')).reshape([-1])
         nframes = self.tr_data_ec.shape[0]
-        self.tr_data_ec_ij = np.loadtxt(os.path.join(self.data_path, 'ec_ij.raw')).reshape([nframes, self.nocc, self.nocc])
+        self.tr_data_ec_ij = np.load(os.path.join(self.data_path, 'ec_ij.npy')).reshape([nframes, self.nocc, self.nocc])
         self.tr_data_ec_i = self.ec_scale * self.tr_data_ec_ij.sum(axis=1)
         
-        self.tr_data_coeff_occ = np.loadtxt(os.path.join(self.data_path,'coeff_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_coeff_vir = np.loadtxt(os.path.join(self.data_path,'coeff_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
-        self.tr_data_rinv_occ = 10.0 \
-                                * np.loadtxt(os.path.join(self.data_path,'rinv_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_rinv_vir = 10.0 \
-                                * np.loadtxt(os.path.join(self.data_path,'rinv_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])
-        self.tr_data_r2_occ = 0.01 \
-                                * np.loadtxt(os.path.join(self.data_path,'r2_occ.raw')).reshape([nframes, self.nocc, self.natm, self.nproj])
-        self.tr_data_r2_vir = 0.01 \
-                                * np.loadtxt(os.path.join(self.data_path,'r2_vir.raw')).reshape([nframes, self.nvir, self.natm, self.nproj])        
-        
-        self.tr_data_mo_occ = np.stack([self.tr_data_coeff_occ, self.tr_data_rinv_occ, self.tr_data_r2_occ], axis=-1)
-        self.tr_data_mo_vir = np.stack([self.tr_data_coeff_vir, self.tr_data_rinv_vir, self.tr_data_r2_vir], axis=-1)
-        self.tr_data_e_occ = np.loadtxt(os.path.join(self.data_path,'ener_occ.raw')).reshape([nframes, self.nocc])
-        self.tr_data_e_vir = np.loadtxt(os.path.join(self.data_path,'ener_vir.raw')).reshape([nframes, self.nvir])
+        self.tr_data_mo_occ = np.load(os.path.join(self.data_path,'coeff_occ.npy')).reshape([nframes, self.nocc, self.natm, self.nproj, 1])
+        self.tr_data_mo_vir = np.load(os.path.join(self.data_path,'coeff_vir.npy')).reshape([nframes, self.nvir, self.natm, self.nproj, 1])
+        self.tr_data_e_occ = np.load(os.path.join(self.data_path,'ener_occ.npy')).reshape([nframes, self.nocc])
+        self.tr_data_e_vir = np.load(os.path.join(self.data_path,'ener_vir.npy')).reshape([nframes, self.nvir])
         self.train_size_all = nframes
         # print(np.shape(self.inputs_train))
         if self.train_size_all < self.batch_size:

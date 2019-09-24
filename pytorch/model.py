@@ -114,7 +114,7 @@ class ShellDescriptor(nn.Module):
         u_j = torch.einsum("nov,noapf->napfv", g_j, mo_j) / no_j # n_frame x n_atom x n_operator x n_proj x n_filter
         u_j_list = torch.split(u_j, self.sections, dim=-3) # [n_frame x n_atom x n_operator x n_ao_in_shell x n_filter] list
         mo_i_list = torch.split(mo_i, self.sections, dim=-2) # [n_frame x n_orbit x n_atom x n_ao_in_shell x n_operator] list
-        d_list = [torch.einsum("noapf,napfv->noafv", _mo_i, _u_j) / _np # n_frame x n_orbit_i x n_atom x n_operator x n_filter
+        d_list = [torch.einsum("noapf,napfv->noafv", _mo_i, _u_j) #/ _np # n_frame x n_orbit_i x n_atom x n_operator x n_filter
                     for _mo_i, _u_j, _np in zip(mo_i_list, u_j_list, self.sections)] 
         d = torch.stack(d_list, dim=-1) # n_frame x n_orbit_i x n_atom x n_operator x n_filter x n_shell
         # d = self.layer_norm(d) # layer normalization
@@ -189,7 +189,7 @@ class QCNet(nn.Module):
         d_all = torch.cat([d_occ, d_vir], dim=-1) # n_frame x n_occ x n_atom x 2 n_d
         d_all = torch.tanh(d_all)
         e_all = self.final_layer(self.enet(d_all)) # n_frame x n_occ x n_atom x 1
-        e_corr = torch.sum(e_all, dim=[2,3])
+        e_corr = torch.mean(e_all, dim=[2,3])
         return e_corr
 
     def save(self, filename):
