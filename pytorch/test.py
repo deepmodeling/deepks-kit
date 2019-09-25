@@ -35,7 +35,7 @@ def main():
     parser.add_argument("-d", "--data-path", default='data', type=str, nargs = '+',
                         help="the path to data .raw files for test")
     parser.add_argument("-o", "--output-prefix", default = 'test', type = str,
-                        help=r"the prefix of output file, would wite into file %prefix.%sysidx.out")
+                        help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
     parser.add_argument("-s", "--ec-scale", default = 1.0, type = float,
                         help="the scale that data loader multiplies to correlation energy")
     args = parser.parse_args()
