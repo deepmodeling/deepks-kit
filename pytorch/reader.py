@@ -38,14 +38,14 @@ class Reader(object):
             # shuffle the data
             self.index_count_all = self.batch_size
             ind = np.random.choice(self.train_size_all, self.train_size_all, replace=False)
-            self.tr_data_ec_i = self.tr_data_ec_i[ind]
+            self.tr_data_ec = self.tr_data_ec[ind]
             self.tr_data_mo_occ = self.tr_data_mo_occ[ind]
             self.tr_data_mo_vir = self.tr_data_mo_vir[ind]
             self.tr_data_e_occ = self.tr_data_e_occ[ind]
             self.tr_data_e_vir = self.tr_data_e_vir[ind]
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
-            self.tr_data_ec_i[ind], \
+            self.tr_data_ec[ind], \
             self.tr_data_mo_occ[ind], \
             self.tr_data_mo_vir[ind], \
             self.tr_data_e_occ[ind], \
@@ -56,7 +56,7 @@ class Reader(object):
 
     def sample_all(self) :
         return \
-            self.tr_data_ec_i, \
+            self.tr_data_ec, \
             self.tr_data_mo_occ, \
             self.tr_data_mo_vir, \
             self.tr_data_e_occ, \

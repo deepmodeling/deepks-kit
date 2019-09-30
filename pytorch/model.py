@@ -189,7 +189,7 @@ class QCNet(nn.Module):
         d_all = torch.cat([d_occ, d_vir], dim=-1) # n_frame x n_occ x n_atom x 2 n_d
         d_all = torch.tanh(d_all)
         e_all = self.final_layer(self.enet(d_all)) # n_frame x n_occ x n_atom x 1
-        e_corr = torch.mean(e_all, dim=[2,3])
+        e_corr = e_all.mean(dim=[2,3]).sum(dim=1)
         return e_corr
 
     def save(self, filename):
