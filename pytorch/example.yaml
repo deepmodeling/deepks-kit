@@ -1,9 +1,10 @@
 # args to be passed to model construction
 model_args: 
-  n_neuron_d: [10, 10, 10] # essential
-  n_neuron_e: [100, 100, 100, 100] # essential
-  shell_sections: [1,1,1,1,3,3,3,5,5]
+  channel_sizes: [9, 9, 9, 9, 1] # essential
+  kernel_size: 5
   use_resnet: true
+  input_scale: 1
+  output_scale: 1
 # args to be passed to training procedure
 train_args:
   n_epoch: 10000 # essential
@@ -16,7 +17,6 @@ train_args:
 # args used to construct data loader
 data_args:
   batch_size: 64 # essential
-  ec_scale: 1.0
 # path to training and testing folders
 train_paths: # essential
   - 'path/to/train/data/1'

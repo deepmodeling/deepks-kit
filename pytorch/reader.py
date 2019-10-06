@@ -2,11 +2,10 @@ import os,time,sys
 import numpy as np
 
 class Reader(object):
-    def __init__(self, data_path, batch_size, ec_scale=1.0):
+    def __init__(self, data_path, batch_size):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
-        self.ec_scale = ec_scale
 
     def prepare(self):
         self.index_count_all = 0
@@ -17,79 +16,60 @@ class Reader(object):
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
         self.nproj = self.meta[4]
-        self.tr_data_ec = np.load(os.path.join(self.data_path,'e_mp2.npy')).reshape([-1])
-        nframes = self.tr_data_ec.shape[0]
-        self.tr_data_ec_ij = np.load(os.path.join(self.data_path, 'ec_ij.npy')).reshape([nframes, self.nocc, self.nocc])
-        self.tr_data_ec_i = self.ec_scale * self.tr_data_ec_ij.sum(axis=1)
-        
-        self.tr_data_mo_occ = np.load(os.path.join(self.data_path,'coeff_occ.npy')).reshape([nframes, self.nocc, self.natm, self.nproj, 1])
-        self.tr_data_mo_vir = np.load(os.path.join(self.data_path,'coeff_vir.npy')).reshape([nframes, self.nvir, self.natm, self.nproj, 1])
-        self.tr_data_e_occ = np.load(os.path.join(self.data_path,'ener_occ.npy')).reshape([nframes, self.nocc])
-        self.tr_data_e_vir = np.load(os.path.join(self.data_path,'ener_vir.npy')).reshape([nframes, self.nvir])
-        self.train_size_all = nframes
+        self.data_ec = np.load(os.path.join(self.data_path,'e_mp2.npy')).reshape([-1, 1])
+        self.nframes = self.data_ec.shape[0]
+        self.data_eig_occ = np.load(os.path.join(self.data_path,'eig_occ.npy')).reshape([self.nframes, -1, self.nocc])
+        self.nshell = self.data_eig_occ.shape[1]
         # print(np.shape(self.inputs_train))
-        if self.train_size_all < self.batch_size:
-            self.batch_size = self.train_size_all
+        if self.nframes < self.batch_size:
+            self.batch_size = self.nframes
             print('#', self.data_path, f"reset batch size to {self.batch_size}")
     
-    def _sample_train_all(self):
+    def sample_train(self):
+        if self.nframes == self.batch_size == 1:
+            return self.data_ec, self.data_eig_occ
         self.index_count_all += self.batch_size
-        if self.index_count_all > self.train_size_all:
+        if self.index_count_all > self.nframes:
             # shuffle the data
             self.index_count_all = self.batch_size
-            ind = np.random.choice(self.train_size_all, self.train_size_all, replace=False)
-            self.tr_data_ec = self.tr_data_ec[ind]
-            self.tr_data_mo_occ = self.tr_data_mo_occ[ind]
-            self.tr_data_mo_vir = self.tr_data_mo_vir[ind]
-            self.tr_data_e_occ = self.tr_data_e_occ[ind]
-            self.tr_data_e_vir = self.tr_data_e_vir[ind]
+            ind = np.random.choice(self.nframes, self.nframes, replace=False)
+            self.data_ec = self.data_ec[ind]
+            self.data_eig_occ = self.data_eig_occ[ind]
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
-            self.tr_data_ec[ind], \
-            self.tr_data_mo_occ[ind], \
-            self.tr_data_mo_vir[ind], \
-            self.tr_data_e_occ[ind], \
-            self.tr_data_e_vir[ind]
-
-    def sample_train(self) :
-        return self._sample_train_all()
+            self.data_ec[ind], \
+            self.data_eig_occ[ind]
 
     def sample_all(self) :
         return \
-            self.tr_data_ec, \
-            self.tr_data_mo_occ, \
-            self.tr_data_mo_vir, \
-            self.tr_data_e_occ, \
-            self.tr_data_e_vir
+            self.data_ec, \
+            self.data_eig_occ
 
     def get_train_size(self) :
-        return self.train_size_all
+        return self.nframes
 
     def get_batch_size(self) :
         return self.batch_size
 
     def get_data(self):
-        return self.tr_data_mo_occ, self.tr_data_mo_vir, self.tr_data_e_occ, self.tr_data_e_vir
+        return self.data_eig_occ
 
-    # def get_meta(self): 
-    #     return self.natm, self.nao, self.nocc, self.nvir, self.nproj
     def get_meta(self) :
         return self.meta
 
     def get_nframes(self) :
-        return self.tr_data_ec.shape[0]
+        return self.nframes
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size, ec_scale=1.0) :
+    def __init__ (self, path_list, batch_size) :
         self.path_list = path_list
         self.batch_size = batch_size
-        self.ec_scale = ec_scale
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size, ec_scale))
+            self.readers.append(Reader(ii, batch_size))
         # prepare all systems
         for ii in self.readers:
             ii.prepare()
@@ -153,25 +133,3 @@ class GroupReader(object) :
 
     def get_nmeta(self) :
         return len(self.readers[0].get_meta())
-
-    def compute_ener_stat(self) :
-        all_e = np.array([])
-        for ii in self.readers :
-            _, _, e_occ, e_vir = ii.get_data()
-            e_occ = e_occ.reshape([-1])
-            e_vir = e_vir.reshape([-1])
-            all_e = np.concatenate((all_e, e_occ, e_vir))
-        return np.average(all_e), np.std(all_e)
-
-    def compute_coeff_stat(self) :
-        avg_list = []
-        var_list = []
-        for ii in self.readers :
-            mo_occ, mo_vir, _, _ = ii.get_data()
-            mo_all = np.concatenate((mo_occ, mo_vir), axis=1)
-            assert len(mo_all.shape) == 5
-            avg_list.append(np.mean(mo_all, axis=(0,1,2,3)))
-            var_list.append(np.var(mo_all, axis=(0,1,2,3)))
-        return \
-            np.average(avg_list, weights=self.nframes, axis=0), \
-            np.sqrt(np.average(var_list, weights=self.nframes, axis=0))

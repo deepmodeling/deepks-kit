@@ -16,9 +16,9 @@ def test(model, g_reader, prefix="test"):
         pred = model(*data)
         error = torch.sqrt(loss_fn(pred, label))
 
-        error_np = error.item() / g_reader.ec_scale
-        label_np = label.cpu().numpy().reshape(nframes, -1).sum(axis=1) / g_reader.ec_scale
-        pred_np = pred.detach().cpu().numpy().reshape(nframes, -1).sum(axis=1) / g_reader.ec_scale
+        error_np = error.item()
+        label_np = label.cpu().numpy().reshape(nframes, -1).sum(axis=1)
+        pred_np = pred.detach().cpu().numpy().reshape(nframes, -1).sum(axis=1)
         dump_res = np.stack([label_np, pred_np], axis=1)
         error_sys = np.sqrt(np.mean((label_np - pred_np)**2))
         
@@ -36,12 +36,10 @@ def main():
                         help="the path to data .raw files for test")
     parser.add_argument("-o", "--output-prefix", default = 'test', type = str,
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
-    parser.add_argument("-s", "--ec-scale", default = 1.0, type = float,
-                        help="the scale that data loader multiplies to correlation energy")
     args = parser.parse_args()
 
     model = QCNet.load(args.model_file).double().to(DEVICE)
-    g_reader = GroupReader(args.data_path, 1, args.ec_scale)
+    g_reader = GroupReader(args.data_path, 1)
     test(model, g_reader, prefix=args.output_prefix)
 
 
