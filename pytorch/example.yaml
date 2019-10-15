@@ -1,7 +1,6 @@
 # args to be passed to model construction
 model_args: 
-  channel_sizes: [9, 9, 9, 9, 1] # essential
-  kernel_size: 5
+  layer_sizes: [23, 100, 100, 100, 1] # essential
   use_resnet: true
   input_scale: 1
   output_scale: 1

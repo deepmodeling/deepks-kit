@@ -18,8 +18,7 @@ class Reader(object):
         self.nproj = self.meta[4]
         self.data_ec = np.load(os.path.join(self.data_path,'e_mp2.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
-        self.data_eig_occ = np.load(os.path.join(self.data_path,'eig_occ.npy')).reshape([self.nframes, -1, self.nocc])
-        self.nshell = self.data_eig_occ.shape[1]
+        self.data_dm = np.load(os.path.join(self.data_path,'dm_eig.npy')).reshape([self.nframes, self.natm, self.nproj])
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
@@ -27,23 +26,23 @@ class Reader(object):
     
     def sample_train(self):
         if self.nframes == self.batch_size == 1:
-            return self.data_ec, self.data_eig_occ
+            return self.data_ec, self.data_dm
         self.index_count_all += self.batch_size
         if self.index_count_all > self.nframes:
             # shuffle the data
             self.index_count_all = self.batch_size
             ind = np.random.choice(self.nframes, self.nframes, replace=False)
             self.data_ec = self.data_ec[ind]
-            self.data_eig_occ = self.data_eig_occ[ind]
+            self.data_dm = self.data_dm[ind]
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
             self.data_ec[ind], \
-            self.data_eig_occ[ind]
+            self.data_dm[ind]
 
     def sample_all(self) :
         return \
             self.data_ec, \
-            self.data_eig_occ
+            self.data_dm
 
     def get_train_size(self) :
         return self.nframes
@@ -52,7 +51,7 @@ class Reader(object):
         return self.batch_size
 
     def get_data(self):
-        return self.data_eig_occ
+        return self.data_dm
 
     def get_meta(self) :
         return self.meta
@@ -133,3 +132,7 @@ class GroupReader(object) :
 
     def get_nmeta(self) :
         return len(self.readers[0].get_meta())
+
+    def compute_data_stat(self):
+        all_dm = np.concatenate([r.data_dm.reshape(-1,r.nproj) for r in self.readers])
+        return all_dm.mean(0), all_dm.std(0)

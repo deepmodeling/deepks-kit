@@ -23,37 +23,33 @@ def parse_xyz(filename, basis='ccpvtz', verbose=False):
     return mol  
 
 
-def proj(mol, 
-         mo, 
-         test_name, 
-         test_basis, 
-         intor = 'ovlp',
-         verbose = False) :
+def gen_proj(mol, 
+             test_name, 
+             test_basis, 
+             intor = 'ovlp',
+             verbose = False) :
+
     natm = mol.natm
     mole_coords = mol.atom_coords(unit="Ang")
-    res = []
-    for ii in range(natm):
-        test_mol = gto.Mole()
-        if verbose :
-            test_mol.verbose = 4
-        else :
-            test_mol.verbose = 0
-        test_mol.atom = '%s %f %f %f' % (test_name,
-                                         mole_coords[ii][0],
-                                         mole_coords[ii][1],
-                                         mole_coords[ii][2])
-        test_mol.basis = gto.basis.load(test_basis, test_name)
-        test_mol.spin = mendeleev.element(test_name).atomic_number % 2
-        test_mol.build(0,0,unit="Ang")
-        proj = gto.intor_cross(f'int1e_{intor}_sph', mol, test_mol)        
-        n_proj = proj.shape[1]
-        proj_coeff = np.matmul(mo, proj)
-        res.append(proj_coeff)
-    res = np.array(res)
-    if verbose:
-        print('shape of coeff data          ', res.shape)
-    # res : natm x nframe x nocc/nvir x nproj
-    return res, proj_coeff.shape[-1]
+    test_mol = gto.Mole()
+    if verbose :
+        test_mol.verbose = 4
+    else :
+        test_mol.verbose = 0
+    test_mol.atom = [[test_name, coord] for coord in mole_coords]
+    test_mol.basis = gto.basis.load(test_basis, test_name)
+    test_mol.spin = mendeleev.element(test_name).atomic_number * natm % 2
+    test_mol.build(0,0,unit="Ang")
+    proj = gto.intor_cross(f'int1e_{intor}_sph', mol, test_mol) 
+    
+    def proj_func(mo):
+        proj_coeff = np.matmul(mo, proj).reshape(*mo.shape[:2], natm, -1)
+        if verbose:
+            print('shape of coeff data          ', proj_coeff.shape)
+        # res : nframe x nocc/nvir x natm x nproj
+        return proj_coeff, proj_coeff.shape[-1]
+    
+    return proj_func
 
 
 def load_data(dir_name):
@@ -102,19 +98,17 @@ def dump_data(dir_name, meta, ehf, emp2, ec_ij, e_data, c_data) :
 def proj_frame(xyz_file, mo_dir, dump_dir=None, test_name="Ne", test_basis="ccpvtz", intor='ovlp', verbose=False):
     mol = parse_xyz(xyz_file)
     meta, ehf, emp2, ec_ij, e_data, c_data = load_data(mo_dir)
-    c_proj_occ,nproj = proj(mol, c_data[0], test_name, test_basis, intor, verbose)
-    c_proj_vir,nproj = proj(mol, c_data[1], test_name, test_basis, intor, verbose)
+    
+    proj_func = gen_proj(mol, test_name, test_basis, intor, verbose)
+    c_proj_occ,nproj = proj_func(c_data[0])
+    c_proj_vir,nproj = proj_func(c_data[1])
 
-    # [natm, nframe, nocc, nproj] -> [nframe, nocc, natm, nproj]
-    # [natm, nframe, nvir, nproj] -> [nframe, nvir, natm, nproj]
-    c_proj_occ = np.transpose(c_proj_occ, [1,2,0,3])
-    c_proj_vir = np.transpose(c_proj_vir, [1,2,0,3])   
     c_data = (c_proj_occ, c_proj_vir)
     meta = np.append(meta, nproj)
     # print(meta, c_proj_occ.shape)
 
     if dump_dir is not None:
-        dump_data(dump_dir, meta, ehf, emp2, e_data, c_data)
+        dump_data(dump_dir, meta, ehf, emp2, ec_ij, e_data, c_data)
     return meta, ehf, emp2, ec_ij, e_data, c_data
 
 

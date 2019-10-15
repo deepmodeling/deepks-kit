@@ -28,6 +28,8 @@ def main():
         model = QCNet.load(args.restart)
     else:
         model = QCNet(**argdict['model_args'])
+        davg, dstd = g_reader.compute_data_stat()
+        model.set_normalization(davg, dstd*5)
     model = model.double().to(DEVICE)
 
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])
