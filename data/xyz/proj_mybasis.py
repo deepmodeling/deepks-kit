@@ -5,6 +5,10 @@ import sys
 import argparse
 import mendeleev
 
+aa = 2.0**np.arange(6,-3,-1)
+bb = np.diag(np.ones(aa.size)) - np.diag(np.ones(aa.size-1), k=1)
+coef = np.concatenate([aa.reshape(-1,1), bb], axis=1)
+BASIS = [[0, *coef.tolist()], [1, *coef.tolist()], [2, *coef.tolist()]]
 
 def parse_xyz(filename, basis='ccpvtz', verbose=False):
     with open(filename) as fp:
@@ -37,7 +41,7 @@ def gen_proj(mol,
     else :
         test_mol.verbose = 0
     test_mol.atom = [[test_name, coord] for coord in mole_coords]
-    test_mol.basis = gto.basis.load(test_basis, test_name)
+    test_mol.basis = BASIS
     test_mol.spin = mendeleev.element(test_name).atomic_number * natm % 2
     test_mol.build(0,0,unit="Ang")
     proj = gto.intor_cross(f'int1e_{intor}_sph', mol, test_mol) 
