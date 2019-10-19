@@ -16,7 +16,7 @@ class Reader(object):
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
         self.nproj = self.meta[4]
-        self.data_ec = np.load(os.path.join(self.data_path,'e_mp2.npy')).reshape([-1, 1])
+        self.data_ec = np.load(os.path.join(self.data_path,'e_cc.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
         self.data_dm = np.load(os.path.join(self.data_path,'dm_eig.npy')).reshape([self.nframes, self.natm, self.nproj])
         # print(np.shape(self.inputs_train))
