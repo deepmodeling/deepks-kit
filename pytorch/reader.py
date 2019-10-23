@@ -134,5 +134,16 @@ class GroupReader(object) :
         return len(self.readers[0].get_meta())
 
     def compute_data_stat(self):
-        all_dm = np.concatenate([r.data_dm.reshape(-1,r.nproj) for r in self.readers])
-        return all_dm.mean(0), all_dm.std(0)
+        if not (hasattr(self, 'all_mean') and hasattr(self, 'all_std')):
+            all_dm = np.concatenate([r.data_dm.reshape(-1,r.nproj) for r in self.readers])
+            self.all_mean, self.all_std = all_dm.mean(0), all_dm.std(0)
+        return self.all_mean, self.all_std
+
+    def compute_prefitting(self):
+        all_mean, all_std = self.compute_data_stat()
+        all_sdm = np.concatenate([((r.data_dm - all_mean) / all_std).sum(1) for r in self.readers])
+        all_natm = np.concatenate([[float(r.data_dm.shape[1])]*r.data_dm.shape[0] for r in self.readers])
+        all_x = np.concatenate([all_sdm, all_natm.reshape(-1,1)], -1)
+        all_y = np.concatenate([r.data_ec for r in self.readers])
+        coef, _, _, _ = np.linalg.lstsq(all_x, all_y, None)
+        return coef[:-1], coef[-1]
