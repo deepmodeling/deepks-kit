@@ -25,13 +25,14 @@ def train(model, g_reader, n_epoch,
     print("# working on device:", DEVICE)
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
-    trn_loss = eval_sample(model, g_reader.sample_train()).item()
-    tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
+    trn_loss = np.sqrt(np.mean([eval_sample(model, batch).item() for batch in g_reader.sample_all_batch()]))
+    tst_loss = np.sqrt(np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()]))
     tst_time = time() - tic
     print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {start_lr:>.2e}  {0:>8.2f}  {tst_time:>8.2f}")
 
     for epoch in range(1, n_epoch+1):
         tic = time()
+        loss_list = []
         for sample in g_reader:
             label, *data = [torch.from_numpy(d).to(DEVICE) for d in sample]
             optimizer.zero_grad()
@@ -39,9 +40,10 @@ def train(model, g_reader, n_epoch,
             loss = loss_fn(pred, label)
             loss.backward()
             optimizer.step()
+            loss_list.append(loss.item())
 
         if epoch % display_epoch == 0:
-            trn_loss = loss.item()
+            trn_loss = np.mean(loss_list)
             trn_time = time() - tic
             tic = time()
             tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
