@@ -114,7 +114,7 @@ def dump_data(dir_name, meta, ehf, e_data, c_data) :
     assert(all(c_data[1].shape == np.array([nvir, nao], dtype = int)))
     assert(all(e_data[0].shape == np.array([nocc], dtype = int)))
     assert(all(e_data[1].shape == np.array([nvir], dtype = int)))
-    np.savetxt(os.path.join(dir_name, 'e_rks.raw'), np.reshape(ehf, [nframe,1])) 
+    np.savetxt(os.path.join(dir_name, 'e_dft.raw'), np.reshape(ehf, [nframe,1])) 
     np.savetxt(os.path.join(dir_name, 'ener_occ.raw'), e_data[0].reshape([nframe, -1]))
     np.savetxt(os.path.join(dir_name, 'ener_vir.raw'), e_data[1].reshape([nframe, -1]))
     np.savetxt(os.path.join(dir_name, 'coeff_occ.raw'), c_data[0].reshape([nframe, -1]))
