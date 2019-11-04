@@ -41,6 +41,7 @@ def train(model, g_reader, n_epoch,
             loss.backward()
             optimizer.step()
             loss_list.append(loss.item())
+        scheduler.step()
 
         if epoch % display_epoch == 0:
             trn_loss = np.mean(loss_list)
@@ -51,8 +52,8 @@ def train(model, g_reader, n_epoch,
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {scheduler.get_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
             if ckpt_file:
                 model.save(ckpt_file)
-        
-        scheduler.step()
+    
+    
 
 
 # if __name__ == "__main__":

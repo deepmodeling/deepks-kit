@@ -2,7 +2,7 @@
 model_args: 
   layer_sizes: [23, 100, 100, 100, 1] # essential
   use_resnet: true
-  input_scale: 1
+  actv_fn: 'softplus'
   output_scale: 1
 # args to be passed to training procedure
 train_args:

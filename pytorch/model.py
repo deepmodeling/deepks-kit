@@ -3,6 +3,22 @@ import torch.nn as nn
 import inspect
 
 
+def parse_actv_fn(code):
+    if callable(code):
+        return code
+    assert type(code) is str
+    lcode = code.lower()
+    if lcode == 'sigmoid':
+        return torch.sigmoid
+    if lcode == 'tanh':
+        return torch.tanh
+    if lcode == 'relu':
+        return torch.relu
+    if lcode == 'softplus':
+        return nn.Softplus()
+    raise ValueError(f'{code} is not a valid activation function')
+
+
 def log_args(name):
     def decorator(func):
         def warpper(self, *args, **kwargs):
@@ -42,12 +58,12 @@ class DenseNet(nn.Module):
         return x
     
 
-
 class QCNet(nn.Module):
 
     @log_args('_init_args')
-    def __init__(self, layer_sizes, actv_fn=torch.relu, use_resnet=False, input_shift=0, input_scale=1, output_scale=1):
+    def __init__(self, layer_sizes, actv_fn='softplus', use_resnet=True, input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
+        actv_fn = parse_actv_fn(actv_fn)
         self.densenet = DenseNet(layer_sizes, actv_fn, use_resnet).double()
         self.linear = nn.Linear(layer_sizes[0], layer_sizes[-1]).double()
         self.input_shift = nn.Parameter(torch.tensor(input_shift, dtype=torch.float64).expand(layer_sizes[0]).clone(), requires_grad=False)
