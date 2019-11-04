@@ -2,6 +2,7 @@ import argparse, os
 import numpy as np
 import torch
 import torch.nn as nn
+import os
 from model import QCNet
 from reader import GroupReader
 
@@ -30,7 +31,7 @@ def test(model, g_reader, prefix="test"):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model-file", default='model.pth', type=str,
+    parser.add_argument("-m", "--model-file", default='model.pth', type=str, nargs = '+',
                         help="the dumped model file to test")
     parser.add_argument("-d", "--data-path", default='data', type=str, nargs = '+',
                         help="the path to data .raw files for test")
@@ -38,9 +39,11 @@ def main():
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
     args = parser.parse_args()
 
-    model = QCNet.load(args.model_file).double().to(DEVICE)
     g_reader = GroupReader(args.data_path, 1)
-    test(model, g_reader, prefix=args.output_prefix)
+    for f in args.model_file:
+        p = os.path.dirname(f)
+        model = QCNet.load(f).double().to(DEVICE)
+        test(model, g_reader, prefix=os.path.join(p,args.output_prefix))
 
 
 if __name__ == "__main__":
