@@ -16,6 +16,7 @@ train_args:
 # args used to construct data loader
 data_args:
   batch_size: 64 # essential
+  group_batch: 1
 # path to training and testing folders
 train_paths: # essential
   - 'path/to/train/data/1'

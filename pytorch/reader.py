@@ -61,7 +61,7 @@ class Reader(object):
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size) :
+    def __init__ (self, path_list, batch_size, group_batch=1) :
         self.path_list = path_list
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
@@ -77,7 +77,26 @@ class GroupReader(object) :
         for ii in self.readers :
             self.nframes.append(ii.get_nframes())
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
+        
+        self.group_batch = max(group_batch, 1)
+        if self.group_batch > 1:
+            self.group_dict = {}
+            self.group_index = {}
+            for idx, r in enumerate(self.readers):
+                if r.natm in self.group_dict:
+                    self.group_dict[r.natm].append(r)
+                    # self.group_index[r.natm].append(idx)
+                else:
+                    self.group_dict[r.natm] = [r]
+                    # self.group_index[r.natm] = [idx]
+            self.group_prob = {n: sum(r.nframes for r in r_list) / sum(self.nframes)
+                                for n, r_list in self.group_dict.items()}
+            self.batch_prob_raw = {n: [r.nframes / r.batch_size for r in r_list] 
+                                for n, r_list in self.group_dict.items()}
+            self.batch_prob = {n: p / np.sum(p) for n, p in self.batch_prob_raw.items()}
+
         self._sample_used = 0
+
 
     def __iter__(self):
         return self
@@ -86,11 +105,12 @@ class GroupReader(object) :
         if self._sample_used > self.get_train_size():
             self._sample_used = 0
             raise StopIteration
-        self._sample_used += self.batch_size
-        return self.sample_train()
+        sample = self.sample_train() if self.group_batch == 1 else self.sample_train_group()
+        self._sample_used += sample[0].shape[0]
+        return sample
 
     def sample_idx(self) :
-        return np.random.choice(np.arange(self.nsystems), p = self.sys_prob)
+        return np.random.choice(np.arange(self.nsystems), p=self.sys_prob)
         
     def sample_meta(self, idx=None) :
         if idx is None:
@@ -102,6 +122,13 @@ class GroupReader(object) :
             idx = self.sample_idx()
         return \
             self.readers[idx].sample_train()
+
+    def sample_train_group(self):
+        cnatm = np.random.choice(list(self.group_prob.keys()), p=list(self.group_prob.values()))
+        cgrp = self.group_dict[cnatm]
+        csys = np.random.choice(cgrp, self.group_batch, p=self.batch_prob[cnatm])
+        all_sample = list(zip(*[s.sample_train() for s in csys]))
+        return [np.concatenate(d, axis=0) for d in all_sample]
 
     def sample_all(self, idx=None) :
         if idx is None:
