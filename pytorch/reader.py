@@ -2,10 +2,11 @@ import os,time,sys
 import numpy as np
 
 class Reader(object):
-    def __init__(self, data_path, batch_size):
+    def __init__(self, data_path, batch_size, e_name="e_cc"):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
+        self.e_name = e_name
 
     def prepare(self):
         self.index_count_all = 0
@@ -16,7 +17,7 @@ class Reader(object):
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
         self.nproj = self.meta[4]
-        self.data_ec = np.load(os.path.join(self.data_path,'e_cc.npy')).reshape([-1, 1])
+        self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
         self.data_dm = np.load(os.path.join(self.data_path,'dm_eig.npy')).reshape([self.nframes, self.natm, self.nproj])
         # print(np.shape(self.inputs_train))
@@ -61,14 +62,14 @@ class Reader(object):
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size, group_batch=1) :
+    def __init__ (self, path_list, batch_size, group_batch=1, e_name="e_cc") :
         self.path_list = path_list
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size))
+            self.readers.append(Reader(ii, batch_size, e_name))
         # prepare all systems
         for ii in self.readers:
             ii.prepare()
