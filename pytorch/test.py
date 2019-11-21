@@ -31,15 +31,19 @@ def test(model, g_reader, prefix="test"):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model-file", default='model.pth', type=str, nargs = '+',
+    parser.add_argument("-m", "--model-file", default='model.pth', type=str, nargs='+',
                         help="the dumped model file to test")
-    parser.add_argument("-d", "--data-path", default='data', type=str, nargs = '+',
+    parser.add_argument("-d", "--data-path", default='data', type=str, nargs='+',
                         help="the path to data .raw files for test")
-    parser.add_argument("-o", "--output-prefix", default = 'test', type = str,
+    parser.add_argument("-o", "--output-prefix", default='test', type=str,
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
+    parser.add_argument("-E", "--e-name", default='e_cc', type=str,
+                        help="the name of energy file to be read (no .npy extension)")
+    parser.add_argument("-D", "--d-name", default='dm_eig', type=str, nargs="+",
+                        help="the name of descriptor file(s) to be read (no .npy extension)")
     args = parser.parse_args()
 
-    g_reader = GroupReader(args.data_path, 1)
+    g_reader = GroupReader(args.data_path, e_name=args.e_name, d_name=args.d_name)
     for f in args.model_file:
         p = os.path.dirname(f)
         model = QCNet.load(f).double().to(DEVICE)

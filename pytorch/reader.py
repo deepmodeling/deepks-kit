@@ -2,11 +2,12 @@ import os,time,sys
 import numpy as np
 
 class Reader(object):
-    def __init__(self, data_path, batch_size, e_name="e_cc"):
+    def __init__(self, data_path, batch_size, e_name="e_cc", d_name="dm_eig"):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
         self.e_name = e_name
+        self.d_name = d_name if isinstance(d_name, (list, tuple)) else [d_name]
 
     def prepare(self):
         self.index_count_all = 0
@@ -16,10 +17,14 @@ class Reader(object):
         self.nao = self.meta[1]
         self.nocc = self.meta[2]
         self.nvir = self.meta[3]
-        self.nproj = self.meta[4]
+        # self.nproj = self.meta[4]
         self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
-        self.data_dm = np.load(os.path.join(self.data_path,'dm_eig.npy')).reshape([self.nframes, self.natm, self.nproj])
+        self.data_dm = np.concatenate(
+            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, -1])
+                for dn in self.d_name], 
+            axis=-1)
+        self.nproj = self.data_dm.shape[-1]
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
@@ -54,22 +59,19 @@ class Reader(object):
     def get_data(self):
         return self.data_dm
 
-    def get_meta(self) :
-        return self.meta
-
     def get_nframes(self) :
         return self.nframes
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size, group_batch=1, e_name="e_cc") :
+    def __init__ (self, path_list, batch_size=1, group_batch=1, e_name="e_cc", d_name="dm_eig") :
         self.path_list = path_list
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size, e_name))
+            self.readers.append(Reader(ii, batch_size, e_name=e_name, d_name=d_name))
         # prepare all systems
         for ii in self.readers:
             ii.prepare()
@@ -113,11 +115,6 @@ class GroupReader(object) :
     def sample_idx(self) :
         return np.random.choice(np.arange(self.nsystems), p=self.sys_prob)
         
-    def sample_meta(self, idx=None) :
-        if idx is None:
-            idx = self.sample_idx()
-        return self.readers[idx].get_meta()
-
     def sample_train(self, idx=None) :
         if idx is None:
             idx = self.sample_idx()
@@ -151,15 +148,6 @@ class GroupReader(object) :
 
     def get_batch_size(self) :
         return self.batch_size
-
-    def get_nvec_dof(self) :
-        return self.readers[0].get_meta()[0] * self.readers[0].get_meta()[4]
-
-    def get_nproj(self) :
-        return self.readers[0].get_meta()[4]
-
-    def get_nmeta(self) :
-        return len(self.readers[0].get_meta())
 
     def compute_data_stat(self):
         if not (hasattr(self, 'all_mean') and hasattr(self, 'all_std')):
