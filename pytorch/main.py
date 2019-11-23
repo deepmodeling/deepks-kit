@@ -12,6 +12,7 @@ def load_yaml(file_path):
         res = yaml.safe_load(fp)
     return res
 
+
 def main():
     parser = argparse.ArgumentParser(description="*** Train a model according to givven input. ***")
     parser.add_argument('input', type=str, 
@@ -24,6 +25,11 @@ def main():
     g_reader = GroupReader(argdict['train_paths'], **argdict['data_args'])
     test_reader = GroupReader(argdict['test_paths'], **argdict['data_args']) if 'test_paths' in argdict else None
     
+    seed = argdict['seed'] if 'seed' in argdict else np.random.randint(0, 2**32)
+    print(f'# using seed: {seed}')
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
     if args.restart is not None:
         model = QCNet.load(args.restart)
     else:
@@ -31,7 +37,8 @@ def main():
         davg, dstd = g_reader.compute_data_stat()
         model.set_normalization(davg, dstd)
         weight, bias = g_reader.compute_prefitting()
-        model.set_prefitting(weight, bias, trainable=argdict['prefit_trainable'])
+        pf_train = argdict['prefit_trainable'] if 'prefit_trainable' in argdict else False
+        model.set_prefitting(weight, bias, trainable=pf_train)
     model = model.double().to(DEVICE)
 
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])
