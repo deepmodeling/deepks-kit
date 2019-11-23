@@ -11,3 +11,5 @@ checkpoint
 model.ckpt.*
 *bk[0-9]
 *bk
+.vscode
+.ipynb*
