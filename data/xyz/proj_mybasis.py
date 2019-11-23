@@ -5,7 +5,8 @@ import sys
 import argparse
 import mendeleev
 
-aa = 2.0**np.arange(6,-3,-1)
+# aa = 2.0**np.arange(6,-3,-1)
+aa = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])
 bb = np.diag(np.ones(aa.size)) - np.diag(np.ones(aa.size-1), k=1)
 coef = np.concatenate([aa.reshape(-1,1), bb], axis=1)
 BASIS = [[0, *coef.tolist()], [1, *coef.tolist()], [2, *coef.tolist()]]
