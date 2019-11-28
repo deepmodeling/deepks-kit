@@ -13,6 +13,17 @@ def load_yaml(file_path):
     return res
 
 
+def load_sys_paths(path_list):
+    new_list = []
+    for p in path_list:
+        if os.path.isdir(p):
+            new_list.append(p)
+        else:
+            with open(p) as f:
+                new_list.extend(f.read().splitlines())
+    return new_list
+
+
 def main():
     parser = argparse.ArgumentParser(description="*** Train a model according to givven input. ***")
     parser.add_argument('input', type=str, 
@@ -21,14 +32,22 @@ def main():
                         help='the restart file to load model from, would ignore model_args if given')
     args = parser.parse_args()
     argdict = load_yaml(args.input)
-
-    g_reader = GroupReader(argdict['train_paths'], **argdict['data_args'])
-    test_reader = GroupReader(argdict['test_paths'], **argdict['data_args']) if 'test_paths' in argdict else None
     
     seed = argdict['seed'] if 'seed' in argdict else np.random.randint(0, 2**32)
     print(f'# using seed: {seed}')
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+    train_paths = load_sys_paths(argdict['train_paths'])
+    print(f'# training with {len(train_paths)} systems')
+    g_reader = GroupReader(train_paths, **argdict['data_args'])
+    if 'test_paths' in argdict:
+        test_paths = load_sys_paths(argdict['test_paths'])
+        print(f'# testing with {len(test_paths)} systems')
+        test_reader = GroupReader(test_paths, **argdict['data_args'])
+    else:
+        print('# testing with training set')
+        test_reader = None
 
     if args.restart is not None:
         model = QCNet.load(args.restart)
