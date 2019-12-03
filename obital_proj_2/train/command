@@ -1,2 +1,0 @@
-./main.py -n 10 10 10  --resnet --decay-steps 30 -e 10000 -d ../data.split/data.trn/data_H_H/ -b 16 -l 1e-3
-./main.py -N 5 5 5 -n 5 5 5  --resnet --decay-steps 120 -e 40000 -d ../data.split/data.trn/data_H_H/ -b 16 -l 5e-3 -w 0.01
