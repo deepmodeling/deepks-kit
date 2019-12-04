@@ -39,11 +39,11 @@ def main():
     torch.manual_seed(seed)
 
     train_paths = load_sys_paths(argdict['train_paths'])
-    print(f'# training with {len(train_paths)} systems')
+    print(f'# training with {len(train_paths)} system(s)')
     g_reader = GroupReader(train_paths, **argdict['data_args'])
     if 'test_paths' in argdict:
         test_paths = load_sys_paths(argdict['test_paths'])
-        print(f'# testing with {len(test_paths)} systems')
+        print(f'# testing with {len(test_paths)} system(s)')
         test_reader = GroupReader(test_paths, **argdict['data_args'])
     else:
         print('# testing with training set')
