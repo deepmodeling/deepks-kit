@@ -127,7 +127,7 @@ def main(xyz_files, mo_dirs, dump_dir, eig_names=['dm_eig', 'od_eig', 'se_eig', 
         all_e_occ.append(e_occ)
         all_c_occ.append(c_occ)
         for name, dm_list in all_dm_dict.items():
-            dm_list.append(calc_eig(name, c_occ, e_occ, xf, shell=SHELL))
+            dm_list.append(2 * calc_eig(name, c_occ, e_occ, xf, shell=SHELL)) # multiply by 2 for restricted method, doubly occupied orbitals
         print(f"{xf} && {md} finished")
 
     all_e_hf = np.concatenate(all_e_hf)
