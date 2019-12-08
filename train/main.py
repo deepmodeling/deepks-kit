@@ -4,7 +4,7 @@ import torch
 import ruamel_yaml as yaml
 from model import QCNet
 from reader import GroupReader
-from train import DEVICE, train
+from train import DEVICE, train, preprocess
 
 
 def load_yaml(file_path):
@@ -33,7 +33,7 @@ def main():
     args = parser.parse_args()
     argdict = load_yaml(args.input)
     
-    seed = argdict['seed'] if 'seed' in argdict else np.random.randint(0, 2**32)
+    seed = argdict.get('seed', np.random.randint(0, 2**32))
     print(f'# using seed: {seed}')
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -53,11 +53,7 @@ def main():
         model = QCNet.load(args.restart)
     else:
         model = QCNet(**argdict['model_args'])
-        davg, dstd = g_reader.compute_data_stat()
-        model.set_normalization(davg, dstd)
-        weight, bias = g_reader.compute_prefitting()
-        pf_train = argdict['prefit_trainable'] if 'prefit_trainable' in argdict else False
-        model.set_prefitting(weight, bias, trainable=pf_train)
+        preprocess(model, g_reader, **argdict['preprocess_args'])
     model = model.double().to(DEVICE)
 
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])

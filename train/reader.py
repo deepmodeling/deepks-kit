@@ -1,6 +1,7 @@
 import os,time,sys
 import numpy as np
 
+
 class Reader(object):
     def __init__(self, data_path, batch_size, e_name="e_cc", d_name="dm_eig"):
         # copy from config
@@ -155,11 +156,20 @@ class GroupReader(object) :
             self.all_mean, self.all_std = all_dm.mean(0), all_dm.std(0)
         return self.all_mean, self.all_std
 
-    def compute_prefitting(self):
+    def compute_prefitting(self, shift=None, scale=None, ridge_alpha=0):
         all_mean, all_std = self.compute_data_stat()
-        all_sdm = np.concatenate([((r.data_dm - all_mean) / all_std).sum(1) for r in self.readers])
+        if shift is None:
+            shift = all_mean
+        if scale is None:
+            scale = all_std
+        all_sdm = np.concatenate([((r.data_dm - shift) / scale).sum(1) for r in self.readers])
         all_natm = np.concatenate([[float(r.data_dm.shape[1])]*r.data_dm.shape[0] for r in self.readers])
         all_x = np.concatenate([all_sdm, all_natm.reshape(-1,1)], -1)
         all_y = np.concatenate([r.data_ec for r in self.readers])
-        coef, _, _, _ = np.linalg.lstsq(all_x, all_y, None)
+        
+        from sklearn.linear_model import Ridge 
+        reg = Ridge(alpha=ridge_alpha, fit_intercept=False, tol=1e-9)
+        reg.fit(all_x, all_y)
+        coef = reg.coef_.reshape(-1)
+        # coef, _, _, _ = np.linalg.lstsq(all_x, all_y, None)
         return coef[:-1], coef[-1]
