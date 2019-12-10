@@ -24,15 +24,8 @@ def load_sys_paths(path_list):
     return new_list
 
 
-def main():
-    parser = argparse.ArgumentParser(description="*** Train a model according to givven input. ***")
-    parser.add_argument('input', type=str, 
-                        help='the input yaml file for args')
-    parser.add_argument('--restart', default=None,
-                        help='the restart file to load model from, would ignore model_args if given')
-    args = parser.parse_args()
-    argdict = load_yaml(args.input)
-    
+def main(restart=None, **argdict):
+   
     seed = argdict.get('seed', np.random.randint(0, 2**32))
     print(f'# using seed: {seed}')
     np.random.seed(seed)
@@ -49,8 +42,8 @@ def main():
         print('# testing with training set')
         test_reader = None
 
-    if args.restart is not None:
-        model = QCNet.load(args.restart)
+    if restart is not None:
+        model = QCNet.load(restart)
     else:
         model = QCNet(**argdict['model_args'])
         preprocess(model, g_reader, **argdict['preprocess_args'])
@@ -60,4 +53,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="*** Train a model according to givven input. ***")
+    parser.add_argument('input', type=str, 
+                        help='the input yaml file for args')
+    parser.add_argument('--restart', default=None,
+                        help='the restart file to load model from, would ignore model_args if given')
+    args = parser.parse_args()
+    argdict = load_yaml(args.input)
+
+    main(restart=args.restart, **argdict)
