@@ -113,6 +113,7 @@ class DeepSCF(scf.hf.RHF):
         return ec, vc
 
     def make_eig(self, dm=None):
+        """return eigenvalues of projected density matrix"""
         if dm is None:
             dm = self.make_rdm1()
         t_dm = torch.from_numpy(dm).double().to(self.device)

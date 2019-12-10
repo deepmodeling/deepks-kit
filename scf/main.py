@@ -53,7 +53,7 @@ def dump_data(dir_name, meta, **data_dict):
 
 def main(xyz_files, model_path, dump_dir=None, group=False, verbose=0):
 
-    model = QCNet.load(model_path)
+    model = QCNet.load(model_path).double()
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
