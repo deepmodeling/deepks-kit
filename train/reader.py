@@ -16,16 +16,15 @@ class Reader(object):
         self.meta = sys_meta
         self.natm = self.meta[0]
         self.nao = self.meta[1]
-        self.nocc = self.meta[2]
-        self.nvir = self.meta[3]
-        # self.nproj = self.meta[4]
+        # self.nocc = self.meta[2]
+        # self.nvir = self.meta[3]
+        self.nproj = self.meta[-1]
         self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
         self.data_dm = np.concatenate(
-            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, -1])
+            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, self.nproj])
                 for dn in self.d_name], 
             axis=-1)
-        self.nproj = self.data_dm.shape[-1]
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
