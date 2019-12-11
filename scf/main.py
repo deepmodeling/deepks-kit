@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 from pyscf import gto
 from model import QCNet
-from scf import DeepSCF
+from dscf import DeepSCF
 
 
 def parse_xyz(filename, basis='ccpvtz', verbose=0):
@@ -42,6 +42,24 @@ def solve_mol(mol, model, chkfile=None, verbose=0):
     return meta, ehf, ecf, dm, eig, cf.converged
 
 
+def check_fields(fields, results):
+    nframe = len(results) if isinstance(results, list) else 1
+    meta, ehf, ecf, dm, eig, conv = zip(*results)
+    natom, nao, nproj = meta[0]
+    res_dict = {}
+    if 'e_hf' or 'ehf' in fields:
+        res_dict['e_hf'] = np.reshape(ehf, (nframe,1))
+    if 'e_cf' or 'ecf' in fields:
+        res_dict['e_hf'] = np.reshape(ecf, (nframe,1))
+    if 'dm' or 'rdm' in fields:
+        res_dict['rdm'] = np.reshape(dm, (nframe,nao,nao))
+    if 'eig' or 'dm_eig' in fields:
+        res_dict['dm_eig'] = np.reshape(eig, (nframe,natom,nproj))
+    if 'conv' or 'convergence' in fields:
+        res_dict['conv'] = np.reshape(conv, (nframe,1))
+    return res_dict
+
+
 def dump_data(dir_name, meta, **data_dict):
     os.makedirs(dir_name, exist_ok = True)
     np.savetxt(os.path.join(dir_name, 'system.raw'), 
@@ -51,7 +69,7 @@ def dump_data(dir_name, meta, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_path, dump_dir=None, group=False, verbose=0):
+def main(xyz_files, model_path, dump_dir=None, dump_fields=['e_cf'], group=False, verbose=0):
 
     model = QCNet.load(model_path).double()
     if dump_dir is None:
@@ -67,14 +85,9 @@ def main(xyz_files, model_path, dump_dir=None, group=False, verbose=0):
             print(fl, 'failed! error:', e, file=sys.stderr)
             continue
         if not group:
-            meta, ehf, ecf, dm, eig, conv = result
-            natom, nao, nproj = meta
+            meta = result[0]
             sub_dir = os.path.join(dump_dir, os.path.splitext(os.path.basename(fl))[0])
-            dump_data(sub_dir, meta,
-                e_hf=np.reshape(ehf, (1,1)),
-                e_cf=np.reshape(ecf, (1,1)),
-                dm_eig=np.reshape(eig, (1, natom, nproj)),
-                conv=np.reshape(conv, (1,1)))
+            dump_data(sub_dir, meta, **check_fields(dump_fields, [result]))
         else:
             results.append(result)
             if any(result[0] != results[0][0]):
@@ -84,28 +97,26 @@ def main(xyz_files, model_path, dump_dir=None, group=False, verbose=0):
             print(fl, 'finished')
 
     if group:
-        nframes = len(results)
-        meta, ehf, ecf, dm, eig, conv = zip(*results)
-        natom, nao, nproj = meta[0]
-        dump_data(dump_dir, meta[0],
-            e_hf=np.reshape(ehf, (nframes,1)),
-            e_cf=np.reshape(ecf, (nframes,1)),
-            dm_eig=np.reshape(eig, (nframes, natom, nproj)),
-            conv=np.reshape(conv, (nframes,1)))
+        meta = results[0][0]
+        dump_data(dump_dir, meta, **check_fields(dump_fields, results))
+        if verbose:
+            print('group finished')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate and save SCF energies and descriptors using given model.")
-    parser.add_argument("files", nargs="+", 
+    parser.add_argument("xyz_files", nargs="+", 
                         help="input xyz files")
     parser.add_argument("-m", "--model-path", default='model.pth', 
-                        help="path to the trained model, default: model.pth")
+                        help="path to the trained model")
     parser.add_argument("-d", "--dump-dir", default='.', 
-                        help="dir of dumped files, default: current dir")
+                        help="dir of dumped files")
+    parser.add_argument("-F", "--dump_fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
+                        help="fields to be dumped into the folder")    
     parser.add_argument("-G", "--group", action='store_true',
                         help="group results for all molecules, only works for same system")
-    parser.add_argument("-v", "--verbose", default=0, type=int, 
+    parser.add_argument("-v", "--verbose", default=0, type=int, choices=range(0,11),
                         help="output calculation information")
     args = parser.parse_args()
     
-    main(args.files, args.model_path, args.dump_dir, args.group, args.verbose)
+    main(**vars(args))
