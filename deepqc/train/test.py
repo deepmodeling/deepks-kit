@@ -3,8 +3,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
-from model import QCNet
-from reader import GroupReader
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
+from deepqc.train.model import QCNet
+from deepqc.train.reader import GroupReader
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -21,17 +24,28 @@ def test(model, g_reader, prefix="test"):
         label_np = label.cpu().numpy().reshape(nframes, -1).sum(axis=1)
         pred_np = pred.detach().cpu().numpy().reshape(nframes, -1).sum(axis=1)
         dump_res = np.stack([label_np, pred_np], axis=1)
-        error_sys = np.sqrt(np.mean((label_np - pred_np)**2))
+        error_l1 = np.mean(np.abs(label_np - pred_np))
         
-        header = f"{g_reader.path_list[i]}\nmean l2 error: {error_np}\nsystem l2 error: {error_sys}\nreal_ene  pred_ene"
+        header = f"{g_reader.path_list[i]}\nmean l1 error: {error_l1}\nmean l2 error: {error_np}\nreal_ene  pred_ene"
         filename = f"{prefix}.{i}.out"
         np.savetxt(filename, dump_res, header=header)
         print(f"system {i} finished")
     
 
-def main():
+def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm_eig']):
+
+    g_reader = GroupReader(data_path, e_name=e_name, d_name=d_name)
+    if isinstance(model_file, str):
+        model_file = [model_file]
+    for f in model_file:
+        p = os.path.dirname(f)
+        model = QCNet.load(f).double().to(DEVICE)
+        test(model, g_reader, prefix=os.path.join(p, output_prefix))
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model-file", default='model.pth', type=str, nargs='+',
+    parser.add_argument("-m", "--model-file", default=['model.pth'], type=str, nargs='+',
                         help="the dumped model file to test")
     parser.add_argument("-d", "--data-path", default='data', type=str, nargs='+',
                         help="the path to data .raw files for test")
@@ -39,16 +53,8 @@ def main():
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
     parser.add_argument("-E", "--e-name", default='e_cc', type=str,
                         help="the name of energy file to be read (no .npy extension)")
-    parser.add_argument("-D", "--d-name", default='dm_eig', type=str, nargs="+",
+    parser.add_argument("-D", "--d-name", default=['dm_eig'], type=str, nargs="+",
                         help="the name of descriptor file(s) to be read (no .npy extension)")
     args = parser.parse_args()
 
-    g_reader = GroupReader(args.data_path, e_name=args.e_name, d_name=args.d_name)
-    for f in args.model_file:
-        p = os.path.dirname(f)
-        model = QCNet.load(f).double().to(DEVICE)
-        test(model, g_reader, prefix=os.path.join(p,args.output_prefix))
-
-
-if __name__ == "__main__":
-    main()
+    main(**vars(args))

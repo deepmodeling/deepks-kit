@@ -5,7 +5,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import scf
-from model import QCNet
+from deepqc.train.model import QCNet
 
 
 _zeta = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])

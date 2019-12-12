@@ -5,8 +5,10 @@ import torch
 import argparse
 import numpy as np
 from pyscf import gto
-from model import QCNet
-from dscf import DeepSCF
+if __name__ == "__main__":
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
+from deepqc.scf.scf import DeepSCF
+from deepqc.train.model import QCNet
 
 
 def parse_xyz(filename, basis='ccpvtz', verbose=0):
@@ -47,15 +49,15 @@ def check_fields(fields, results):
     meta, ehf, ecf, dm, eig, conv = zip(*results)
     natom, nao, nproj = meta[0]
     res_dict = {}
-    if 'e_hf' or 'ehf' in fields:
+    if 'e_hf' in fields or 'ehf' in fields:
         res_dict['e_hf'] = np.reshape(ehf, (nframe,1))
-    if 'e_cf' or 'ecf' in fields:
-        res_dict['e_hf'] = np.reshape(ecf, (nframe,1))
-    if 'dm' or 'rdm' in fields:
+    if 'e_cf' in fields or 'ecf' in fields:
+        res_dict['e_cf'] = np.reshape(ecf, (nframe,1))
+    if 'dm' in fields or 'rdm' in fields:
         res_dict['rdm'] = np.reshape(dm, (nframe,nao,nao))
-    if 'eig' or 'dm_eig' in fields:
+    if 'eig' in fields or 'dm_eig' in fields:
         res_dict['dm_eig'] = np.reshape(eig, (nframe,natom,nproj))
-    if 'conv' or 'convergence' in fields:
+    if 'conv' in fields or 'convergence' in fields:
         res_dict['conv'] = np.reshape(conv, (nframe,1))
     return res_dict
 

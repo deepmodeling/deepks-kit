@@ -2,9 +2,12 @@ import argparse, os
 import numpy as np
 import torch
 import ruamel_yaml as yaml
-from model import QCNet
-from reader import GroupReader
-from train import DEVICE, train, preprocess
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
+from deepqc.train.model import QCNet
+from deepqc.train.reader import GroupReader
+from deepqc.train.train import DEVICE, train, preprocess
 
 
 def load_yaml(file_path):
