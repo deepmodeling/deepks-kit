@@ -9,6 +9,8 @@ from contextlib import nullcontext, redirect_stdout, redirect_stderr
 def link_file(src, dst):
     assert src.exists()
     if not dst.exists():
+        if not dst.parent.exists():
+            os.makedirs(dst.parent)
         os.symlink(os.path.relpath(src, dst.parent), dst)
     elif not os.path.samefile(src, dst):
         os.remove(dst)
@@ -17,6 +19,8 @@ def link_file(src, dst):
 def copy_file(src, dst):
     assert src.exists()
     if not dst.exists():
+        if not dst.parent.exists():
+            os.makedirs(dst.parent)
         shutil.copy2(src, dst)
     elif not os.path.samefile(src, dst):
         os.remove(dst)
@@ -69,7 +73,7 @@ class AbstructTask(AbstructStep):
             os.makedirs(self.workdir)
         else:
             assert self.workdir.is_dir()
-        if self.prev_folder is None:
+        if self.prev_folder is None and (self.link_prev_files or self.copy_prev_files):
             self.prev_folder = self.prev_task.workdir
         for f in self.link_prev_files:
             link_file(self.prev_folder / f, self.workdir / f)
