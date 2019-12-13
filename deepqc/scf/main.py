@@ -11,6 +11,17 @@ from deepqc.scf.scf import DeepSCF
 from deepqc.train.model import QCNet
 
 
+def load_xyz_files(file_list):
+    new_list = []
+    for p in file_list:
+        if os.path.splitext(p)[1] == '.xyz':
+            new_list.append(p)
+        else:
+            with open(p) as f:
+                new_list.extend(f.read().splitlines())
+    return new_list
+
+
 def parse_xyz(filename, basis='ccpvtz', verbose=0):
     with open(filename) as fp:
         natoms = int(fp.readline())
@@ -71,14 +82,15 @@ def dump_data(dir_name, meta, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_path, dump_dir=None, dump_fields=['e_cf'], group=False, verbose=0):
+def main(xyz_files, model_file, dump_dir=None, dump_fields=['e_cf'], group=False, verbose=0):
 
-    model = QCNet.load(model_path).double()
+    model = QCNet.load(model_file).double()
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
         results = []
         
+    xyz_files = load_xyz_files(xyz_files)
     for fl in xyz_files:
         mol = parse_xyz(fl, verbose=verbose)
         try:
@@ -109,8 +121,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate and save SCF energies and descriptors using given model.")
     parser.add_argument("xyz_files", nargs="+", 
                         help="input xyz files")
-    parser.add_argument("-m", "--model-path", default='model.pth', 
-                        help="path to the trained model")
+    parser.add_argument("-m", "--model-file", default='model.pth', 
+                        help="file of the trained model")
     parser.add_argument("-d", "--dump-dir", default='.', 
                         help="dir of dumped files")
     parser.add_argument("-F", "--dump_fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
