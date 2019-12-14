@@ -7,7 +7,7 @@ from contextlib import nullcontext, redirect_stdout, redirect_stderr
 
 
 def link_file(src, dst):
-    assert src.exists()
+    assert src.exists(), f'{src} does not exist'
     if not dst.exists():
         if not dst.parent.exists():
             os.makedirs(dst.parent)
@@ -17,7 +17,7 @@ def link_file(src, dst):
         os.symlink(os.path.relpath(src, dst.parent), dst)
 
 def copy_file(src, dst):
-    assert src.exists()
+    assert src.exists(), f'{src} does not exist'
     if not dst.exists():
         if not dst.parent.exists():
             os.makedirs(dst.parent)
@@ -32,6 +32,12 @@ def check_file_list(files):
     if files is None:
         return []
     return files
+
+def get_abs_path(p):
+    if p is None:
+        return None
+    else:
+        return Path(p).absolute()
 
 
 class AbstructStep(object):
@@ -61,8 +67,8 @@ class AbstructTask(AbstructStep):
         super().__init__(workdir)
         assert prev_task is None or prev_folder is None
         self.prev_task = prev_task
-        self.prev_folder = Path(prev_folder).absolute() if prev_folder is not None else None
-        self.share_folder = Path(share_folder).absolute() if share_folder is not None else None
+        self.prev_folder = get_abs_path(prev_folder)
+        self.share_folder = get_abs_path(share_folder)
         self.link_prev_files = check_file_list(link_prev_files)
         self.copy_prev_files = check_file_list(copy_prev_files)
         self.link_share_files = check_file_list(link_share_files)
@@ -72,7 +78,7 @@ class AbstructTask(AbstructStep):
         if not self.workdir.exists():
             os.makedirs(self.workdir)
         else:
-            assert self.workdir.is_dir()
+            assert self.workdir.is_dir(), f'{self.workdir} is not a dir'
         if self.prev_folder is None and (self.link_prev_files or self.copy_prev_files):
             self.prev_folder = self.prev_task.workdir
         for f in self.link_prev_files:
@@ -134,7 +140,7 @@ class Workflow(AbstructStep):
     def __init__(self, child_tasks, workdir='.', record_file=None):
         super().__init__(workdir)
         self.child_tasks = [deepcopy(task) for task in child_tasks]
-        self.record_file = Path(record_file).absolute() if record_file is not None else None
+        self.record_file = get_abs_path(record_file)
         for task in self.child_tasks:
             assert not task.workdir.is_absolute()
             task.prepend_workdir(self.workdir)
@@ -190,7 +196,7 @@ class Workflow(AbstructStep):
 
 
 class Sequence(Workflow):
-    def __init__(self, child_tasks, workdir='.', record_file=None, init_folder='.'):
+    def __init__(self, child_tasks, workdir='.', record_file=None, init_folder=None):
         # would reset all tasks' prev folder into their prev task, except for the first one
         super().__init__(child_tasks, workdir, record_file)
         self.chain_tasks()
@@ -198,7 +204,7 @@ class Sequence(Workflow):
         while isinstance(start, Workflow):
             start = start.child_tasks[0]
         if start.prev_folder is None:
-            start.prev_folder = Path(init_folder)
+            start.prev_folder = get_abs_path(init_folder)
         
     def chain_tasks(self):    
         for prev, curr in zip(self.child_tasks[:-1], self.child_tasks[1:]):
@@ -210,7 +216,7 @@ class Sequence(Workflow):
 
 
 class Iteration(Sequence):
-    def __init__(self, task, iternum, workdir='.', record_file=None, init_folder='.'):
+    def __init__(self, task, iternum, workdir='.', record_file=None, init_folder=None):
         # iterated task should have workdir='.' to avoid redundant folders
         iter_tasks = [deepcopy(task) for i in range(iternum)]
         nd = len(str(iternum))
