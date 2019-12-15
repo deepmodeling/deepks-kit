@@ -5,8 +5,7 @@ import os
 import sys
 import numpy as np
 
-sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
-
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.scf.main import main as scf_main
@@ -20,7 +19,7 @@ def collect_data(nmol, ntrain):
     ecf = np.load('results/e_cf.npy')
     assert ecf.size == nmol
     eref = np.load('e_ref.npy')
-    print(f'convverged calculation: {np.load("results/conv.npy").sum()}')
+    print(f'converged calculation: {np.load("results/conv.npy").sum()}')
     print(f'mean error: {np.mean(eref - ecf)}, mean absolute error: {np.abs(eref - ecf).mean()}')
     ehf = np.load('results/e_hf.npy')
     np.save('results/e_cc.npy', eref - ehf)
