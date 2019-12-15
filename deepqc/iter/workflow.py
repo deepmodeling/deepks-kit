@@ -184,11 +184,15 @@ class Workflow(AbstructStep):
             return 1 + max(task.max_depth() for task in self.child_tasks if isinstance(task, Workflow))
             
     def restart(self):
+        if not self.record_file.exists():
+            print('# no record file, starting from scratch')
+            self.run(())
+            return
         with self.record_file.open() as lf:
             all_tags = [tuple(map(int, l.split())) for l in lf.readlines()]
         # assert max(map(len, all_tags)) == self.max_depth()
         restart_tag = all_tags[-1]
-        print('# restart after step', restart_tag)
+        print('# restarting after step', restart_tag)
         self.run((), restart_tag)
         
     def __getitem__(self, idx):

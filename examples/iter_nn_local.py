@@ -50,7 +50,7 @@ task_train = PythonTask(train_main, call_kwargs=train_input,
                         workdir='00.train',
                         link_prev_files=['train_paths.raw', 'test_paths.raw'])
 
-task_scf = PythonTask(scf_main, call_kwargs=scf_main,
+task_scf = PythonTask(scf_main, call_kwargs=scf_input,
                       outlog='log.scf',
                       workdir='01.scf',
                       link_prev_files=['model.pth'],
@@ -64,5 +64,8 @@ task_data = PythonTask(collect_data, call_args=[nmol, ntrain],
 
 seq = Sequence([task_train, task_scf, task_data])
 iterate = Iteration(seq, 10, init_folder='share/init', record_file='RECORD')
-iterate.run()
 
+if Path('RECORD').exists():
+    iterate.restart()
+else:
+    iterate.run()
