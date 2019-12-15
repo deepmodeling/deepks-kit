@@ -143,10 +143,10 @@ class PythonTask(AbstructTask):
         self.errlog = errlog
     
     def execute(self):
-        with (open(self.outlog, 'w') if self.outlog is not None 
+        with (open(self.outlog, 'w', 1) if self.outlog is not None 
                 else nullcontext(sys.stdout)) as fo, \
              redirect_stdout(fo), \
-             (open(self.errlog, 'w') if self.errlog is not None 
+             (open(self.errlog, 'w', 1) if self.errlog is not None 
                 else nullcontext(sys.stderr)) as fe, \
              redirect_stderr(fe):
             self.pycallable(*self.call_args, **self.call_kwargs)
