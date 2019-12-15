@@ -7,6 +7,7 @@ from contextlib import nullcontext, redirect_stdout, redirect_stderr
 
 
 def link_file(src, dst):
+    src, dst = Path(src), Path(dst)
     assert src.exists(), f'{src} does not exist'
     if not dst.exists():
         if not dst.parent.exists():
@@ -17,6 +18,7 @@ def link_file(src, dst):
         os.symlink(os.path.relpath(src, dst.parent), dst)
 
 def copy_file(src, dst):
+    src, dst = Path(src), Path(dst)
     assert src.exists(), f'{src} does not exist'
     if not dst.exists():
         if not dst.parent.exists():
@@ -25,6 +27,22 @@ def copy_file(src, dst):
     elif not os.path.samefile(src, dst):
         os.remove(dst)
         shutil.copy2(src, dst)
+
+def create_dir(dirname, backup=False):
+    dirname = Path(dirname)
+    if not dirname.exists():
+        os.makedirs(dirname)
+    elif backup and dirname != Path('.'):
+        os.makedirs(dirname.parent, exist_ok=True)
+        counter = 0
+        bckname = str(dirname) + f'.bck.{counter:03d}'
+        while os.path.exists(bckname):
+            counter += 1
+            bckname = str(dirname) + f'.bck.{counter:03d}'
+        dirname.rename(bckname)
+        os.makedirs(dirname)
+    else:
+        assert dirname.is_dir(), f'{dirname} is not a dir'
 
 def check_file_list(files):
     if isinstance(files, str):
@@ -58,13 +76,14 @@ class AbstructStep(object):
 
 
 class AbstructTask(AbstructStep):
-    def __init__(self, workdir='.', prev_task=None,
+    def __init__(self, workdir='.', backup=False, prev_task=None,
                  prev_folder=None, link_prev_files=None, copy_prev_files=None, 
                  share_folder=None, link_share_files=None, copy_share_files=None):
         # workdir has to be relative in order to be chained
         # prev_task is dereferenced to folder dynamically.
         # folders are absolute.
         super().__init__(workdir)
+        self.backup = backup
         assert prev_task is None or prev_folder is None
         self.prev_task = prev_task
         self.prev_folder = get_abs_path(prev_folder)
@@ -75,10 +94,7 @@ class AbstructTask(AbstructStep):
         self.copy_share_files = check_file_list(copy_share_files)
         
     def preprocess(self):
-        if not self.workdir.exists():
-            os.makedirs(self.workdir)
-        else:
-            assert self.workdir.is_dir(), f'{self.workdir} is not a dir'
+        create_dir(self.workdir, self.backup)
         if self.prev_folder is None and (self.link_prev_files or self.copy_prev_files):
             self.prev_folder = self.prev_task.workdir
         for f in self.link_prev_files:
