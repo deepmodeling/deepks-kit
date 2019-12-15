@@ -103,8 +103,9 @@ def main(xyz_files, model_file, dump_dir=None, dump_fields=['e_cf'], group=False
             sub_dir = os.path.join(dump_dir, os.path.splitext(os.path.basename(fl))[0])
             dump_data(sub_dir, meta, **check_fields(dump_fields, [result]))
         else:
-            results.append(result)
-            if any(result[0] != results[0][0]):
+            if not results or all(result[0] == results[0][0]):
+                results.append(result)
+            else:
                 print(fl, 'meta does not match! saving previous results only.', file=sys.stderr)
                 break
         if verbose:

@@ -186,7 +186,7 @@ class Workflow(AbstructStep):
     def restart(self):
         with self.record_file.open() as lf:
             all_tags = [tuple(map(int, l.split())) for l in lf.readlines()]
-        assert max(map(len, all_tags)) == self.max_depth()
+        # assert max(map(len, all_tags)) == self.max_depth()
         restart_tag = all_tags[-1]
         print('# restart after step', restart_tag)
         self.run((), restart_tag)
