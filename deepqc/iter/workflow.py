@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import subprocess as sp
 from copy import deepcopy
 from pathlib import Path
 from contextlib import nullcontext, redirect_stdout, redirect_stderr
@@ -150,6 +151,24 @@ class PythonTask(AbstructTask):
                 else nullcontext(sys.stderr)) as fe, \
              redirect_stderr(fe):
             self.pycallable(*self.call_args, **self.call_kwargs)
+
+
+class ShellTask(AbstructTask):
+    def __init__(self, cmd, env=None,
+                 outlog=None, errlog=None,
+                 **task_args):
+        super().__init__(**task_args)
+        self.cmd = cmd
+        self.env = env
+        self.outlog = outlog
+        self.errlog = errlog
+
+    def execute(self):
+        with (open(self.outlog, 'w', 1) if self.outlog is not None 
+                else nullcontext()) as fo, \
+             (open(self.errlog, 'w', 1) if self.errlog is not None 
+                else nullcontext()) as fe:
+            sp.run(self.cmd, env=self.env, shell=True, stdout=fo, stderr=fe)
 
 
 class Workflow(AbstructStep):
