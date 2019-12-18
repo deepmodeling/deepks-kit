@@ -25,7 +25,7 @@ class Batch(object) :
     def sub_script_head(self, res) :
         raise RuntimeError('abstract method sub_script_head should be implemented by derived class')        
 
-    def sub_script_cmd(self, cmd, res):
+    def sub_script_cmd(self, cmd, arg, res):
         raise RuntimeError('abstract method sub_script_cmd should be implemented by derived class')        
 
     def do_submit(self,
@@ -42,7 +42,7 @@ class Batch(object) :
 
     def sub_script(self,
                    job_dirs,
-                   cmd,
+                   cmds,
                    args = None,
                    res  = None,
                    outlog = 'log',
@@ -51,8 +51,8 @@ class Batch(object) :
         make submit script
 
         job_dirs(list):         directories of jobs. size: n_job
-        cmd(list):              commands to be executed. size: n_cmd
-        args(list of list):     args of commands. size of n_cmd x n_job
+        cmds(list):             commands to be executed in each dir. size: n_job x n_cmd
+        args(list of list):     args of commands. size: n_job x n_cmd
                                 can be None
         res(dict):              resources available
         outlog(str):            file name for output
@@ -60,30 +60,24 @@ class Batch(object) :
         """
         res = self.default_resources(res)
         ret = self.sub_script_head(res)
-        if not isinstance(cmd, list):
-            cmd = [cmd]
-        if args == None :
-            args = []
-            for ii in cmd:
-                _args = []
-                for jj in job_dirs:
-                    _args.append('')
-                args.append(_args)
-        # loop over commands 
-        self.cmd_cnt = 0
-        try:
-            self.manual_gpu = res['manual_cuda_devices']
-        except:
-            self.manual_gpu = 0
-        for ii in range(len(cmd)):            
-            # for one command
-            ret += self._sub_script_inner(job_dirs,
-                                          cmd[ii],
-                                          args[ii],
-                                          ii,
+        if not isinstance(job_dirs, list):
+            job_dirs = [job_dirs]
+        if not isinstance(cmds, list):
+            cmds = [cmds]
+        if not isinstance(cmds[0], list):
+            cmds = [cmds for d in job_dirs]
+        if args is None:
+            args = [['' for c in jcmd] for jcmd in cmds]
+        # loop over dirs 
+        for jdir, jcmd, jarg in zip(job_dirs, cmds, args):            
+            # for one dir
+            ret += self._sub_script_inner(jdir,
+                                          jcmd,
+                                          jarg,
                                           res,
                                           outlog=outlog,
                                           errlog=errlog)
+        ret += '\nwait\n'
         ret += '\ntouch %s\n' % self.finish_tag_name
         return ret
 
@@ -121,37 +115,27 @@ class Batch(object) :
         return self.context.check_file_exists(self.finish_tag_name)
 
     def _sub_script_inner(self, 
-                          job_dirs,
-                          cmd,
+                          job_dir,
+                          cmds,
                           args,
-                          idx,
                           res,
                           outlog = 'log',
                           errlog = 'err') :
         ret = ""
+        ret += 'cd %s\n' % job_dir
+        ret += 'test $? -ne 0 && exit\n\n'
         try:
             allow_failure = res['allow_failure']
         except:
             allow_failure = False
-        for ii,jj in zip(job_dirs, args) :
-            ret += 'cd %s\n' % ii
-            ret += 'test $? -ne 0 && exit\n\n'
-            if self.manual_gpu <= 0:
-                ret += 'if [ ! -f tag_%d_finished ] ;then\n' % idx
-                ret += '  %s 1>> %s 2>> %s \n' % (self.sub_script_cmd(cmd, jj, res), outlog, errlog)
-                if res['allow_failure'] is False:
-                    ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % idx
-                else :
-                    ret += '  touch tag_%d_finished \n' % idx
-                ret += 'fi\n\n'
+        for idx, (icmd, iarg) in enumerate(zip(cmds, args)) :
+            ret += 'if [ ! -f tag_%d_finished ] ;then\n' % idx
+            ret += '  %s 1>> %s 2>> %s \n' % (self.sub_script_cmd(icmd, iarg, res), outlog, errlog)
+            if not allow_failure:
+                ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % idx
             else :
-                # do not support task-wise restart
-                tmp_cmd = ' %s 1>> %s 2>> %s ' % (self.sub_script_cmd(cmd, jj, res), outlog, errlog)
-                ret += 'CUDA_VISIBLE_DEVICES=%d %s &\n\n' % ((self.cmd_cnt % self.manual_gpu), tmp_cmd)
-                self.cmd_cnt += 1
-            ret += 'cd %s\n' % self.context.remote_root
-            ret += 'test $? -ne 0 && exit\n'
-            if self.manual_gpu > 0 and self.cmd_cnt % self.manual_gpu == 0:
-                ret += '\nwait\n\n'
-        ret += '\nwait\n\n'
+                ret += '  touch tag_%d_finished \n' % idx
+            ret += 'fi\n\n'
+        ret += 'cd %s\n' % self.context.remote_root
+        ret += 'test $? -ne 0 && exit\n\n\n'
         return ret
