@@ -29,61 +29,67 @@ def _split_tasks(tasks,
     
 class Dispatcher(object):
     def __init__ (self,
-                  remote_profile,
-                  context_type = 'local',
-                  batch_type = 'slurm'):
+                  context_type='local',
+                  batch_type='slurm',
+                  remote_profile=None):
+        if remote_profile is None:
+            assert 'local' in context_type
+            context_type = 'lazy-local'
         self.remote_profile = remote_profile
         if context_type == 'local':
             self.session = LocalSession(remote_profile)
-            self.context = LocalContext
+            self.context_fn = LocalContext
             self.uuid_names = False
         elif context_type == 'lazy-local':
             self.session = None
-            self.context = LazyLocalContext
+            self.context_fn = LazyLocalContext
             self.uuid_names = True
         elif context_type == 'ssh':
             self.session = SSHSession(remote_profile)
-            self.context = SSHContext
+            self.context_fn = SSHContext
             self.uuid_names = False
         else :
             raise RuntimeError('unknown context')
         if batch_type == 'slurm':
-            self.batch = Slurm            
-        elif batch_type == 'lsf':
-            self.batch = LSF
-        elif batch_type == 'pbs':
-            self.batch = PBS
+            self.batch_fn = Slurm            
         elif batch_type == 'shell':
-            self.batch = Shell
-        elif batch_type == 'aws':
-            self.batch = AWS
+            self.batch_fn = Shell
         else :
             raise RuntimeError('unknown batch ' + batch_type)
 
 
     def run_jobs(self,
-                 resources,
-                 command,
-                 work_path,
                  tasks,
-                 group_size,
-                 forward_common_files,
-                 forward_task_files,
-                 backward_task_files,
-                 forward_task_deference = True,
-                 outlog = 'log',
-                 errlog = 'err') :
-        # task_chunks = [
-        #     [os.path.basename(j) for j in tasks[i:i + group_size]] \
-        #     for i in range(0, len(tasks), group_size)
-        # ]
+                 group_size=1,
+                 work_path='.',
+                 resources=None,
+                 forward_common_files=[],
+                 forward_task_deref=True,
+                 outlog='log',
+                 errlog='err') :
+        # tasks is a list of dict [t1, t2, t3, ...]
+        # with each element t = {'dir': job_dir, 
+        #                        'cmds': list of cmds, 
+        #                        'forward_files': list of files to be forward,
+        #                        'backward_files': list of files to be pull back}
+        if not isinstance(tasks, list):
+            tasks = [tasks]
+        for task in tasks:
+            assert isinstance(task, dict)
+            if isinstance(task['cmds'], str):
+                task['cmds'] = [task['cmds']]
+            for field in ('forward_files', 'backward_files'):
+                if task.get(field) is None:
+                    task[field] = []
+            task['_label'] = f'{{dir:{task["dir"]}, cmds:{task["cmds"]}}}'
+
         task_chunks = _split_tasks(tasks, group_size)    
         _pmap=PMap(work_path)
         path_map=_pmap.load()
         _fr = FinRecord(work_path, len(task_chunks))        
 
         job_list = []
-        task_chunks_=['+'.join(ii) for ii in task_chunks]
+        task_chunks_=['+'.join(t['_label'] for t in chunk) for chunk in task_chunks]
         job_fin = _fr.get_record()
         assert(len(job_fin) == len(task_chunks))
         for ii,chunk in enumerate(task_chunks) :
@@ -98,26 +104,30 @@ class Dispatcher(object):
                 else:
                     job_uuid = None
                 # communication context, bach system
-                context = self.context(work_path, self.session, job_uuid)
-                batch = self.batch(context, uuid_names = self.uuid_names)
+                context = self.context_fn(work_path, self.session, job_uuid)
+                batch = self.batch_fn(context, uuid_names = self.uuid_names)
                 rjob = {'context':context, 'batch':batch}
                 # upload files
-                if not rjob['context'].check_file_exists('tag_upload'):
+                if (not isinstance(rjob['context'], LazyLocalContext) and
+                    not rjob['context'].check_file_exists('tag_upload')):
                     rjob['context'].upload('.',
                                            forward_common_files)
-                    rjob['context'].upload(chunk,
-                                           forward_task_files, 
-                                           dereference = forward_task_deference)
+                    for task in chunk:
+                        rjob['context'].upload([task['dir']],
+                                               task['forward_files'], 
+                                               dereference = forward_task_deref)
                     rjob['context'].write_file('tag_upload', '')
                     # dlog.debug('uploaded files for %s' % task_chunks_[ii])
                 # submit new or recover old submission
+                dirs = [task['dir'] for task in chunk]
+                commands = [task['cmds'] for task in chunk]
                 if job_uuid is None:
-                    rjob['batch'].submit(chunk, command, res = resources, outlog=outlog, errlog=errlog)
+                    rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog)
                     job_uuid = rjob['context'].job_uuid
                     # dlog.debug('assigned uudi %s for %s ' % (job_uuid, task_chunks_[ii]))
                     print('# new submission of %s' % job_uuid)
                 else:
-                    rjob['batch'].submit(chunk, command, res = resources, outlog=outlog, errlog=errlog, restart = True)
+                    rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog, restart = True)
                     print('# restart from old submission %s ' % job_uuid)
                 # record job and its hash
                 job_list.append(rjob)
@@ -132,6 +142,7 @@ class Dispatcher(object):
         while not all(job_fin) :
             # dlog.debug('checking jobs')
             for idx,rjob in enumerate(job_list) :
+                chunk = task_chunks[idx]
                 if not job_fin[idx] :
                     status = rjob['batch'].check_status()
                     job_uuid = rjob['context'].job_uuid
@@ -141,10 +152,13 @@ class Dispatcher(object):
                             raise RuntimeError('Job %s failed for more than 3 times' % job_uuid)
                         print('# job %s terminated, submit again'% job_uuid)
                         # dlog.debug('try %s times for %s'% (fcount[idx], job_uuid))
-                        rjob['batch'].submit(task_chunks[idx], command, res = resources, outlog=outlog, errlog=errlog,restart=True)
+                        dirs = [task['dir'] for task in chunk]
+                        commands = [task['cmds'] for task in chunk]
+                        rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog,restart=True)
                     elif status == JobStatus.finished :
                         print('# job %s finished' % job_uuid)
-                        rjob['context'].download(task_chunks[idx], backward_task_files)
+                        for task in chunk:
+                            rjob['context'].download([task['dir']], task['backward_files'])
                         rjob['context'].clean()
                         job_fin[idx] = True
                         _fr.write_record(job_fin)
@@ -201,24 +215,3 @@ class PMap(object):
          os.remove(f_path_map)
       except:
          pass
-
-def make_dispatcher(mdata):
-    try:
-        hostname = mdata['hostname']
-        context_type = 'ssh'
-    except:
-        context_type = 'local'
-    try:
-        batch_type = mdata['batch']
-    except:
-        print('# cannot find key "batch" in machine file, try to use deprecated key "machine_type"')
-        batch_type = mdata['machine_type']
-    try:
-        lazy_local = mdata['lazy_local']
-    except:
-        lazy_local = False
-    if lazy_local and context_type == 'local':
-        print('# Dispatcher switches to the lazy local mode')
-        context_type = 'lazy-local'
-    disp = Dispatcher(mdata, context_type=context_type, batch_type=batch_type)
-    return disp
