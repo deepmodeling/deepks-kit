@@ -46,7 +46,6 @@ class Shell(Batch) :
         _default_item(res, 'with_mpi', False)
         _default_item(res, 'cuda_multi_tasks', False)
         _default_item(res, 'allow_failure', False)
-        _default_item(res, 'cvasp', False)
         return res
 
     def sub_script_head(self, resources) :
@@ -78,26 +77,10 @@ class Shell(Batch) :
                        cmd,
                        arg,
                        res) :
-        try:
-            cvasp=res['cvasp']
-            fp_max_errors = 3
-            try:
-                fp_max_errors = res['fp_max_errors']
-            except:
-                pass
-        except:
-            cvasp=False
-
         _cmd = cmd.split('1>')[0].strip()
-        if cvasp :
-            if res['with_mpi']:
-                _cmd = 'python ../cvasp.py "mpirun -n %d %s %s" %s' % (res['task_per_node'], _cmd, arg, fp_max_errors)
-            else :
-                _cmd = 'python ../cvasp.py "%s %s" %s' % (_cmd, arg, fp_max_errors)
+        if res['with_mpi']:
+            _cmd = 'mpirun -n %d %s %s' % (res['task_per_node'],  _cmd, arg)
         else :
-            if res['with_mpi']:
-                _cmd = 'mpirun -n %d %s %s' % (res['task_per_node'],  _cmd, arg)
-            else :
-                _cmd = '%s %s' % (_cmd, arg)
+            _cmd = '%s %s' % (_cmd, arg)
         return _cmd
         

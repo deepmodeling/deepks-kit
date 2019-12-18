@@ -52,7 +52,7 @@ class Slurm(Batch) :
             res = res_
         _default_item(res, 'numb_node', 1)
         _default_item(res, 'task_per_node', 1)
-        _default_item(res, 'cpus_per_task', -1)
+        _default_item(res, 'cpus_per_task', 1)
         _default_item(res, 'numb_gpu', 0)
         _default_item(res, 'time_limit', '1:0:0')
         _default_item(res, 'mem_limit', -1)
@@ -69,7 +69,6 @@ class Slurm(Batch) :
         _default_item(res, 'with_mpi', False)
         _default_item(res, 'cuda_multi_tasks', False)
         _default_item(res, 'allow_failure', False)
-        _default_item(res, 'cvasp', False)
         return res
 
     def sub_script_head(self, res):
@@ -77,7 +76,7 @@ class Slurm(Batch) :
         ret += "#!/bin/bash -l\n"
         ret += "#SBATCH -N %d\n" % res['numb_node']
         ret += "#SBATCH --ntasks-per-node %d\n" % res['task_per_node']
-        if res['cpus_per_task'] > 0 :            
+        if res['cpus_per_task'] > 1 :            
             ret += "#SBATCH --cpus-per-task %d\n" % res['cpus_per_task']
         ret += "#SBATCH -t %s\n" % res['time_limit']
         if res['mem_limit'] > 0 :
@@ -121,27 +120,11 @@ class Slurm(Batch) :
                        cmd,
                        arg,
                        res) :
-        try:
-            cvasp=res['cvasp']
-            fp_max_errors = 3
-            try:
-                fp_max_errors = res['fp_max_errors']
-            except:
-                pass
-        except:
-            cvasp=False
-
         _cmd = cmd.split('1>')[0].strip()
-        if cvasp :
-            if res['with_mpi']:
-                _cmd = 'python ../cvasp.py "srun %s %s" %s' % (_cmd, arg, fp_max_errors)
-            else :
-                _cmd = 'python ../cvasp.py "%s %s" %s' % (_cmd, arg, fp_max_errors)
+        if res['with_mpi']:
+            _cmd = 'srun %s %s' % (_cmd, arg)
         else :
-            if res['with_mpi']:
-                _cmd = 'srun %s %s' % (_cmd, arg)
-            else :
-                _cmd = '%s %s' % (_cmd, arg)        
+            _cmd = '%s %s' % (_cmd, arg)        
         return _cmd
 
     def _get_job_id(self) :
