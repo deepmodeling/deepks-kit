@@ -25,7 +25,7 @@ class Slurm(Batch) :
 
     def do_submit(self, 
                   job_dirs,
-                  cmd,
+                  cmds,
                   args = None, 
                   res = None,
                   outlog = 'log',
@@ -35,7 +35,7 @@ class Slurm(Batch) :
         if 'task_max' in res and res['task_max'] > 0:
             while self._check_sub_limit(task_max=res['task_max']):
                 time.sleep(60)
-        script_str = self.sub_script(job_dirs, cmd, args=args, res=res, outlog=outlog, errlog=errlog)
+        script_str = self.sub_script(job_dirs, cmds, args=args, res=res, outlog=outlog, errlog=errlog)
         self.context.write_file(self.sub_script_name, script_str)
         stdin, stdout, stderr = self.context.block_checkcall('cd %s && %s %s' % (self.context.remote_root, 'sbatch', self.sub_script_name))
         subret = (stdout.readlines())

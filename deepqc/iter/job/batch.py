@@ -30,7 +30,7 @@ class Batch(object) :
 
     def do_submit(self,
                   job_dirs,
-                  cmd,
+                  cmds,
                   args = None, 
                   res = None,
                   outlog = 'log',
@@ -83,7 +83,7 @@ class Batch(object) :
 
     def submit(self,
                job_dirs,
-               cmd,
+               cmds,
                args = None,
                res = None,
                restart = False,
@@ -94,7 +94,7 @@ class Batch(object) :
             status = self.check_status()
             if status in [  JobStatus.unsubmitted, JobStatus.unknown, JobStatus.terminated ]:
                 # dlog.debug('task restart point !!!')
-                self.do_submit(job_dirs, cmd, args, res, outlog=outlog, errlog=errlog)
+                self.do_submit(job_dirs, cmds, args, res, outlog=outlog, errlog=errlog)
             elif status==JobStatus.waiting:
                 pass
                 # dlog.debug('task is waiting')
@@ -108,7 +108,7 @@ class Batch(object) :
                 raise RuntimeError('unknow job status, must be wrong')
         else:
             # dlog.debug('new task')
-            self.do_submit(job_dirs, cmd, args, res, outlog=outlog, errlog=errlog)
+            self.do_submit(job_dirs, cmds, args, res, outlog=outlog, errlog=errlog)
         time.sleep(sleep) # For preventing the crash of the tasks while submitting        
 
     def check_finish_tag(self) :

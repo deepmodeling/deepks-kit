@@ -21,14 +21,14 @@ class Shell(Batch) :
 
     def do_submit(self, 
                   job_dirs,
-                  cmd,
+                  cmds,
                   args = None, 
                   res = None,
                   outlog = 'log',
                   errlog = 'err'):
         if res == None:
             res = {}
-        script_str = self.sub_script(job_dirs, cmd, args=args, res=res, outlog=outlog, errlog=errlog)
+        script_str = self.sub_script(job_dirs, cmds, args=args, res=res, outlog=outlog, errlog=errlog)
         self.context.write_file(self.sub_script_name, script_str)
         self.proc = self.context.call('cd %s && exec bash %s' % (self.context.remote_root, self.sub_script_name))
 
