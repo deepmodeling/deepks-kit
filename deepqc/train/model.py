@@ -16,6 +16,8 @@ def parse_actv_fn(code):
         return torch.relu
     if lcode == 'softplus':
         return nn.Softplus()
+    if lcode == 'gelu':
+        return nn.functional.gelu
     raise ValueError(f'{code} is not a valid activation function')
 
 
