@@ -35,10 +35,14 @@ def parse_xyz(filename, basis='ccpvtz', verbose=0):
     return mol
 
 
-def solve_mol(mol, model, chkfile=None, verbose=0):
+def solve_mol(mol, model, 
+              conv_tol=1e-9, conv_tol_grad=None,
+              chkfile=None, verbose=0):
     if verbose:
         tic = time.time()
     cf = DeepSCF(mol, model)
+    cf.conv_tol = conv_tol
+    cf.conv_tol_grad = conv_tol_grad
     if chkfile:
         cf.set(chkfile=chkfile)
     ecf = cf.scf()
@@ -82,7 +86,10 @@ def dump_data(dir_name, meta, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file, dump_dir=None, dump_fields=['e_cf'], group=False, verbose=0):
+def main(xyz_files, model_file, 
+         dump_dir=None, dump_fields=['e_cf'], group=False, 
+         conv_tol=1e-9, conv_tol_grad=None,
+         verbose=0):
 
     model = QCNet.load(model_file).double()
     if dump_dir is None:
@@ -94,7 +101,9 @@ def main(xyz_files, model_file, dump_dir=None, dump_fields=['e_cf'], group=False
     for fl in xyz_files:
         mol = parse_xyz(fl, verbose=verbose)
         try:
-            result = solve_mol(mol, model, verbose=verbose)
+            result = solve_mol(mol, model, 
+                               conv_tol=conv_tol, conv_tol_grad=conv_tol_grad,
+                               verbose=verbose)
         except Exception as e:
             print(fl, 'failed! error:', e, file=sys.stderr)
             continue
@@ -126,12 +135,16 @@ if __name__ == "__main__":
                         help="file of the trained model")
     parser.add_argument("-d", "--dump-dir", default='.', 
                         help="dir of dumped files")
-    parser.add_argument("-F", "--dump_fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
+    parser.add_argument("-F", "--dump-fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
                         help="fields to be dumped into the folder")    
     parser.add_argument("-G", "--group", action='store_true',
                         help="group results for all molecules, only works for same system")
     parser.add_argument("-v", "--verbose", default=0, type=int, choices=range(0,11),
                         help="output calculation information")
+    parser.add_argument("--conv-tol", default=1e-9, type=float,
+                        help="converge threshold of scf iteration")
+    parser.add_argument("--conv-tol-grad", default=None, type=float,
+                        help="gradient converge threshold of scf iteration")
     args = parser.parse_args()
     
     main(**vars(args))

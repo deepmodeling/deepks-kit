@@ -75,8 +75,13 @@ class LazyLocalContext(object) :
         os.chdir(cwd)        
         return code, None, stdout, stderr
 
-    def clean(self) :
-        pass
+    def clean(self):
+        tmp_files = [f'{self.job_uuid}.sub', 
+                     f'{self.job_uuid}_job_id',
+                     f'{self.job_uuid}_tag_finished']
+        for fn in tmp_files:
+            if self.check_file_exists(fn):
+                os.remove(os.path.join(self.local_root, fn))
 
     def write_file(self, fname, write_str):
         with open(os.path.join(self.local_root, fname), 'w') as fp :

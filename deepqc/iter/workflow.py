@@ -216,7 +216,7 @@ class GroupBatchTask(AbstructTask):
     # only grouped one setting in this task would be effective
     def __init__(self, batch_tasks, group_size=1,
                  dispatcher=None, resources=None, 
-                 outlog='log', errlog='err', common_files=None,
+                 outlog='log', errlog='err', forward_common_files=None,
                  **task_args):
         super().__init__(**task_args)            
         self.batch_tasks = [deepcopy(task) for task in batch_tasks]
@@ -236,7 +236,7 @@ class GroupBatchTask(AbstructTask):
         self.resources = resources
         self.outlog = outlog
         self.errlog = errlog
-        self.common_files = check_arg_list(common_files)
+        self.common_files = check_arg_list(forward_common_files)
 
     def execute(self):
         tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]
@@ -265,19 +265,17 @@ class GroupBatchTask(AbstructTask):
     def set_prev_folder(self, path):
         super().set_prev_folder(path)
         for t in self.batch_tasks:
-            t.set_prev_task(path)
+            t.set_prev_folder(path)
 
 
 class Workflow(AbstructStep):
     def __init__(self, child_tasks, workdir='.', record_file=None):
         super().__init__(workdir)
         self.child_tasks = [deepcopy(task) for task in child_tasks]
-        self.record_file = get_abs_path(record_file)
         for task in self.child_tasks:
             assert not task.workdir.is_absolute()
             task.prepend_workdir(self.workdir)
-            if isinstance(task, Workflow):
-                task.record_file = self.record_file
+        self.set_record_file(record_file)
         
     def run(self, parent_tag=(), restart_tag=None):
         start_idx = 0
@@ -300,7 +298,13 @@ class Workflow(AbstructStep):
         super().prepend_workdir(path)
         for task in self.child_tasks:
             task.prepend_workdir(path)
-            
+
+    def set_record_file(self, record_file):
+        self.record_file = get_abs_path(record_file)
+        for task in self.child_tasks:
+            if isinstance(task, Workflow):
+                task.set_record_file(record_file)
+
     def write_record(self, tag):
         if self.record_file is None:
             return
