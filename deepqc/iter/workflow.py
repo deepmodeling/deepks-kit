@@ -358,6 +358,9 @@ class Sequence(Workflow):
 class Iteration(Sequence):
     def __init__(self, task, iternum, workdir='.', record_file=None, init_folder=None):
         # iterated task should have workdir='.' to avoid redundant folders
+        # handle multple tasks by first make a sequence
+        if not isinstance(task, AbstructStep):
+            task = Sequence(task)
         iter_tasks = [deepcopy(task) for i in range(iternum)]
         nd = len(str(iternum))
         for ii, itask in enumerate(iter_tasks):
