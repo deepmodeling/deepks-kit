@@ -17,10 +17,11 @@ class SSHSession (object) :
             self.remote_password = self.remote_profile['password']
         self.remote_workpath = self.remote_profile['work_path']
         self.ssh = None
-        self._setup_ssh(self.remote_host,
-                        self.remote_port,
-                        username=self.remote_uname,
-                        password=self.remote_password)
+        # postpone setup to runtime in order to be deep copied
+        # self._setup_ssh(self.remote_host,
+        #                 self.remote_port,
+        #                 username=self.remote_uname,
+        #                 password=self.remote_password)
 
     def ensure_alive(self,
                      max_check = 10,
@@ -62,6 +63,11 @@ class SSHSession (object) :
         transport.set_keepalive(60)
 
     def get_ssh_client(self) :
+        if self.ssh is None:
+            self._setup_ssh(self.remote_host,
+                            self.remote_port,
+                            username=self.remote_uname,
+                            password=self.remote_password)
         return self.ssh
 
     def get_session_root(self) :
@@ -85,14 +91,17 @@ class SSHContext (object):
            self.job_uuid = str(uuid.uuid4())
         self.remote_root = os.path.join(ssh_session.get_session_root(), self.job_uuid)
         self.ssh_session = ssh_session
-        self.ssh = self.ssh_session.get_ssh_client()        
         self.ssh_session.ensure_alive()
         try:
-           sftp = self.ssh.open_sftp() 
+           sftp = self.ssh_session.ssh.open_sftp() 
            sftp.mkdir(self.remote_root)
            sftp.close()
         except: 
            pass
+    
+    @property
+    def ssh(self):
+        return self.ssh_session.get_ssh_client()        
 
     def close(self):
         self.ssh_session.close()
@@ -110,7 +119,9 @@ class SSHContext (object):
         file_list = []
         for ii in job_dirs :
             for jj in local_up_files :
-                file_list.append(os.path.join(ii,jj))        
+                file_list.append(os.path.join(ii,jj))   
+            if not file_list:
+                file_list.append(ii)     
         self._put_files(file_list, dereference = dereference)
         os.chdir(cwd)
 
@@ -123,11 +134,10 @@ class SSHContext (object):
         os.chdir(self.local_root) 
         file_list = []
         for ii in job_dirs :
-            for jj in remote_down_files :
+            for jj in remote_down_files:
                 file_list.append(os.path.join(ii,jj))
             if back_error:
-               errors=glob(os.path.join(ii,'error*'))
-               file_list.extend(errors)
+                file_list.append(os.path.join(ii,'error*'))
         self._get_files(file_list)
         os.chdir(cwd)
         
@@ -137,7 +147,7 @@ class SSHContext (object):
         stdin, stdout, stderr = self.ssh.exec_command(('cd %s ;' % self.remote_root) + cmd)
         exit_status = stdout.channel.recv_exit_status() 
         if exit_status != 0:
-            raise RuntimeError("Get error code %d in calling %s through ssh with job: %s . message:",
+            raise RuntimeError("Get error code %d in calling %s through ssh with job: %s .\nmessage: %s" %
                                (exit_status, cmd, self.job_uuid, stderr.read().decode('utf-8')))
         return stdin, stdout, stderr    
 
@@ -245,6 +255,8 @@ class SSHContext (object):
 
     def _get_files(self, 
                    files) :
+        if not files:
+            return
         of = self.job_uuid + '.tgz'
         flist = ""
         for ii in files :

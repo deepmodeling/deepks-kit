@@ -216,7 +216,8 @@ class GroupBatchTask(AbstructTask):
     # only grouped one setting in this task would be effective
     def __init__(self, batch_tasks, group_size=1,
                  dispatcher=None, resources=None, 
-                 outlog='log', errlog='err', forward_common_files=None,
+                 outlog='log', errlog='err', 
+                 forward_files=None, backward_files=None,
                  **task_args):
         super().__init__(**task_args)            
         self.batch_tasks = [deepcopy(task) for task in batch_tasks]
@@ -236,13 +237,15 @@ class GroupBatchTask(AbstructTask):
         self.resources = resources
         self.outlog = outlog
         self.errlog = errlog
-        self.common_files = check_arg_list(forward_common_files)
+        self.forward_files = check_arg_list(forward_files)
+        self.backward_files = check_arg_list(backward_files)
 
     def execute(self):
         tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]
         self.dispatcher.run_jobs(tdicts, group_size=self.group_size, work_path='.', 
                                  resources=self.resources, forward_task_deref=False,
-                                 forward_common_files=self.common_files,
+                                 forward_common_files=self.forward_files,
+                                 backward_common_files=self.backward_files,
                                  outlog=self.outlog, errlog=self.errlog)
     
     def preprocess(self):

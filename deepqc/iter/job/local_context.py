@@ -93,6 +93,10 @@ class LocalContext(object) :
             local_job = os.path.join(self.local_root, ii)
             remote_job = os.path.join(self.remote_root, ii)
             flist = remote_down_files
+            if any("*" in fn for fn in flist):
+                os.chdir(remote_job)
+                flist = sum(map(glob, flist), [])
+                os.chdir(cwd)
             if back_error :
                 os.chdir(remote_job)
                 flist += glob('error*')                        
@@ -108,11 +112,13 @@ class LocalContext(object) :
                         pass
                     elif (os.path.exists(rfile)) and (not os.path.exists(lfile)) :
                         # trivial case, download happily
+                        os.makedirs(os.path.dirname(lfile), exist_ok=True)
                         shutil.move(rfile, lfile)
                     elif (os.path.exists(rfile)) and (os.path.exists(lfile)) :
                         # both exists, replace!
                         # dlog.info('find existing %s, replacing by %s' % (lfile, rfile))
                         shutil.rmtree(lfile)
+                        os.makedirs(os.path.dirname(lfile), exist_ok=True)
                         shutil.move(rfile, lfile)
                     else :
                         raise RuntimeError('should not reach here!')

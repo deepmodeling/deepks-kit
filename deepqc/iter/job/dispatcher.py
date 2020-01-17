@@ -63,8 +63,9 @@ class Dispatcher(object):
                  group_size=1,
                  work_path='.',
                  resources=None,
-                 forward_common_files=[],
                  forward_task_deref=True,
+                 forward_common_files=[],
+                 backward_common_files=[],
                  outlog='log',
                  errlog='err') :
         # tasks is a list of dict [t1, t2, t3, ...]
@@ -157,6 +158,7 @@ class Dispatcher(object):
                         rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog,restart=True)
                     elif status == JobStatus.finished :
                         print('# job %s finished' % job_uuid)
+                        rjob['context'].download('.', backward_common_files)
                         for task in chunk:
                             rjob['context'].download([task['dir']], task['backward_files'])
                         rjob['context'].clean()
