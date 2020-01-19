@@ -10,6 +10,7 @@ from .shell import Shell
 from .job_status import JobStatus
 from hashlib import sha1
 from monty.serialization import dumpfn,loadfn
+from copy import deepcopy
 
 
 def _split_tasks(tasks,
@@ -57,6 +58,20 @@ class Dispatcher(object):
         else :
             raise RuntimeError('unknown batch ' + batch_type)
 
+    # customize deepcopy to make sure copied instances share same session
+    def __deepcopy__(self, memo):
+        d = id(self)
+        if d in memo:
+            return memo[d]
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[d] = result
+        for k, v in self.__dict__.items():
+            if k == "session":
+                setattr(result, k, v)
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result
 
     def run_jobs(self,
                  tasks,
