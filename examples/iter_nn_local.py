@@ -10,7 +10,8 @@ import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.scf.main import main as scf_main
 from deepqc.train.main import load_yaml
-from deepqc.iter.workflow import PythonTask, Sequence, Iteration
+from deepqc.iter.task import PythonTask
+from deepqc.iter.workflow import Sequence, Iteration
 
 from pathlib import Path
 import shutil

@@ -8,10 +8,10 @@ import numpy as np
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 import deepqc
-from deepqc.iter.workflow import PythonTask
-from deepqc.iter.workflow import ShellTask
-from deepqc.iter.workflow import BatchTask
-from deepqc.iter.workflow import GroupBatchTask
+from deepqc.iter.task import PythonTask
+from deepqc.iter.task import ShellTask
+from deepqc.iter.task import BatchTask
+from deepqc.iter.task import GroupBatchTask
 from deepqc.iter.workflow import Sequence
 from deepqc.iter.workflow import Iteration
 
