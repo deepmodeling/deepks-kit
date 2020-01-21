@@ -65,6 +65,8 @@ class Reader(object):
 
 class GroupReader(object) :
     def __init__ (self, path_list, batch_size=1, group_batch=1, e_name="e_cc", d_name="dm_eig") :
+        if isinstance(path_list, str):
+            path_list = [path_list]
         self.path_list = path_list
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
