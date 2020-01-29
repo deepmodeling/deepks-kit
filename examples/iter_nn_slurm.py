@@ -38,6 +38,8 @@ def collect_data(train_idx, test_idx):
     np.savetxt('test_paths.raw', np.array(systems)[test_idx], fmt='%s')
 
 
+niter = 20
+
 # Define Training
 nmodel = 4
 
@@ -123,7 +125,7 @@ scf_flow = Sequence([run_scf, post_scf, clean_scf], workdir='01.scf')
 
 # Group them together
 per_iter = Sequence([train_flow, scf_flow])
-iterate = Iteration(per_iter, 10, init_folder='share/init', record_file='RECORD')
+iterate = Iteration(per_iter, niter, init_folder='share/init', record_file='RECORD')
 
 if os.path.exists('RECORD'):
     iterate.restart()

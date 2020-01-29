@@ -38,6 +38,7 @@ def collect_data(nmol, ntrain):
     Path('test_paths.raw').write_text(str(Path('test').absolute()))
 
 
+niter = 10
 nmol = 1000
 ntrain = 900
 ntest = 100
@@ -63,7 +64,7 @@ task_data = PythonTask(collect_data, call_args=[nmol, ntrain],
                        share_folder='share', link_share_files=['e_ref.npy'])
 
 seq = Sequence([task_train, task_scf, task_data])
-iterate = Iteration(seq, 10, init_folder='share/init', record_file='RECORD')
+iterate = Iteration(seq, niter, init_folder='share/init', record_file='RECORD')
 
 if Path('RECORD').exists():
     iterate.restart()
