@@ -71,6 +71,7 @@ class QCNet(nn.Module):
         self.input_shift = nn.Parameter(torch.tensor(input_shift, dtype=torch.float64).expand(layer_sizes[0]).clone(), requires_grad=False)
         self.input_scale = nn.Parameter(torch.tensor(input_scale, dtype=torch.float64).expand(layer_sizes[0]).clone(), requires_grad=False)
         self.output_scale = nn.Parameter(torch.tensor(output_scale, dtype=torch.float64), requires_grad=False)
+        self.energy_const = nn.Parameter(torch.tensor(0, dtype=torch.float64), requires_grad=False)
     
     def forward(self, x):
         # x: nframes x natom x nfeature
@@ -78,7 +79,8 @@ class QCNet(nn.Module):
         l = self.linear(x)
         y = self.densenet(x)
         y = y / self.output_scale + l
-        return y.sum(-2)
+        e = y.sum(-2) + self.energy_const
+        return e
 
     def set_normalization(self, shift=None, scale=None):
         dtype = self.input_scale.dtype
@@ -93,16 +95,27 @@ class QCNet(nn.Module):
         self.linear.bias.data[:] = torch.tensor(bias, dtype=dtype).reshape(-1)
         self.linear.requires_grad_(trainable)
 
-    def save(self, filename):
+    def set_energy_const(self, const):
+        dtype = self.energy_const.dtype
+        self.energy_const.data = torch.tensor(const, dtype=dtype).reshape([])
+
+    def save_dict(self):
         dump_dict = {
             "state_dict": self.state_dict(),
             "init_args": self._init_args
         }
-        torch.save(dump_dict, filename)
+        return dump_dict
+
+    def save(self, filename):
+        torch.save(self.save_dict(), filename)
     
     @staticmethod
-    def load(filename):
-        checkpoint = torch.load(filename, map_location="cpu")
+    def load_dict(checkpoint, strict=False):
         model = QCNet(**checkpoint["init_args"])
-        model.load_state_dict(checkpoint['state_dict'])
+        model.load_state_dict(checkpoint['state_dict'], strict=strict)
         return model
+
+    @staticmethod
+    def load(filename, strict=False):
+        checkpoint = torch.load(filename, map_location="cpu")
+        return QCNet.load_dict(checkpoint, strict=strict)
