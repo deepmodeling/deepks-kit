@@ -86,7 +86,7 @@ def dump_data(dir_name, meta, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file, 
+def main(xyz_files, model_file, basis='ccpvtz',
          dump_dir=None, dump_fields=['e_cf'], group=False, 
          conv_tol=1e-9, conv_tol_grad=None,
          verbose=0):
@@ -99,7 +99,7 @@ def main(xyz_files, model_file,
         
     xyz_files = load_xyz_files(xyz_files)
     for fl in xyz_files:
-        mol = parse_xyz(fl, verbose=verbose)
+        mol = parse_xyz(fl, basis=basis, verbose=verbose)
         try:
             result = solve_mol(mol, model, 
                                conv_tol=conv_tol, conv_tol_grad=conv_tol_grad,
@@ -133,6 +133,8 @@ if __name__ == "__main__":
                         help="input xyz files")
     parser.add_argument("-m", "--model-file", default='model.pth', 
                         help="file of the trained model")
+    parser.add_argument("-B", "--basis", default='ccpvtz', 
+                        help="basis set used to solve the model")                
     parser.add_argument("-d", "--dump-dir", default='.', 
                         help="dir of dumped files")
     parser.add_argument("-F", "--dump-fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
