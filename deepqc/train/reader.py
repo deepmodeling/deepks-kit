@@ -86,7 +86,7 @@ class GroupReader(object) :
         self.group_batch = max(group_batch, 1)
         if self.group_batch > 1:
             self.group_dict = {}
-            self.group_index = {}
+            # self.group_index = {}
             for idx, r in enumerate(self.readers):
                 if r.natm in self.group_dict:
                     self.group_dict[r.natm].append(r)
