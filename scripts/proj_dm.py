@@ -56,9 +56,9 @@ def gen_proj(mol, intor = 'ovlp', verbose = False) :
     return proj_func
 
 
-def proj_frame(xyz_file, mo_dir, dump_dir=None, intor='ovlp', verbose=False):
+def proj_frame(xyz_file, mo_dir, dump_dir=None, ename="e_hf", intor='ovlp', verbose=False):
     mol = parse_xyz(xyz_file)
-    meta, ehf, e_occ, c_occ = load_data(mo_dir)
+    meta, ehf, e_occ, c_occ = load_data(mo_dir, ename)
     
     proj_func = gen_proj(mol, intor, verbose)
     c_proj_occ,nproj = proj_func(c_occ)
@@ -71,13 +71,13 @@ def proj_frame(xyz_file, mo_dir, dump_dir=None, intor='ovlp', verbose=False):
     return meta, ehf, e_occ, c_occ
 
 
-def load_data(dir_name):
+def load_data(dir_name, ename="e_hf"):
     meta = np.loadtxt(os.path.join(dir_name, 'system.raw'), dtype=int).reshape(-1)
     natm = meta[0]
     nao = meta[1]
     nocc = meta[2]
     nvir = meta[3]
-    ehf = np.loadtxt(os.path.join(dir_name, 'e_hf.raw')).reshape(-1, 1)
+    ehf = np.loadtxt(os.path.join(dir_name, f'{ename}.raw')).reshape(-1, 1)
     e_occ = np.loadtxt(os.path.join(dir_name, 'ener_occ.raw')).reshape(-1, nocc)
     c_occ = np.loadtxt(os.path.join(dir_name, 'coeff_occ.raw')).reshape([-1, nocc, nao])
     return meta, ehf, e_occ, c_occ
@@ -106,7 +106,7 @@ def dump_data(dir_name, meta, ehf, e_occ, c_occ, dm_dict={}) :
         np.save(os.path.join(dir_name, f'{name}.npy'), dm)
 
 
-def main(xyz_files, mo_dirs, dump_dir, eig_names=['dm_eig', 'od_eig', 'se_eig', 'fe_eig'], intor='ovlp', verbose='False'):
+def main(xyz_files, mo_dirs, dump_dir, ename="e_hf", eig_names=['dm_eig', 'od_eig', 'se_eig', 'fe_eig'], intor='ovlp', verbose='False'):
     assert len(xyz_files) == len(mo_dirs)
     oldmeta = None
     all_e_hf = []
@@ -115,7 +115,7 @@ def main(xyz_files, mo_dirs, dump_dir, eig_names=['dm_eig', 'od_eig', 'se_eig', 
     all_dm_dict = {name:[] for name in eig_names}
     
     for xf, md in zip(xyz_files, mo_dirs):
-        meta, e_hf, e_occ, c_occ = proj_frame(xf, md, intor=intor, verbose=verbose)
+        meta, e_hf, e_occ, c_occ = proj_frame(xf, md, ename=ename, intor=intor, verbose=verbose)
         if oldmeta is not None:
             assert all(oldmeta == meta), "all frames has to be in the same system thus meta has to be equal!"
         oldmeta = meta
@@ -143,8 +143,10 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dump-dir", default=".", help="dir of dumped files, if not specified, use current folder")
     parser.add_argument("-v", "--verbose", action='store_true', help="output calculation information")
     parser.add_argument("-I", "--intor", default="ovlp", help="intor string used to calculate int1e")
+    parser.add_argument("-e", "--ename", default="e_hf", help="file name for total energy")
     parser.add_argument("-E", "--eig-name", nargs="*", default=['dm_eig', 'od_eig', 'se_eig', 'fe_eig'], 
                         help="name of eigen values to be calculated and dumped")
     args = parser.parse_args()
     
-    main(args.xyz_file, args.mo_dir, args.dump_dir, args.eig_name, args.intor, args.verbose)
+    main(args.xyz_file, args.mo_dir, args.dump_dir, 
+         args.ename, args.eig_name, args.intor, args.verbose)

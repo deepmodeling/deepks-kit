@@ -179,7 +179,7 @@ class Dispatcher(object):
                         rjob['context'].clean()
                         job_fin[idx] = True
                         _fr.write_record(job_fin)
-            time.sleep(10)
+            time.sleep(60)
         # delete path map file when job finish
         _pmap.delete()
 
