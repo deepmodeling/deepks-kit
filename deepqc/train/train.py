@@ -17,10 +17,13 @@ def eval_sample(model, sample, loss_fn=nn.MSELoss()):
 def preprocess(model, g_reader, 
                 preshift=True, prescale=True, prescale_clip=0, 
                 prefit=True, prefit_ridge=0, prefit_trainable=False):
-    davg, dstd = g_reader.compute_data_stat()
-    shift = davg if preshift else 0.0
-    scale = dstd.clip(prescale_clip) if prescale else 1.0
-    model.set_normalization(shift, scale)
+    shift = model.input_shift.cpu().detach().numpy()
+    scale = model.input_scale.cpu().detach().numpy()
+    if preshift or prescale:
+        davg, dstd = g_reader.compute_data_stat()
+        if preshift: shift = davg
+        if prescale: scale = dstd.clip(prescale_clip)
+        model.set_normalization(shift, scale)
     if prefit:
         weight, bias = g_reader.compute_prefitting(shift=shift, scale=scale, ridge_alpha=prefit_ridge)
         model.set_prefitting(weight, bias, trainable=prefit_trainable)

@@ -49,7 +49,7 @@ def main(restart=None, **argdict):
         model = QCNet.load(restart)
     else:
         model = QCNet(**argdict['model_args'])
-        preprocess(model, g_reader, **argdict['preprocess_args'])
+    preprocess(model, g_reader, **argdict['preprocess_args'])
     model = model.double().to(DEVICE)
 
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])
