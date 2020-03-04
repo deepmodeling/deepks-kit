@@ -31,11 +31,17 @@ def collect_data(train_idx, test_idx):
 
     convs = np.array(convs).reshape(-1)
     ecfs = np.array(ecfs).reshape(-1)
+    err = erefs - ecfs
     print(f'converged calculation: {np.sum(convs)} / {len(systems)} = {np.sum(convs) / len(systems):.3f}')
-    print(f'mean error: {np.mean(erefs - ecfs)}, mean absolute error: {np.abs(erefs - ecfs).mean()}')
+    print(f'mean error: {err.mean()}')
+    print(f'mean absolute error: {np.abs(err).mean()}')
+    print(f'mean absolute error after shift: {np.abs(err - err[train_idx].mean()).mean()}')
+    print(f'  training: {np.abs(err[train_idx] - err[train_idx].mean()).mean()}')
+    print(f'  testing: {np.abs(err[test_idx] - err[train_idx].mean()).mean()}')
 
     np.savetxt('train_paths.raw', np.array(systems)[train_idx], fmt='%s')
     np.savetxt('test_paths.raw', np.array(systems)[test_idx], fmt='%s')
+    np.savetxt('e_result.out', np.stack([erefs, ecfs], axis=-1), head="real pred")
 
 
 niter = 20
