@@ -34,13 +34,17 @@ class AbstructTask(AbstructStep):
         if self.prev_folder is None and (self.link_prev_files or self.copy_prev_files):
             self.prev_folder = self.prev_task.workdir
         for f in self.link_prev_files:
-            link_file(self.prev_folder / f, self.workdir / f)
+            (fsrc, fdst) = (f, f) if isinstance(f, str) else f
+            link_file(self.prev_folder / fsrc, self.workdir / fdst)
         for f in self.copy_prev_files:
-            copy_file(self.prev_folder / f, self.workdir / f)
+            (fsrc, fdst) = (f, f) if isinstance(f, str) else f
+            copy_file(self.prev_folder / fsrc, self.workdir / fdst)
         for f in self.link_share_files:
-            link_file(self.share_folder / f, self.workdir / f)
+            (fsrc, fdst) = (f, f) if isinstance(f, str) else f
+            link_file(self.share_folder / fsrc, self.workdir / fdst)
         for f in self.copy_share_files:
-            copy_file(self.share_folder / f, self.workdir / f)
+            (fsrc, fdst) = (f, f) if isinstance(f, str) else f
+            copy_file(self.share_folder / fsrc, self.workdir / fdst)
     
     def execute(self):
         raise NotImplementedError
