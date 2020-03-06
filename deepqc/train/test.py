@@ -54,6 +54,7 @@ def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm
     if isinstance(model_file, str):
         model_file = [model_file]
     for f in model_file:
+        print(f)
         p = os.path.dirname(f)
         model = QCNet.load(f).double().to(DEVICE)
         test(model, g_reader, dump_prefix=os.path.join(p, output_prefix))
