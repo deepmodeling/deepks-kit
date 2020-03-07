@@ -98,7 +98,7 @@ class Iteration(Sequence):
         if not isinstance(task, AbstructStep):
             task = Sequence(task)
         iter_tasks = [deepcopy(task) for i in range(iternum)]
-        nd = len(str(iternum))
+        nd = max(len(str(iternum)), 2)
         for ii, itask in enumerate(iter_tasks):
             itask.prepend_workdir(f'iter.{ii:0>{nd}d}')
         super().__init__(iter_tasks, workdir, record_file, init_folder)
