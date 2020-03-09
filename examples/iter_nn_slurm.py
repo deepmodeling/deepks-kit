@@ -41,7 +41,7 @@ def collect_data(train_idx, test_idx):
 
     np.savetxt('train_paths.raw', np.array(systems)[train_idx], fmt='%s')
     np.savetxt('test_paths.raw', np.array(systems)[test_idx], fmt='%s')
-    np.savetxt('e_result.out', np.stack([erefs, ecfs], axis=-1), head="real pred")
+    np.savetxt('e_result.out', np.stack([erefs, ecfs], axis=-1), header="real pred")
 
 
 niter = 20
