@@ -169,10 +169,10 @@ def dump_data(dir_name, meta, ehf, emp2, ec_ij, e_data, c_data) :
     np.savetxt(os.path.join(dir_name, 'coeff_vir.raw'), c_data[1].reshape([nframe, -1]))
 
 
-def gen_frame(xyz_file, frozen=0, dump_dir=None, verbose=False):
+def gen_frame(xyz_file, basis='ccpvtz', frozen=0, dump_dir=None, verbose=False):
     if dump_dir is None:
         dump_dir = os.path.splitext(xyz_file)[0]
-    mol = parse_xyz(xyz_file, verbose=verbose)
+    mol = parse_xyz(xyz_file, basis=basis ,verbose=verbose)
     mol_meta, ehf, emp2, ec_ij, e_data, c_data = mol_electron(mol, frozen=frozen, verbose=verbose)
     dump_data(dump_dir, mol_meta, ehf, emp2, ec_ij, e_data, c_data)
 
@@ -183,6 +183,7 @@ def main():
     parser.add_argument("-d", "--dump-dir", default=None, help="dir of dumped files, if not specified, using same dir as input")
     parser.add_argument("-v", "--verbose", action='store_true', help="output calculation information")
     parser.add_argument("-F", "--frozen", default=0, type=int, help="number of orbit to be frozen when calculate mp2")
+    parser.add_argument("-B", "--basis", default="ccpvtz", type=str, help="basis used to do the calculation")
     args = parser.parse_args()
 
     for fn in args.files:
@@ -191,7 +192,7 @@ def main():
         else:
             dump = os.path.join(args.dump_dir, os.path.splitext(os.path.basename(fn))[0])
         try:
-            gen_frame(fn, args.frozen, dump, args.verbose)
+            gen_frame(fn, args.basis, args.frozen, dump, args.verbose)
             print(f"{fn} finished")
         except Exception as e:
             print(f"{fn} failed,", e, file=sys.stderr)
