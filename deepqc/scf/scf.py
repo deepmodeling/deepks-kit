@@ -41,8 +41,8 @@ class DeepSCF(scf.hf.RHF):
         # split the projected coeffs by shell (different r and l)
         self.t_proj_shells = torch.split(self.t_proj_ovlp, self.shell_sec, -1)
         # < alpha^I_rlm | mol_ao >< mol_ao | aplha^I_rlm' >
-        self.t_proj_aos = [torch.einsum('rap,saq->rsapq', po, po) 
-                             for po in self.t_proj_shells]
+        # self.t_proj_ops = [torch.einsum('rap,saq->rsapq', po, po) 
+        #                      for po in self.t_proj_shells]
 
         self.get_veff0 = super().get_veff
         self._keys.update(self.__dict__.keys())
@@ -107,8 +107,8 @@ class DeepSCF(scf.hf.RHF):
         ceig = torch.cat(proj_eigs, dim=-1).unsqueeze(0) # 1 x natoms x nproj
         ec = self.net(ceig)
         grad_dms = torch.autograd.grad(ec, proj_dms)
-        shell_vcs = [torch.einsum('rsapq,apq->rs', pao, gdm)
-                        for pao, gdm in zip(self.t_proj_aos, grad_dms)]
+        shell_vcs = [torch.einsum('rap,apq,saq->rs', po, gdm, po)
+                        for po, gdm in zip(self.t_proj_shells, grad_dms)]
         vc = torch.stack(shell_vcs).sum(0)
         return ec, vc
 
