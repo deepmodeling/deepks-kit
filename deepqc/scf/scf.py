@@ -25,7 +25,8 @@ class DeepSCF(scf.hf.RHF):
     #   p,q: projected basis on atom
     #   r,s: mol basis in pyscf
     """Self Consistant Field solver for given QC model"""
-    def __init__(self, mol, model, basis=DEFAULT_BASIS, device=DEVICE):
+    
+    def __init__(self, mol, model, basis=None, device=DEVICE):
         super().__init__(mol)
         self.device = device
         if isinstance(model, str):
@@ -33,16 +34,18 @@ class DeepSCF(scf.hf.RHF):
         self.net = model
 
         # must be a list here, follow pyscf convention
-        self.basis = basis
+        self.pbas = basis if basis is not None else DEFAULT_BASIS
+        # a virtual molecule to be projected on
+        self.pmol = gen_proj_mol(mol, self.pbas)
         # [1,1,1,...,3,3,3,...,5,5,5,...]
-        self.shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in basis), [])
-        # < mol_ao | aplha^I_rlm >, shape=[nao x natom x nproj]
-        self.t_proj_ovlp = torch.from_numpy(gen_proj_ovlp(mol, basis)).double().to(self.device)
+        self.shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self.pbas), [])
+        # < mol_ao | alpha^I_rlm >, shape=[nao x natom x nproj]
+        self.t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double().to(self.device)
         # split the projected coeffs by shell (different r and l)
-        self.t_proj_shells = torch.split(self.t_proj_ovlp, self.shell_sec, -1)
+        self.t_ovlp_shells = torch.split(self.t_proj_ovlp, self.shell_sec, -1)
         # < alpha^I_rlm | mol_ao >< mol_ao | aplha^I_rlm' >
         # self.t_proj_ops = [torch.einsum('rap,saq->rsapq', po, po) 
-        #                      for po in self.t_proj_shells]
+        #                      for po in self.t_ovlp_shells]
 
         self.get_veff0 = super().get_veff
         self._keys.update(self.__dict__.keys())
@@ -101,15 +104,15 @@ class DeepSCF(scf.hf.RHF):
         """return ec and vc, all inputs and outputs are pytorch tensor"""
         # (D^I_rl)_mm' = \sum_i < alpha^I_rlm | phi_i >< phi_i | aplha^I_rlm' >
         proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
-                        for po in self.t_proj_shells]
+                        for po in self.t_ovlp_shells]
         proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
                         for dm in proj_dms]
         ceig = torch.cat(proj_eigs, dim=-1).unsqueeze(0) # 1 x natoms x nproj
         ec = self.net(ceig)
         grad_dms = torch.autograd.grad(ec, proj_dms)
         shell_vcs = [torch.einsum('rap,apq,saq->rs', po, gdm, po)
-                        for po, gdm in zip(self.t_proj_shells, grad_dms)]
-        vc = torch.stack(shell_vcs).sum(0)
+                        for po, gdm in zip(self.t_ovlp_shells, grad_dms)]
+        vc = torch.stack(shell_vcs, 0).sum(0)
         return ec, vc
 
     def make_eig(self, dm=None):
@@ -118,14 +121,32 @@ class DeepSCF(scf.hf.RHF):
             dm = self.make_rdm1()
         t_dm = torch.from_numpy(dm).double().to(self.device)
         proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po)
-                        for po in self.t_proj_shells]
+                        for po in self.t_ovlp_shells]
         proj_eigs = [torch.symeig(dm)[0]
                         for dm in proj_dms]
         t_eig = torch.cat(proj_eigs, dim=-1) # natoms x nproj
         return t_eig.detach().cpu().numpy()
 
+    def proj_intor(self, intor):
+        """1-electron integrals between origin and projected basis"""
+        proj = gto.intor_cross(intor, self.mol, self.pmol) 
+        return proj
+        
+    def proj_ovlp(self):
+        """overlap between origin and projected basis, reshaped"""
+        nao = self.mol.nao
+        natm = self.mol.natm
+        pnao = self.pmol.nao
+        proj = self.proj_intor("int1e_ovlp")
+        # return shape [nao x natom x nproj]
+        return proj.reshape(nao, natm, pnao // natm)
 
-def gen_proj_ovlp(mol, basis) :
+    def nuc_grad_method(self):
+        from deepqc.scf.grad import Gradients
+        return Gradients(self)
+
+
+def gen_proj_mol(mol, basis) :
     natm = mol.natm
     nao = mol.nao
     mole_coords = mol.atom_coords(unit="Ang")
@@ -133,9 +154,7 @@ def gen_proj_ovlp(mol, basis) :
     test_mol.atom = [["Ne", coord] for coord in mole_coords]
     test_mol.basis = basis
     test_mol.build(0,0,unit="Ang")
-    proj = gto.intor_cross(f'int1e_ovlp_sph', mol, test_mol) 
-    # return shape [nao x natom x nproj]
-    return proj.reshape(nao, natm, test_mol.nao // natm)
+    return test_mol
 
 
 # if __name__ == '__main__':
