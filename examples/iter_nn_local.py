@@ -20,11 +20,19 @@ def collect_data(nmol, ntrain):
     ecf = np.load('results/e_cf.npy')
     assert ecf.size == nmol
     eref = np.load('e_ref.npy')
-    print(f'converged calculation: {np.load("results/conv.npy").sum()}')
-    print(f'mean error: {np.mean(eref - ecf)}, mean absolute error: {np.abs(eref - ecf).mean()}')
+    
+    err = eref.reshape(-1) - ecf.reshape(-1)
+    convs = np.load("results/conv.npy").reshape(-1)
+    print(f'converged calculation: {np.sum(convs)} / {nmol} = {np.sum(convs) / nmol:.3f}')
+    print(f'mean error: {err.mean()}')
+    print(f'mean absolute error: {np.abs(err).mean()}')
+    print(f'mean absolute error after shift: {np.abs(err - err[:ntrain].mean()).mean()}')
+    print(f'  training: {np.abs(err[:ntrain] - err[:ntrain].mean()).mean()}')
+    print(f'  testing: {np.abs(err[ntrain:] - err[:ntrain].mean()).mean()}')
+    
     ehf = np.load('results/e_hf.npy')
     np.save('results/e_cc.npy', eref - ehf)
-
+    
     dd = ['dm_eig.npy', 'e_cc.npy']
     os.makedirs('train', exist_ok=True)
     os.makedirs('test', exist_ok=True)
