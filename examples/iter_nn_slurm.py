@@ -98,6 +98,7 @@ cmd_templ = " ".join([
     "{mol_files}",
     "-m ../model.pth",
     "-d ../results", 
+    "-B ccpvdz",
     "--verbose 1",
     "--conv-tol 1e-6", 
     "--conv-tol-grad 3e-2"
