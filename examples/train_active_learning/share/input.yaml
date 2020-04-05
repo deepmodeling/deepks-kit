@@ -1,0 +1,26 @@
+model_args:
+  layer_sizes: [324, 100, 100, 100, 1]
+  output_scale: 100
+  use_resnet: true
+  actv_fn: gelu
+data_args: 
+  batch_size: 1
+  group_batch: 16
+  e_name: e_cc
+  d_name: [dm_eig, se_eig, fe_eig]
+preprocess_args:
+  preshift: false
+  prescale: false
+  prefit_ridge: 1e0
+  prefit_trainable: false
+train_args: 
+  ckpt_file: model.pth
+  decay_rate: 0.96
+  decay_steps: 500
+  display_epoch: 100
+  n_epoch: 50000
+  start_lr: 0.0001
+train_paths:
+  - ../train_paths.raw 
+test_paths:
+  - ../test_paths.raw 

@@ -6,7 +6,7 @@ import pyscf
 from pyscf import gto
 from sklearn import linear_model
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
 from deepqc.scf.scf import DeepSCF
 from deepqc.scf.main import parse_xyz, solve_mol
 
@@ -37,13 +37,13 @@ nmol = 1000
 ntrain = 900
 niter = 10
 
-mol_list = [parse_xyz(f'../../data/tom_miller/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
-ehfs = np.load('../../data/tom_miller/water/rproj_mb2/e_hf.npy').reshape(-1)[:nmol]
-wene = np.loadtxt('../../data/tom_miller/water/energy.dat', usecols=(1,2,3,4))[:nmol]
+mol_list = [parse_xyz(f'../../../data/tom_miller/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
+ehfs = np.load('../../../data/tom_miller/water/rproj_mb2/e_hf.npy').reshape(-1)[:nmol]
+wene = np.loadtxt('../../../data/tom_miller/water/energy.dat', usecols=(1,2,3,4))[:nmol]
 erefs = wene[:,3]
 ecfs = ehfs
 ecs = erefs - ehfs
-ceigs = np.load('../../data/tom_miller/water/rproj_mb2/dm_eig.npy')[:nmol]
+ceigs = np.load('../../../data/tom_miller/water/rproj_mb2/dm_eig.npy')[:nmol]
 model = get_linear_model(ceigs[:ntrain], ecs[:ntrain])
 
 os.makedirs('dump', exist_ok=True)

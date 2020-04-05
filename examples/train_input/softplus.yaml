@@ -6,6 +6,8 @@ model_args:
   output_scale: 100
 # args to be passed to preprocessing
 preprocess_args:
+  preshift: true
+  prescale: true
   prescale_clip: 1e-2
   prefit_ridge: 1e-7
   prefit_trainable: false

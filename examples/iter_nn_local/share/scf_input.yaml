@@ -1,0 +1,8 @@
+basis: ccpvdz
+conv_tol: 1e-7
+xyz_files: [mol_files.raw]
+model_file: model.pth
+dump_dir: results
+dump_fields: [e_hf, e_cf, dm_eig, conv]
+group: true 
+verbose: 1

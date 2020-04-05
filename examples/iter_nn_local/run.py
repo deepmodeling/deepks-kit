@@ -5,7 +5,7 @@ import os
 import sys
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
+sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
 import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.scf.main import main as scf_main
@@ -20,7 +20,7 @@ def collect_data(nmol, ntrain):
     ecf = np.load('results/e_cf.npy')
     assert ecf.size == nmol
     eref = np.load('e_ref.npy')
-    
+
     err = eref.reshape(-1) - ecf.reshape(-1)
     convs = np.load("results/conv.npy").reshape(-1)
     print(f'converged calculation: {np.sum(convs)} / {nmol} = {np.sum(convs) / nmol:.3f}')
@@ -29,10 +29,10 @@ def collect_data(nmol, ntrain):
     print(f'mean absolute error after shift: {np.abs(err - err[:ntrain].mean()).mean()}')
     print(f'  training: {np.abs(err[:ntrain] - err[:ntrain].mean()).mean()}')
     print(f'  testing: {np.abs(err[ntrain:] - err[:ntrain].mean()).mean()}')
-    
+
     ehf = np.load('results/e_hf.npy')
     np.save('results/e_cc.npy', eref - ehf)
-    
+
     dd = ['dm_eig.npy', 'e_cc.npy']
     os.makedirs('train', exist_ok=True)
     os.makedirs('test', exist_ok=True)
@@ -46,10 +46,10 @@ def collect_data(nmol, ntrain):
     Path('test_paths.raw').write_text(str(Path('test').absolute()))
 
 
-niter = 10
-nmol = 1000
-ntrain = 900
-ntest = 100
+niter = 5
+nmol = 1500
+ntrain = 1000
+ntest = 500
 
 train_input = load_yaml('share/train_input.yaml')
 scf_input = load_yaml('share/scf_input.yaml')

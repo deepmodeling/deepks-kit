@@ -15,7 +15,7 @@ def eval_sample(model, sample, loss_fn=nn.MSELoss()):
 
 
 def preprocess(model, g_reader, 
-                preshift=True, prescale=True, prescale_clip=0, 
+                preshift=False, prescale=False, prescale_clip=0, 
                 prefit=True, prefit_ridge=0, prefit_trainable=False):
     shift = model.input_shift.cpu().detach().numpy()
     scale = model.input_scale.cpu().detach().numpy()
