@@ -15,14 +15,20 @@ def eval_sample(model, sample, loss_fn=nn.MSELoss()):
 
 
 def preprocess(model, g_reader, 
-                preshift=False, prescale=False, prescale_clip=0, 
+                preshift=False, prescale=False, prescale_sqrt=False, prescale_clip=0,
                 prefit=True, prefit_ridge=0, prefit_trainable=False):
     shift = model.input_shift.cpu().detach().numpy()
     scale = model.input_scale.cpu().detach().numpy()
     if preshift or prescale:
         davg, dstd = g_reader.compute_data_stat()
-        if preshift: shift = davg
-        if prescale: scale = dstd.clip(prescale_clip)
+        if preshift: 
+            shift = davg
+        if prescale: 
+            scale = dstd
+            if prescale_sqrt: 
+                scale = np.sqrt(scale)
+            if prescale_clip: 
+                scale = scale.clip(prescale_clip)
         model.set_normalization(shift, scale)
     if prefit:
         weight, bias = g_reader.compute_prefitting(shift=shift, scale=scale, ridge_alpha=prefit_ridge)
