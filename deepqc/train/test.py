@@ -57,7 +57,9 @@ def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm
         print(f)
         p = os.path.dirname(f)
         model = QCNet.load(f).double().to(DEVICE)
-        test(model, g_reader, dump_prefix=os.path.join(p, output_prefix))
+        dump = os.path.join(p, output_prefix)
+        os.makedirs(os.path.dirname(dump), exist_ok=True)
+        test(model, g_reader, dump_prefix=dump)
 
 
 if __name__ == "__main__":
