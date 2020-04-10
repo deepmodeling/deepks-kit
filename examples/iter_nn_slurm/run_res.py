@@ -17,16 +17,17 @@ from deepqc.iter.workflow import Iteration
 from deepqc.scf.tools import collect_data
 
 
-niter = 20
+niter = 5
+ntrain = 7000
 
 # Define Training
 nmodel = 4
 
-train_res = {"time_limit": "24:00:00",
+train_res = {"time_limit": "6:00:00",
              "mem_limit": 32,
              "numb_gpu": 1}
 
-train_cmd = "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/train/main.py input.yaml"
+train_cmd = "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/train/main.py input.yaml --restart ../old_model.pth"
 
 batch_train = [BatchTask(cmds=train_cmd, 
                          workdir=f'task.{i:02}',
@@ -36,7 +37,8 @@ batch_train = [BatchTask(cmds=train_cmd,
                for i in range(nmodel)]
 run_train = GroupBatchTask(batch_train, 
                            resources=train_res, 
-                           outlog="log.train")
+                           outlog="log.train",
+                           link_prev_files=[('model.pth', 'old_model.pth')])
 
 post_train = ShellTask("ln -s task.00/model.pth .")
 
@@ -46,15 +48,14 @@ train_flow = Sequence([run_train, post_train, clean_train], workdir='00.train')
 
 
 # Define SCF
-ngroup = 24
-ntrain = 3000
+ngroup = 12
 
 mol_files = np.loadtxt('share/mol_files.raw', dtype=str)
 group_files = [mol_files[i::ngroup] for i in range(ngroup)]
 
 envs = {"PYSCF_MAX_MEMORY": 32000}
 scf_res = {"cpus_per_task": 5,
-           "time_limit": "24:00:00",
+           "time_limit": "6:00:00",
            "mem_limit": 32,
            "envs": envs}
 
@@ -70,7 +71,7 @@ cmd_templ = " ".join([
     "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/scf/main.py",
     "{mol_files}",
     "-m ../model.pth",
-    "-d ../results", 
+    "-d ../results",
     "-B ccpvdz",
     "--verbose 1",
     "--conv-tol 1e-6", 
