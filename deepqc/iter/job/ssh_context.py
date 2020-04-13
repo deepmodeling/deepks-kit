@@ -40,7 +40,7 @@ class SSHSession (object) :
             time.sleep(sleep_time)
 
     def _check_alive(self):
-        if self.ssh == None:
+        if self.ssh is None:
             return False
         try :
             transport = self.ssh.get_transport()
@@ -73,8 +73,9 @@ class SSHSession (object) :
     def get_session_root(self) :
         return self.remote_workpath
 
-    def close(self) :
-        self.ssh.close()
+    def close(self):
+        if self.ssh is not None:
+            self.ssh.close()
 
 
 class SSHContext (object):
