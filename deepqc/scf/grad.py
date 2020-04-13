@@ -2,10 +2,10 @@ import time
 import torch
 import numpy as np
 from pyscf import lib
-from pyscf import grad
+from pyscf.grad import rhf as rhf_grad
 
 
-class Gradients(grad.rhf.Gradients):
+class Gradients(rhf_grad.Gradients):
     # all variables and functions start with "t_" are torch related.
     # convention in einsum:
     #   i,j: orbital
@@ -29,10 +29,15 @@ class Gradients(grad.rhf.Gradients):
 
     def extra_force(self, atom_id, envs):
         """We calculate the pulay force caused by our atomic projection here"""
+        de0 = super().extra_force(atom_id, envs)
         dm = envs["dm0"]
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
         t_de = self.t_get_pulay(atom_id, t_dm)
-        return t_de.detach().cpu().numpy()
+        return de0 + t_de.detach().cpu().numpy()
+
+    def get_hf(self, *args, **kwargs):
+        """return the grad given by raw Hartree Fock Hamiltonian under current dm"""
+        return rhf_grad.Gradients(self.base).kernel(*args, **kwargs)
 
     def t_get_pulay(self, atom_id, t_dm):
         """calculate pulay force in torch tensor"""
