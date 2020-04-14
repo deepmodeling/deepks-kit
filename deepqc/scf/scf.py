@@ -48,6 +48,7 @@ class DeepSCF(scf.hf.RHF):
         #                      for po in self.t_ovlp_shells]
 
         self.get_veff0 = super().get_veff
+        self.nuc_grad_method0 = super().nuc_grad_method
         self._keys.update(self.__dict__.keys())
 
     def energy_elec0(self, dm=None, h1e=None, vhf=None):
