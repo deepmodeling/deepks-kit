@@ -4,12 +4,14 @@ import time
 import torch
 import argparse
 import numpy as np
+import ruamel_yaml as yaml
 from collections import namedtuple
 from pyscf import gto
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.scf.scf import DeepSCF
 from deepqc.train.model import QCNet
+from deepqc.train.main import load_yaml
 
 
 A2B = 1.889725989
@@ -45,6 +47,7 @@ fd_fcf = Field("f_cf",
                lambda mf: mf.nuc_grad_method().kernel(),
                "(nframe, natom, 3)")
 ALL_FIELDS = [fd_ehf, fd_ecf, fd_eig, fd_rdm, fd_conv, fd_fhf, fd_fcf]
+DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
 
 def load_xyz_files(file_list):
@@ -135,8 +138,8 @@ def dump_data(dir_name, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file, basis='ccpvdz',
-         dump_dir=None, dump_fields=['e_cf'], group=False, 
+def main(xyz_files, model_file="model.pth", basis='ccpvdz',
+         dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          conv_tol=1e-9, conv_tol_grad=None,
          verbose=0):
 
@@ -180,25 +183,36 @@ def main(xyz_files, model_file, basis='ccpvdz',
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Calculate and save SCF energies and descriptors using given model.")
-    parser.add_argument("xyz_files", nargs="+", 
+    parser = argparse.ArgumentParser(
+                description="Calculate and save SCF energies and descriptors using given model.",
+                argument_default=argparse.SUPPRESS)
+    parser.add_argument("input", nargs="?",
+                        help='the input yaml file for args')
+    parser.add_argument("-x", "--xyz-files", nargs="*",
                         help="input xyz files")
-    parser.add_argument("-m", "--model-file", default='model.pth', 
+    parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
-    parser.add_argument("-B", "--basis", default='ccpvdz', 
+    parser.add_argument("-B", "--basis",
                         help="basis set used to solve the model")                
-    parser.add_argument("-d", "--dump-dir", default='.', 
+    parser.add_argument("-d", "--dump-dir",
                         help="dir of dumped files")
-    parser.add_argument("-F", "--dump-fields", nargs="+", default=['e_hf', 'e_cf', 'dm_eig', 'conv'],
+    parser.add_argument("-F", "--dump-fields", nargs="*",
                         help="fields to be dumped into the folder")    
     parser.add_argument("-G", "--group", action='store_true',
                         help="group results for all molecules, only works for same system")
-    parser.add_argument("-v", "--verbose", default=0, type=int, choices=range(0,11),
+    parser.add_argument("-v", "--verbose", type=int, choices=range(0,11),
                         help="output calculation information")
-    parser.add_argument("--conv-tol", default=1e-9, type=float,
+    parser.add_argument("--conv-tol", type=float,
                         help="converge threshold of scf iteration")
-    parser.add_argument("--conv-tol-grad", default=None, type=float,
+    parser.add_argument("--conv-tol-grad", type=float,
                         help="gradient converge threshold of scf iteration")
     args = parser.parse_args()
-    
-    main(**vars(args))
+
+    if hasattr(args, "input"):
+        argdict = load_yaml(args.input)
+        del args.input
+        argdict.update(vars(args))
+    else:
+        argdict = vars(args)
+
+    main(**argdict)
