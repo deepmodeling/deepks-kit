@@ -3,7 +3,6 @@ import sys
 import glob
 import numpy as np
 import shutil
-from pathlib import Path
 
 
 def get_array(arr):
@@ -33,6 +32,17 @@ def print_stat(err, conv=None, train_idx=None, test_idx=None):
         if test_idx is None:
             test_idx = np.setdiff1d(np.arange(nsys), train_idx, assume_unique=True)
         print(f'  testing: {np.abs(err[test_idx] - err[train_idx].mean()).mean()}')
+    
+
+def make_label(sys_dir, eref, dump=True):
+    eref = eref.reshape(-1,1)
+    nmol = eref.shape[0]
+    ehf = np.load(f'{sys_dir}/e_hf.npy')
+    assert ehf.shape[0] == nmol
+    ecc = eref - ehf
+    if dump:
+        np.save(f'{sys_dir}/e_cc.npy', ecc)
+    return ecc
 
 
 def collect_data(train_idx, test_idx=None, 
@@ -61,6 +71,7 @@ def collect_data(train_idx, test_idx=None,
     if test_idx is None:
         test_idx = np.setdiff1d(np.arange(nsys), train_idx, assume_unique=True)
     if verbose:
+        print(sys_dir)
         print_stat(err, convs, train_idx, test_idx)
     
     np.savetxt(f'{dump_dir}/train_paths.raw', np.array(systems)[train_idx], fmt='%s')
@@ -70,11 +81,11 @@ def collect_data(train_idx, test_idx=None,
 
 def collect_data_grouped(train_idx, test_idx=None, 
                          sys_dir="results", ene_ref="e_ref.npy", 
-                         dump_dir=".", verbose=True):
+                         dump_dir=".", append=True, verbose=True):
     eref = get_array(ene_ref).reshape(-1, 1)
     nmol = eref.shape[0]
     ecf = np.load(f'{sys_dir}/e_cf.npy').reshape(-1, 1)
-    assert ecf.shape[0] == nmol
+    assert ecf.shape[0] == nmol, f"{ene_ref} ref size: {nmol}, {sys_dir} data size: {ecf.shape[0]}"
     ehf = np.load(f'{sys_dir}/e_hf.npy')
     np.save(f'{sys_dir}/e_cc.npy', eref - ehf)
 
@@ -83,19 +94,25 @@ def collect_data_grouped(train_idx, test_idx=None,
     if test_idx is None:
         test_idx = np.setdiff1d(np.arange(nmol), train_idx, assume_unique=True)
     if verbose:
+        print(sys_dir)
         print_stat(err.reshape(-1), conv.reshape(-1), train_idx, test_idx)
     
-    dd = ['dm_eig.npy', 'e_cc.npy']
-    os.makedirs(f'{dump_dir}/train', exist_ok=True)
-    os.makedirs(f'{dump_dir}/test', exist_ok=True)
+    dd = [name for name in os.listdir(sys_dir) if ".npy" in name]
+    os.makedirs(f'{sys_dir}/train', exist_ok=True)
+    os.makedirs(f'{sys_dir}/test', exist_ok=True)
     for d in dd:
-        np.save(f"{dump_dir}/train/{d}", np.load(f'{sys_dir}/{d}')[train_idx])
+        np.save(f"{sys_dir}/train/{d}", np.load(f'{sys_dir}/{d}')[train_idx])
     for d in dd:
-        np.save(f"{dump_dir}/test/{d}", np.load(f'{sys_dir}/{d}')[test_idx])
-    shutil.copy(f'{sys_dir}/system.raw', f'{dump_dir}/train')
-    shutil.copy(f'{sys_dir}/system.raw', f'{dump_dir}/test')
-    np.savetxt(f'{dump_dir}/train_paths.raw', [os.path.abspath(f'{dump_dir}/train')], fmt='%s')
-    np.savetxt(f'{dump_dir}/test_paths.raw', [os.path.abspath(f'{dump_dir}/test')], fmt='%s')
+        np.save(f"{sys_dir}/test/{d}", np.load(f'{sys_dir}/{d}')[test_idx])
+    shutil.copy(f'{sys_dir}/system.raw', f'{sys_dir}/train')
+    shutil.copy(f'{sys_dir}/system.raw', f'{sys_dir}/test')
+    # np.savetxt(f'{dump_dir}/train_paths.raw', [os.path.abspath(f'{dump_dir}/train')], fmt='%s')
+    # np.savetxt(f'{dump_dir}/test_paths.raw', [os.path.abspath(f'{dump_dir}/test')], fmt='%s')
     # Path(f'{dump_dir}/train_paths.raw').write_text(str(Path(f'{dump_dir}/train').absolute()))
     # Path(f'{dump_dir}/test_paths.raw').write_text(str(Path(f'{dump_dir}/test').absolute()))
+    mode = "a" if append else "w"
+    with open(f'{dump_dir}/train_paths.raw', mode) as fp:
+        fp.write(os.path.abspath(f'{sys_dir}/train') + "\n")
+    with open(f'{dump_dir}/test_paths.raw', mode) as fp:
+        fp.write(os.path.abspath(f'{sys_dir}/test') + "\n")
 

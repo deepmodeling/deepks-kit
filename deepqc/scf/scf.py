@@ -116,17 +116,22 @@ class DeepSCF(scf.hf.RHF):
         vc = torch.stack(shell_vcs, 0).sum(0)
         return ec, vc
 
-    def make_eig(self, dm=None):
-        """return eigenvalues of projected density matrix"""
+    def make_proj_rdms(self, dm=None):
+        """return projected density matrix by shell"""
         if dm is None:
             dm = self.make_rdm1()
-        t_dm = torch.from_numpy(dm).double().to(self.device)
-        proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po)
+        ovlp_shell = [po.detach().cpu().numpy() 
                         for po in self.t_ovlp_shells]
-        proj_eigs = [torch.symeig(dm)[0]
-                        for dm in proj_dms]
-        t_eig = torch.cat(proj_eigs, dim=-1) # natoms x nproj
-        return t_eig.detach().cpu().numpy()
+        proj_dms = [np.einsum('rap,rs,saq->apq', po, dm, po)
+                        for po in ovlp_shell]
+        return proj_dms # [natoms x nproj x nproj] list
+
+    def make_eig(self, dm=None):
+        """return eigenvalues of projected density matrix"""
+        proj_dms = self.make_proj_rdms(dm)
+        proj_eigs = [np.linalg.eigvalsh(dm) for dm in proj_dms]
+        eig = np.concatenate(proj_eigs, -1) # natoms x nproj
+        return eig
 
     def proj_intor(self, intor):
         """1-electron integrals between origin and projected basis"""

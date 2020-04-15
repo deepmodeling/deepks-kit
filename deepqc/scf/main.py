@@ -51,6 +51,8 @@ DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
 
 def load_xyz_files(file_list):
+    if isinstance(file_list, str):
+        file_list = [file_list]
     new_list = []
     for p in file_list:
         if os.path.splitext(p)[1] == '.xyz':
