@@ -22,25 +22,18 @@ class Slurm(Batch) :
                 return stat
             else:
                 time.sleep(5)
-
-    def do_submit(self, 
-                  job_dirs,
-                  cmds,
-                  args = None, 
-                  res = None,
-                  outlog = 'log',
-                  errlog = 'err'):
-        if res == None:
-            res = self.default_resources(res)
+    
+    def check_before_sub(self, res):
         if 'task_max' in res and res['task_max'] > 0:
             while self._check_sub_limit(task_max=res['task_max']):
-                time.sleep(60)
-        script_str = self.sub_script(job_dirs, cmds, args=args, res=res, outlog=outlog, errlog=errlog)
+                time.sleep(60)      
+
+    def exec_sub_script(self, script_str):
         self.context.write_file(self.sub_script_name, script_str)
         stdin, stdout, stderr = self.context.block_checkcall('cd %s && %s %s' % (self.context.remote_root, 'sbatch', self.sub_script_name))
         subret = (stdout.readlines())
         job_id = subret[0].split()[-1]
-        self.context.write_file(self.job_id_name, job_id)        
+        self.context.write_file(self.job_id_name, job_id)          
                 
     def default_resources(self, res_) :
         """
@@ -115,6 +108,21 @@ class Slurm(Batch) :
                 ret += 'export %s=%s\n' % (key, envs[key])
             ret += '\n'        
         return ret
+    
+    def sub_step_head(self, step_res=None):
+        if step_res is None:
+            step_res = {}
+        _default_item(step_res, "exclusive", True)
+        _default_item(step_res, "numb_node", 1)
+        _default_item(step_res, "task_per_node", 1)
+        _default_item(step_res, "cpus_per_task", 1)
+        params = f" -N {step_res['numb_node']} "
+        params += f" -n {step_res['task_per_node']*step_res['numb_node']} "
+        if step_res["cpus_per_task"] > 1:
+            params += f" -c {step_res['cpus_per_task']} "
+        if step_res["exclusive"]:
+            params += " --exclusive "
+        return f"srun {params} "
 
     def sub_script_cmd(self,
                        cmd,

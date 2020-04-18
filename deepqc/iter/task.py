@@ -144,6 +144,7 @@ class BatchTask(AbstructTask):
     def make_dict(self, base='.'):
         return {'dir': str(self.workdir.relative_to(base)),
                 'cmds': self.cmds,
+                "resources": self.resources,
                 'forward_files': self.forward_files,
                 'backward_files': self.backward_files}
 
@@ -152,7 +153,7 @@ class GroupBatchTask(AbstructTask):
     # after grouping up, the following individual setting would be ignored:
     # dispatcher, resources, outlog, errlog
     # only grouped one setting in this task would be effective
-    def __init__(self, batch_tasks, group_size=1,
+    def __init__(self, batch_tasks, group_size=1, parallel_degree=1,
                  dispatcher=None, resources=None, 
                  outlog='log', errlog='err', 
                  forward_files=None, backward_files=None,
@@ -166,6 +167,7 @@ class GroupBatchTask(AbstructTask):
             if task.prev_folder is None:
                 task.prev_folder = self.prev_folder
         self.group_size = group_size
+        self.para_deg = parallel_degree
         if dispatcher is None:
             dispatcher = Dispatcher()
         elif isinstance(dispatcher, dict):
@@ -180,8 +182,9 @@ class GroupBatchTask(AbstructTask):
 
     def execute(self):
         tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]
-        self.dispatcher.run_jobs(tdicts, group_size=self.group_size, work_path='.', 
-                                 resources=self.resources, forward_task_deref=False,
+        self.dispatcher.run_jobs(tdicts, group_size=self.group_size, para_deg=self.para_deg,
+                                 work_path='.', resources=self.resources, 
+                                 forward_task_deref=False,
                                  forward_common_files=self.forward_files,
                                  backward_common_files=self.backward_files,
                                  outlog=self.outlog, errlog=self.errlog)

@@ -19,22 +19,12 @@ class Shell(Batch) :
         else :
             return JobStatus.terminated
 
-    def do_submit(self, 
-                  job_dirs,
-                  cmds,
-                  args = None, 
-                  res = None,
-                  outlog = 'log',
-                  errlog = 'err'):
-        if res == None:
-            res = {}
-        script_str = self.sub_script(job_dirs, cmds, args=args, res=res, outlog=outlog, errlog=errlog)
+    def exec_sub_script(self, script_str):
         self.context.write_file(self.sub_script_name, script_str)
         self.proc = self.context.call('cd %s && exec bash %s' % (self.context.remote_root, self.sub_script_name))
 
-
     def default_resources(self, res_) :
-        if res_ == None :
+        if res_ is None :
             res = {}
         else:
             res = res_
@@ -72,7 +62,6 @@ class Shell(Batch) :
         ret += ('\n')
         return ret
 
-
     def sub_script_cmd(self,
                        cmd,
                        arg,
@@ -84,3 +73,5 @@ class Shell(Batch) :
             _cmd = '%s %s' % (_cmd, arg)
         return _cmd
         
+    def make_non_blocking(self, inner_script, step_res=None):
+        return f"({inner_script})&\n"

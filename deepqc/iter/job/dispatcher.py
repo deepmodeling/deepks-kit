@@ -76,6 +76,7 @@ class Dispatcher(object):
     def run_jobs(self,
                  tasks,
                  group_size=1,
+                 para_deg=1,
                  work_path='.',
                  resources=None,
                  forward_task_deref=True,
@@ -137,13 +138,19 @@ class Dispatcher(object):
                 # submit new or recover old submission
                 dirs = [task['dir'] for task in chunk]
                 commands = [task['cmds'] for task in chunk]
+                para_res = [task['resources'] for task in chunk]
                 if job_uuid is None:
-                    rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog)
+                    rjob['batch'].submit(dirs, commands, res = resources, 
+                                         outlog=outlog, errlog=errlog, 
+                                         para_deg=para_deg, para_res=para_res)
                     job_uuid = rjob['context'].job_uuid
                     # dlog.debug('assigned uudi %s for %s ' % (job_uuid, task_chunks_[ii]))
                     print('# new submission of %s' % job_uuid)
                 else:
-                    rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog, restart = True)
+                    rjob['batch'].submit(dirs, commands, res = resources, 
+                                         outlog=outlog, errlog=errlog, 
+                                         para_deg=para_deg, para_res=para_res,
+                                         restart = True)
                     print('# restart from old submission %s ' % job_uuid)
                 # record job and its hash
                 job_list.append(rjob)
@@ -170,7 +177,11 @@ class Dispatcher(object):
                         # dlog.debug('try %s times for %s'% (fcount[idx], job_uuid))
                         dirs = [task['dir'] for task in chunk]
                         commands = [task['cmds'] for task in chunk]
-                        rjob['batch'].submit(dirs, commands, res = resources, outlog=outlog, errlog=errlog,restart=True)
+                        para_res = [task['resources'] for task in chunk]
+                        rjob['batch'].submit(dirs, commands, res = resources, 
+                                             outlog=outlog, errlog=errlog, 
+                                             para_deg=para_deg, para_res=para_res,
+                                             restart = True)
                     elif status == JobStatus.finished :
                         print('# job %s finished' % job_uuid)
                         rjob['context'].download('.', backward_common_files)
