@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn 
 import inspect
+import math
 
 
 def parse_actv_fn(code):
@@ -18,7 +19,13 @@ def parse_actv_fn(code):
         return nn.Softplus()
     if lcode == 'gelu':
         return nn.functional.gelu
+    if lcode == 'mygelu':
+        return mygelu
     raise ValueError(f'{code} is not a valid activation function')
+
+
+def mygelu(x):
+    return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
 
 
 def log_args(name):

@@ -8,7 +8,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def eval_sample(model, sample, loss_fn=nn.MSELoss()):
-    label, *data = [torch.from_numpy(d).to(DEVICE) for d in sample]
+    label, *data = [d.to(DEVICE) for d in sample]
     pred = model(*data)
     loss = loss_fn(pred, label)
     return loss
@@ -57,7 +57,7 @@ def train(model, g_reader, n_epoch,
         tic = time()
         loss_list = []
         for sample in g_reader:
-            label, *data = [torch.from_numpy(d).to(DEVICE) for d in sample]
+            label, *data = [d.to(DEVICE) for d in sample]
             optimizer.zero_grad()
             pred = model(*data)
             loss = loss_fn(pred, label)

@@ -1,5 +1,6 @@
 import os,time,sys
 import numpy as np
+import torch
 
 
 class Reader(object):
@@ -33,7 +34,9 @@ class Reader(object):
     
     def sample_train(self):
         if self.nframes == self.batch_size == 1:
-            return self.data_ec, self.data_dm
+            return \
+                torch.from_numpy(self.data_ec), \
+                torch.from_numpy(self.data_dm)
         self.index_count_all += self.batch_size
         if self.index_count_all > self.nframes:
             # shuffle the data
@@ -43,13 +46,13 @@ class Reader(object):
             self.data_dm = self.data_dm[ind]
         ind = np.arange(self.index_count_all - self.batch_size, self.index_count_all)
         return \
-            self.data_ec[ind], \
-            self.data_dm[ind]
+            torch.from_numpy(self.data_ec[ind]), \
+            torch.from_numpy(self.data_dm[ind])
 
     def sample_all(self) :
         return \
-            self.data_ec, \
-            self.data_dm
+            torch.from_numpy(self.data_ec), \
+            torch.from_numpy(self.data_dm)
 
     def get_train_size(self) :
         return self.nframes
@@ -103,7 +106,6 @@ class GroupReader(object) :
 
         self._sample_used = 0
 
-
     def __iter__(self):
         return self
 
@@ -129,7 +131,7 @@ class GroupReader(object) :
         cgrp = self.group_dict[cnatm]
         csys = np.random.choice(cgrp, self.group_batch, p=self.batch_prob[cnatm])
         all_sample = list(zip(*[s.sample_train() for s in csys]))
-        return [np.concatenate(d, axis=0) for d in all_sample]
+        return [torch.cat(d, dim=0) for d in all_sample]
 
     def sample_all(self, idx=None) :
         if idx is None:
@@ -140,8 +142,8 @@ class GroupReader(object) :
     def sample_all_batch(self, idx=None):
         if idx is not None:
             all_data = self.sample_all(idx)
-            n_split = all_data[0].shape[0] // self.batch_size
-            yield from zip(*[np.array_split(all_data[i], n_split, axis=0) for i in range(len(all_data))])
+            # n_split = all_data[0].shape[0] // self.batch_size
+            yield from zip(*[torch.split(all_data[i], self.batch_size, dim=0) for i in range(len(all_data))])
         else:
             for i in range(self.nsystems):
                 yield from self.sample_all_batch(i)

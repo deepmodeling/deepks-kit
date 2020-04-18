@@ -116,19 +116,23 @@ class DeepSCF(scf.hf.RHF):
         vc = torch.stack(shell_vcs, 0).sum(0)
         return ec, vc
 
-    def make_proj_rdms(self, dm=None):
+    def make_proj_rdms(self, dm=None, flatten=False):
         """return projected density matrix by shell"""
         if dm is None:
             dm = self.make_rdm1()
         ovlp_shell = [po.detach().cpu().numpy() 
                         for po in self.t_ovlp_shells]
+        # [natoms x nsph x nsph] list
         proj_dms = [np.einsum('rap,rs,saq->apq', po, dm, po)
                         for po in ovlp_shell]
-        return proj_dms # [natoms x nproj x nproj] list
+        if not flatten:
+            return proj_dms
+        else:
+            return torch.cat([s.flatten(-2) for s in proj_dms], dim=-1) 
 
     def make_eig(self, dm=None):
         """return eigenvalues of projected density matrix"""
-        proj_dms = self.make_proj_rdms(dm)
+        proj_dms = self.make_proj_rdms(dm, flatten=False)
         proj_eigs = [np.linalg.eigvalsh(dm) for dm in proj_dms]
         eig = np.concatenate(proj_eigs, -1) # natoms x nproj
         return eig

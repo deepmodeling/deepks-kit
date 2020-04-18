@@ -19,7 +19,7 @@ def test(model, g_reader, dump_prefix="test"):
     for i in range(g_reader.nsystems):
         sample = g_reader.sample_all(i)
         nframes = sample[0].shape[0]
-        label, *data = [torch.from_numpy(d).to(DEVICE) for d in sample]
+        label, *data = [d.to(DEVICE) for d in sample]
         pred = model(*data)
         error = torch.sqrt(loss_fn(pred, label))
 

@@ -62,6 +62,26 @@ class Gradients(rhf_grad.Gradients):
                ).double().to(self.base.device)
         return mask
 
+    def make_grad_pdm_x(self, dm=None, flatten=False):
+        if dm is None:
+            dm = self.base.make_rdm1()
+        t_dm = torch.from_numpy(dm).double().to(self.base.device)
+        atom_gdmx_shells = []
+        for atom_id in range(self.mol.natm):
+            mask = self.t_make_mask(atom_id)
+            atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, *self.base.t_proj_ovlp.shape)
+            govx_shells = torch.split(atom_ipovlp, self.base.shell_sec, -1)
+            gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
+                                for govx, po in zip(govx_shells, self.t_ovlp_shells)]
+            atom_gdmx_shells.append([gdmx + gdmx.transpose(-1,-2) for gdmx in gdmx_shells])
+        # [natom (deriv atom) x 3 (xyz) x natom (proj atom) x nsph (1|3|5) x nsph] list
+        all_gdmx_shells = [torch.stack(s, dim=0) for s in zip(*atom_gdmx_shells)]
+        if not flatten:
+            return [s.detach().cpu().numpy() for s in all_gdmx_shells]
+        else:
+            return torch.cat([s.flatten(-2) for s in all_gdmx_shells], 
+                             dim=-1).detach().cpu().numpy()
+
 
 def make_mask(mol1, mol2, atom_id):
     mask = np.zeros((mol1.nao, mol2.nao))
