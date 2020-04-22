@@ -6,6 +6,8 @@ import shutil
 
 
 def get_array(arr):
+    if arr is None:
+        return arr
     if isinstance(arr, str):
         ext = os.path.splitext(arr)[-1]
         if "npy" in ext:
@@ -27,26 +29,32 @@ def print_stat(err, conv=None, train_idx=None, test_idx=None):
     print(f'mean error: {err.mean()}')
     print(f'mean absolute error: {np.abs(err).mean()}')
     if train_idx is not None:
-        print(f'mean absolute error after shift: {np.abs(err - err[train_idx].mean()).mean()}')
-        print(f'  training: {np.abs(err[train_idx] - err[train_idx].mean()).mean()}')
         if test_idx is None:
             test_idx = np.setdiff1d(np.arange(nsys), train_idx, assume_unique=True)
+        print(f'  training: {np.abs(err[train_idx]).mean()}')
+        print(f'  testing: {np.abs(err[test_idx]).mean()}')
+        print(f'mean absolute error after shift: {np.abs(err - err[train_idx].mean()).mean()}')
+        print(f'  training: {np.abs(err[train_idx] - err[train_idx].mean()).mean()}')
         print(f'  testing: {np.abs(err[test_idx] - err[train_idx].mean()).mean()}')
     
 
-def make_label(sys_dir, eref, dump=True):
+def make_label(sys_dir, eref, fref=None):
     eref = eref.reshape(-1,1)
     nmol = eref.shape[0]
     ehf = np.load(f'{sys_dir}/e_hf.npy')
     assert ehf.shape[0] == nmol
     ecc = eref - ehf
-    if dump:
-        np.save(f'{sys_dir}/e_cc.npy', ecc)
-    return ecc
+    np.save(f'{sys_dir}/e_cc.npy', ecc)
+    if fref is not None:
+        fref = fref.reshape(nmol, -1, 3)
+        fhf = np.load(f'{sys_dir}/f_hf.npy')
+        assert fhf.shape == fref.shape
+        fcc = fref - fhf
+        np.save(f'{sys_dir}/f_cc.npy', fcc)
 
 
 def collect_data(train_idx, test_idx=None, 
-                 sys_dir="results", ene_ref="e_ref.npy", 
+                 sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                  dump_dir=".", verbose=True):
     erefs = get_array(ene_ref).reshape(-1)
     nsys = erefs.shape[0]
@@ -80,14 +88,16 @@ def collect_data(train_idx, test_idx=None,
 
 
 def collect_data_grouped(train_idx, test_idx=None, 
-                         sys_dir="results", ene_ref="e_ref.npy", 
+                         sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                          dump_dir=".", append=True, verbose=True):
     eref = get_array(ene_ref).reshape(-1, 1)
+    fref = get_array(force_ref)
     nmol = eref.shape[0]
     ecf = np.load(f'{sys_dir}/e_cf.npy').reshape(-1, 1)
     assert ecf.shape[0] == nmol, f"{ene_ref} ref size: {nmol}, {sys_dir} data size: {ecf.shape[0]}"
-    ehf = np.load(f'{sys_dir}/e_hf.npy')
-    np.save(f'{sys_dir}/e_cc.npy', eref - ehf)
+    make_label(sys_dir, eref, fref)
+    # ehf = np.load(f'{sys_dir}/e_hf.npy')
+    # np.save(f'{sys_dir}/e_cc.npy', eref - ehf)
 
     err = eref - ecf
     conv = np.load(f'{sys_dir}/conv.npy').reshape(-1)

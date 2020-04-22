@@ -4,15 +4,34 @@ import torch.optim as optim
 import numpy as np
 from time import time
 
+
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def eval_sample(model, sample, loss_fn=nn.MSELoss()):
-    label, *data = [d.to(DEVICE) for d in sample]
-    pred = model(*data)
-    loss = loss_fn(pred, label)
-    return loss
+def calc_force(ene, eig, gvx):
+    [gev] = torch.autograd.grad(ene, eig, 
+                                grad_outputs=torch.ones_like(ene),
+                                retain_graph=True, create_graph=True, only_inputs=True)
+    # minus sign as froce = - grad_x E
+    force = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
+    return force
 
+
+def eval_sample(model, sample, force_factor=0, loss_fn=nn.MSELoss()):
+    # allocate data first
+    e_label, eig, *force_sample = [d.to(DEVICE, non_blocking=True) for d in sample]
+    if force_factor > 0:
+        eig.requires_grad_(True)
+    # begin the calculation
+    e_pred = model(eig)
+    loss = loss_fn(e_pred, e_label)
+    # optional force calculation
+    if force_factor > 0:
+        f_label, gvx = force_sample
+        f_pred = calc_force(e_pred, eig, gvx)
+        loss = loss + force_factor * loss_fn(f_pred, f_label)
+    return loss
+    
 
 def preprocess(model, g_reader, 
                 preshift=False, prescale=False, prescale_sqrt=False, prescale_clip=0,
@@ -36,7 +55,7 @@ def preprocess(model, g_reader,
 
 
 def train(model, g_reader, n_epoch, 
-            test_reader=None,
+            test_reader=None, force_factor=0,
             start_lr=0.01, decay_steps=100, decay_rate=0.96, weight_decay=0.0,
             display_epoch=100, ckpt_file=None):
     if test_reader is None:
@@ -48,8 +67,10 @@ def train(model, g_reader, n_epoch,
     print("# working on device:", DEVICE)
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
-    trn_loss = np.mean([eval_sample(model, batch).item() for batch in g_reader.sample_all_batch()])
-    tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
+    trn_loss = np.mean([eval_sample(model, batch, force_factor, loss_fn).item() 
+                            for batch in g_reader.sample_all_batch()])
+    tst_loss = np.mean([eval_sample(model, batch, force_factor, loss_fn).item() 
+                            for batch in test_reader.sample_all_batch()])
     tst_time = time() - tic
     print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {start_lr:>.2e}  {0:>8.2f}  {tst_time:>8.2f}")
 
@@ -57,10 +78,8 @@ def train(model, g_reader, n_epoch,
         tic = time()
         loss_list = []
         for sample in g_reader:
-            label, *data = [d.to(DEVICE) for d in sample]
             optimizer.zero_grad()
-            pred = model(*data)
-            loss = loss_fn(pred, label)
+            loss = eval_sample(model, sample, force_factor, loss_fn)
             loss.backward()
             optimizer.step()
             loss_list.append(loss.item())
@@ -70,7 +89,8 @@ def train(model, g_reader, n_epoch,
             trn_loss = np.mean(loss_list)
             trn_time = time() - tic
             tic = time()
-            tst_loss = np.mean([eval_sample(model, batch).item() for batch in test_reader.sample_all_batch()])
+            tst_loss = np.mean([eval_sample(model, batch, force_factor, loss_fn).item() 
+                                    for batch in test_reader.sample_all_batch()])
             tst_time = time() - tic
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}  {scheduler.get_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
             if ckpt_file:

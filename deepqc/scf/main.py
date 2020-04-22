@@ -14,39 +14,52 @@ from deepqc.train.model import QCNet
 from deepqc.train.main import load_yaml
 
 
-A2B = 1.889725989
+BOHR = 0.52917721092
 
 
 Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
-fd_ehf = Field("e_hf", 
-               ["ehf", "ene_hf", "e0"], 
-               lambda mf: mf.energy_tot0(),
-               "(nframe, 1)")
-fd_ecf = Field("e_cf", 
-               ["ecf", "ene_cf", "e_tot", "etot", "ene", "energy", "e"],
-               lambda mf: mf.e_tot,
-               "(nframe, 1)")
-fd_rdm = Field("rdm",
-               ["dm"],
-               lambda mf: mf.make_rdm1(),
-               "(nframe,nao,nao)")
-fd_eig = Field("dm_eig",
-               ["eig"],
-               lambda mf: mf.make_eig(),
-               "(nframe,natom,nproj)")
-fd_conv = Field("conv", 
-               ["converged", "convergence"], 
-               lambda mf: mf.converged,
-               "(nframe, 1)")
-fd_fhf = Field("f_hf", 
-               ["fhf", "force_hf", "f0"], 
-               lambda mf: mf.nuc_grad_method0().kernel(),
-               "(nframe, natom, 3)")
-fd_fcf = Field("f_cf", 
-               ["fcf", "force_cf", "f_tot", "ftot", "force", "f"], 
-               lambda mf: mf.nuc_grad_method().kernel(),
-               "(nframe, natom, 3)")
-ALL_FIELDS = [fd_ehf, fd_ecf, fd_eig, fd_rdm, fd_conv, fd_fhf, fd_fcf]
+ALL_FIELDS = [
+    Field("e_hf", 
+          ["ehf", "ene_hf", "e0"], 
+          lambda mf: mf.energy_tot0(),
+          "(nframe, 1)"),
+    Field("e_cf", 
+          ["ecf", "ene_cf", "e_tot", "etot", "ene", "energy", "e"],
+          lambda mf: mf.e_tot,
+          "(nframe, 1)"),
+    Field("rdm",
+          ["dm"],
+          lambda mf: mf.make_rdm1(),
+          "(nframe,nao,nao)"),
+    Field("proj_dm",
+          ["pdm"],
+          lambda mf: mf.make_proj_rdms(flatten=True),
+          "(nframe,natom,-1)"),
+    Field("dm_eig",
+          ["eig"],
+          lambda mf: mf.make_eig(),
+          "(nframe,natom,nproj)"),
+    Field("conv", 
+          ["converged", "convergence"], 
+          lambda mf: mf.converged,
+          "(nframe, 1)"),
+    Field("f_hf", 
+          ["fhf", "force_hf", "f0"], 
+          lambda mf: - mf.nuc_grad_method0().kernel() / BOHR,
+          "(nframe, natom, 3)"),
+    Field("f_cf", 
+          ["fcf", "force_cf", "f_tot", "ftot", "force", "f"], 
+          lambda mf: - mf.nuc_grad_method().kernel() / BOHR,
+          "(nframe, natom, 3)"),
+    Field("gdmx",
+          ["grad_dm_x", "grad_pdm_x"],
+          lambda mf: mf.nuc_grad_method().make_grad_pdm_x(flatten=True) / BOHR,
+          "(nframe,natom,3,natom,-1)"),
+    Field("grad_vx",
+          ["grad_eig_x", "geigx", "gvx"],
+          lambda mf: mf.nuc_grad_method().make_grad_eig_x() / BOHR,
+          "(nframe,natom,3,natom,-1)"),
+]
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
 
@@ -122,8 +135,10 @@ def collect_fields(fields, meta, res_list):
     res_dict = {}
     for fd in fields:
         fd_res = np.array([res[fd.name] for res in res_list])
-        fd_shape = eval(fd.shape, {}, locals())
-        res_dict[fd.name] = fd_res.reshape(fd_shape)
+        if fd.shape:
+            fd_shape = eval(fd.shape, {}, locals())
+            fd_res = fd_res.reshape(fd_shape)
+        res_dict[fd.name] = fd_res
     return res_dict
 
 
@@ -162,7 +177,8 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
                                verbose=verbose)
         except Exception as e:
             print(fl, 'failed! error:', e, file=sys.stderr)
-            continue
+            # continue
+            raise
         if not group:
             sub_dir = os.path.join(dump_dir, os.path.splitext(os.path.basename(fl))[0])
             dump_meta(sub_dir, meta)

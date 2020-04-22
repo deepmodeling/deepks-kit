@@ -9,7 +9,9 @@ if __name__ == "__main__":
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
 
+
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 def test(model, g_reader, dump_prefix="test"):
     loss_fn=nn.MSELoss()
@@ -19,8 +21,8 @@ def test(model, g_reader, dump_prefix="test"):
     for i in range(g_reader.nsystems):
         sample = g_reader.sample_all(i)
         nframes = sample[0].shape[0]
-        label, *data = [d.to(DEVICE) for d in sample]
-        pred = model(*data)
+        label, data, *_ = [d.to(DEVICE) for d in sample]
+        pred = model(data)
         error = torch.sqrt(loss_fn(pred, label))
 
         error_np = error.item()
@@ -48,6 +50,7 @@ def test(model, g_reader, dump_prefix="test"):
                    np.stack([all_label, all_pred], axis=1), 
                    header=info + "\nreal_ene  pred_ene")
     return all_err_l1, all_err_l2
+
 
 def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm_eig']):
     g_reader = GroupReader(data_path, e_name=e_name, d_name=d_name)

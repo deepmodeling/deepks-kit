@@ -13,6 +13,7 @@ class Gradients(rhf_grad.Gradients):
     #   p,q: projected basis on atom
     #   r,s: mol basis in pyscf
     #   x  : space component of gradient
+    #   v  : eigen values of projected dm
     """Analytical nuclear gradient for our SCF model"""
     
     def __init__(self, mf):
@@ -66,6 +67,14 @@ class Gradients(rhf_grad.Gradients):
         if dm is None:
             dm = self.base.make_rdm1()
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
+        all_gdmx_shells = self.t_make_grad_pdm_x(t_dm)
+        if not flatten:
+            return [s.detach().cpu().numpy() for s in all_gdmx_shells]
+        else:
+            return torch.cat([s.flatten(-2) for s in all_gdmx_shells], 
+                             dim=-1).detach().cpu().numpy()
+
+    def t_make_grad_pdm_x(self, t_dm):
         atom_gdmx_shells = []
         for atom_id in range(self.mol.natm):
             mask = self.t_make_mask(atom_id)
@@ -76,11 +85,25 @@ class Gradients(rhf_grad.Gradients):
             atom_gdmx_shells.append([gdmx + gdmx.transpose(-1,-2) for gdmx in gdmx_shells])
         # [natom (deriv atom) x 3 (xyz) x natom (proj atom) x nsph (1|3|5) x nsph] list
         all_gdmx_shells = [torch.stack(s, dim=0) for s in zip(*atom_gdmx_shells)]
-        if not flatten:
-            return [s.detach().cpu().numpy() for s in all_gdmx_shells]
-        else:
-            return torch.cat([s.flatten(-2) for s in all_gdmx_shells], 
-                             dim=-1).detach().cpu().numpy()
+        return all_gdmx_shells
+
+    def make_grad_eig_x(self, dm=None):
+        if dm is None:
+            dm = self.base.make_rdm1()
+        t_dm = torch.from_numpy(dm).double().to(self.base.device)
+        return self.t_make_grad_eig_x(t_dm).detach().cpu().numpy()
+
+    def t_make_grad_eig_x(self, t_dm):
+        "v stands for "
+        shell_pdm = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
+                        for po in self.t_ovlp_shells]
+        calc_eig = lambda dm: torch.symeig(dm, True)[0]
+        shell_gvdm = [get_batch_jacobian(calc_eig, dm, dm.shape[-1]) 
+                        for dm in shell_pdm]
+        shell_gdmx = self.t_make_grad_pdm_x(t_dm)
+        shell_gvx = [torch.einsum("bxapq,avpq->bxav", gdmx, gvdm) 
+                        for gdmx, gvdm in zip(shell_gdmx, shell_gvdm)]
+        return torch.cat(shell_gvx, dim=-1)
 
 
 def make_mask(mol1, mol2, atom_id):
@@ -105,6 +128,17 @@ def t_get_grad_dms(mf, dm=None):
     ec = mf.net(ceig)
     grad_dms = torch.autograd.grad(ec, proj_dms)
     return grad_dms
+
+
+def get_batch_jacobian(f, x, noutputs):
+    nindim = len(x.shape)-1
+    x = x.unsqueeze(1) # b, 1 ,*in_dim
+    n = x.shape[0]
+    x = x.repeat(1, noutputs, *[1]*nindim) # b, out_dim, *in_dim
+    x.requires_grad_(True)
+    y = f(x)
+    input_val = torch.eye(noutputs).reshape(1,noutputs, noutputs).repeat(n, 1, 1)
+    return torch.autograd.grad(y, x, input_val)[0]
 
 
 # only for testing purpose, not used in code

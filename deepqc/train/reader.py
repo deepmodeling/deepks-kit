@@ -10,7 +10,8 @@ class Reader(object):
         self.batch_size = batch_size   
         self.e_name = e_name
         self.d_name = d_name if isinstance(d_name, (list, tuple)) else [d_name]
-
+        self.prepare()
+    
     def prepare(self):
         self.index_count_all = 0
         sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
@@ -34,9 +35,7 @@ class Reader(object):
     
     def sample_train(self):
         if self.nframes == self.batch_size == 1:
-            return \
-                torch.from_numpy(self.data_ec), \
-                torch.from_numpy(self.data_dm)
+            return self.sample_all()
         self.index_count_all += self.batch_size
         if self.index_count_all > self.nframes:
             # shuffle the data
@@ -60,15 +59,83 @@ class Reader(object):
     def get_batch_size(self) :
         return self.batch_size
 
-    def get_data(self):
-        return self.data_dm
-
     def get_nframes(self) :
         return self.nframes
 
 
+class ForceReader(object):
+    def __init__(self, data_path, batch_size, e_name="e_cc", f_name="f_cc"):
+        self.data_path = data_path
+        self.batch_size = batch_size
+        self.e_name = e_name
+        self.f_name = f_name
+        # load meta
+        sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
+        self.meta = sys_meta
+        self.natm = self.meta[0]
+        self.nao = self.meta[1]
+        self.nproj = self.meta[-1]
+        self.prepare()
+        # initialize sample index queue
+        self.idx_queue = []
+
+    def prepare(self):
+        # load energy and check nframes
+        self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
+        self.nframes = self.data_ec.shape[0]
+        if self.nframes < self.batch_size:
+            self.batch_size = self.nframes
+            print('#', self.data_path, f"reset batch size to {self.batch_size}")
+        self.data_dm = np.load(os.path.join(self.data_path, 'dm_eig.npy'))\
+                         .reshape([self.nframes, self.natm, self.nproj])
+        # load data in torch
+        self.t_ec = torch.tensor(self.data_ec)
+        self.t_eig = torch.tensor(self.data_dm)
+        self.t_fc = torch.tensor(
+            np.load(os.path.join(self.data_path, f'{self.f_name}.npy'))\
+              .reshape(self.nframes, self.natm, 3))
+        self.t_gvx = torch.tensor(
+            np.load(os.path.join(self.data_path, 'grad_vx.npy'))\
+              .reshape(self.nframes, self.natm, 3, self.natm, self.nproj))
+        # pin memory
+        if torch.cuda.is_available():
+            self.t_ec = self.t_ec.pin_memory()
+            self.t_fc = self.t_fc.pin_memory()
+            self.t_eig = self.t_eig.pin_memory()
+            self.t_gvx = self.t_gvx.pin_memory()
+
+    def sample_train(self):
+        if self.batch_size == self.nframes == 1:
+            return self.sample_all()
+        if len(self.idx_queue) < self.batch_size:
+            self.idx_queue = np.random.choice(self.nframes, self.nframes, replace=False)
+        sample_idx = self.idx_queue[:self.batch_size]
+        self.idx_queue = self.idx_queue[self.batch_size:]
+        return \
+            self.t_ec[sample_idx], \
+            self.t_eig[sample_idx], \
+            self.t_fc[sample_idx], \
+            self.t_gvx[sample_idx]
+
+    def sample_all(self):
+        return \
+            self.t_ec, \
+            self.t_eig, \
+            self.t_fc, \
+            self.t_gvx
+
+    def get_train_size(self):
+        return self.nframes
+
+    def get_batch_size(self):
+        return self.batch_size
+
+    def get_nframes(self):
+        return self.nframes
+
+
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size=1, group_batch=1, e_name="e_cc", d_name="dm_eig") :
+    def __init__ (self, path_list, batch_size=1, group_batch=1, with_force=False, **kwargs) :
         if isinstance(path_list, str):
             path_list = [path_list]
         self.path_list = path_list
@@ -76,11 +143,12 @@ class GroupReader(object) :
         self.nsystems = len(self.path_list)
         # init system readers
         self.readers = []
+        Reader_class = ForceReader if with_force else Reader
         for ii in self.path_list :
-            self.readers.append(Reader(ii, batch_size, e_name=e_name, d_name=d_name))
+            self.readers.append(Reader_class(ii, batch_size, **kwargs))
         # prepare all systems
-        for ii in self.readers:
-            ii.prepare()
+        # for ii in self.readers:
+        #     ii.prepare()
         # probability of each system
         self.nframes = []
         for ii in self.readers :

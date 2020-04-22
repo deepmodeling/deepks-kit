@@ -128,7 +128,7 @@ class DeepSCF(scf.hf.RHF):
         if not flatten:
             return proj_dms
         else:
-            return torch.cat([s.flatten(-2) for s in proj_dms], dim=-1) 
+            return np.concatenate([s.reshape(*s.shape[:-2], -1) for s in proj_dms], axis=-1) 
 
     def make_eig(self, dm=None):
         """return eigenvalues of projected density matrix"""
