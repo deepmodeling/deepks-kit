@@ -8,6 +8,7 @@ if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
+from deepqc.train.main import load_sys_paths
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -53,6 +54,7 @@ def test(model, g_reader, dump_prefix="test"):
 
 
 def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm_eig']):
+    data_path = load_sys_paths(data_path)
     g_reader = GroupReader(data_path, e_name=e_name, d_name=d_name)
     if isinstance(model_file, str):
         model_file = [model_file]
@@ -61,7 +63,9 @@ def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm
         p = os.path.dirname(f)
         model = QCNet.load(f).double().to(DEVICE)
         dump = os.path.join(p, output_prefix)
-        os.makedirs(os.path.dirname(dump), exist_ok=True)
+        dir_name = os.path.dirname(dump)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
         test(model, g_reader, dump_prefix=dump)
 
 

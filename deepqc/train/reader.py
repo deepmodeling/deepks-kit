@@ -4,7 +4,8 @@ import torch
 
 
 class Reader(object):
-    def __init__(self, data_path, batch_size, e_name="e_cc", d_name="dm_eig"):
+    def __init__(self, data_path, batch_size, 
+                 e_name="e_cc", d_name="dm_eig", **kwargs):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
@@ -64,11 +65,15 @@ class Reader(object):
 
 
 class ForceReader(object):
-    def __init__(self, data_path, batch_size, e_name="e_cc", f_name="f_cc"):
+    def __init__(self, data_path, batch_size, 
+                 e_name="e_cc", d_name="dm_eig", 
+                 f_name="f_cc", gv_name="grad_vx", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_name = e_name
         self.f_name = f_name
+        self.d_name = d_name
+        self.gv_name = gv_name
         # load meta
         sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
         self.meta = sys_meta
@@ -81,12 +86,12 @@ class ForceReader(object):
 
     def prepare(self):
         # load energy and check nframes
-        self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
+        self.data_ec = np.load(os.path.join(self.data_path, f'{self.e_name}.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
             print('#', self.data_path, f"reset batch size to {self.batch_size}")
-        self.data_dm = np.load(os.path.join(self.data_path, 'dm_eig.npy'))\
+        self.data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
                          .reshape([self.nframes, self.natm, self.nproj])
         # load data in torch
         self.t_ec = torch.tensor(self.data_ec)
@@ -95,7 +100,7 @@ class ForceReader(object):
             np.load(os.path.join(self.data_path, f'{self.f_name}.npy'))\
               .reshape(self.nframes, self.natm, 3))
         self.t_gvx = torch.tensor(
-            np.load(os.path.join(self.data_path, 'grad_vx.npy'))\
+            np.load(os.path.join(self.data_path, f'{self.gv_name}.npy'))\
               .reshape(self.nframes, self.natm, 3, self.natm, self.nproj))
         # pin memory
         if torch.cuda.is_available():
