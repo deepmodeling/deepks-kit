@@ -97,6 +97,8 @@ class DeepSCF(scf.hf.RHF):
         """return ec and vc corresponding to ec"""
         if dm is None:
             dm = self.make_rdm1()
+        if self.net is None:
+            return 0., np.zeros_like(dm)
         t_dm = torch.from_numpy(dm).double().to(self.device)
         t_ec, t_vc = self.t_get_ec(t_dm)
         return t_ec.item(), t_vc.detach().cpu().numpy()

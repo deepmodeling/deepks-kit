@@ -159,8 +159,10 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          conv_tol=1e-9, conv_tol_grad=None,
          verbose=0):
-
-    model = QCNet.load(model_file).double()
+    if model_file.upper() == "NONE":
+        model = None
+    else:
+        model = QCNet.load(model_file).double()
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
