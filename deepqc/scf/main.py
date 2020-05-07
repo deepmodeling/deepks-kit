@@ -18,7 +18,7 @@ BOHR = 0.52917721092
 
 
 Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
-ALL_FIELDS = [
+SCF_FIELDS = [
     Field("e_hf", 
           ["ehf", "ene_hf", "e0"], 
           lambda mf: mf.energy_tot0(),
@@ -42,22 +42,24 @@ ALL_FIELDS = [
     Field("conv", 
           ["converged", "convergence"], 
           lambda mf: mf.converged,
-          "(nframe, 1)"),
+          "(nframe, 1)")
+]
+GRAD_FIELDS = [
     Field("f_hf", 
           ["fhf", "force_hf", "f0"], 
-          lambda mf: - mf.nuc_grad_method0().kernel() / BOHR,
+          lambda grad: - grad.get_hf() / BOHR,
           "(nframe, natom, 3)"),
     Field("f_cf", 
           ["fcf", "force_cf", "f_tot", "ftot", "force", "f"], 
-          lambda mf: - mf.nuc_grad_method().kernel() / BOHR,
+          lambda grad: - grad.de / BOHR,
           "(nframe, natom, 3)"),
     Field("gdmx",
           ["grad_dm_x", "grad_pdm_x"],
-          lambda mf: mf.nuc_grad_method().make_grad_pdm_x(flatten=True) / BOHR,
+          lambda grad: grad.make_grad_pdm_x(flatten=True) / BOHR,
           "(nframe,natom,3,natom,-1)"),
     Field("grad_vx",
           ["grad_eig_x", "geigx", "gvx"],
-          lambda mf: mf.nuc_grad_method().make_grad_eig_x() / BOHR,
+          lambda grad: grad.make_grad_eig_x() / BOHR,
           "(nframe,natom,3,natom,-1)"),
 ]
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
@@ -111,8 +113,12 @@ def solve_mol(mol, model, fields,
     meta = np.array([natom, nao, nproj])
 
     res = {}
-    for fd in fields:
+    for fd in fields["scf"]:
         res[fd.name] = fd.calc(cf)
+    if fields["grad"]:
+        gd = cf.nuc_grad_method().run()
+    for fd in fields["grad"]:
+        res[fd.name] = fd.calc(gd)
     
     if verbose:
         tac = time.time()
@@ -122,12 +128,18 @@ def solve_mol(mol, model, fields,
 
 
 def select_fields(names):
-    return [fd for fd in ALL_FIELDS 
-                if fd.name in names 
-                or any(al in names for al in fd.alias)]
+    scfs  = [fd for fd in SCF_FIELDS 
+                 if fd.name in names 
+                 or any(al in names for al in fd.alias)]
+    grads = [fd for fd in GRAD_FIELDS 
+                 if fd.name in names 
+                 or any(al in names for al in fd.alias)]
+    return {"scf": scfs, "grad": grads}
 
 
 def collect_fields(fields, meta, res_list):
+    if isinstance(fields, dict):
+        fields = fields["scf"] + fields["grad"]
     if isinstance(res_list, dict):
         res_list = [res_list]
     nframe = len(res_list)

@@ -26,6 +26,8 @@ class Gradients(rhf_grad.Gradients):
         # < \nabla mol_ao | alpha^I_rlm >
         self.t_proj_ipovlp = torch.from_numpy(
             mf.proj_intor("int1e_ipovlp")).double().to(mf.device)
+        # add a field to memorize the pulay term in ec
+        self.dec = None
         self._keys.update(self.__dict__.keys())
 
     def extra_force(self, atom_id, envs):
@@ -33,12 +35,28 @@ class Gradients(rhf_grad.Gradients):
         de0 = super().extra_force(atom_id, envs)
         dm = envs["dm0"]
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
-        t_de = self.t_get_pulay(atom_id, t_dm)
-        return de0 + t_de.detach().cpu().numpy()
+        t_dec = self.t_get_pulay(atom_id, t_dm)
+        dec = t_dec.detach().cpu().numpy()
+        # memorize dec results for calculate hf grad
+        if self.dec is None:
+            self.dec = np.zeros((len(envs["atmlst"]), 3))
+        self.dec[envs["k"]] = dec
+        # return summed grads
+        return de0 + dec
+    
+    def kernel(self, *args, **kwargs):
+        # do nothing additional to the original one but symmetrizing dec
+        # return exact the same thing
+        de = super().kernel(*args, **kwargs)
+        if self.mol.symmetry:
+            self.dec = self.symmetrize(self.dec, self.atmlst)
+        return de
 
-    def get_hf(self, *args, **kwargs):
+    def get_hf(self):
         """return the grad given by raw Hartree Fock Hamiltonian under current dm"""
-        return rhf_grad.Gradients(self.base).kernel(*args, **kwargs)
+        assert self.de is not None and self.dec is not None
+        return self.de - self.dec
+        
 
     def t_get_pulay(self, atom_id, t_dm):
         """calculate pulay force in torch tensor"""
