@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 import ruamel_yaml as yaml
 from collections import namedtuple
-from pyscf import gto
+from pyscf import gto, lib
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.scf.scf import DeepSCF
@@ -180,6 +180,10 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
     if group:
         res_list = []
     fields = select_fields(dump_fields)
+
+    if verbose:
+        print(f"starting calculation with OMP threads: {lib.num_threads()}")
+        print(f"basis: {basis}, conv_tol: {conv_tol}, conv_tol_grad: {conv_tol_grad}")
 
     old_meta = None
     xyz_files = load_xyz_files(xyz_files)

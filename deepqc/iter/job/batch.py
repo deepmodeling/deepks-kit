@@ -97,6 +97,7 @@ class Batch(object) :
                                           jcmds,
                                           jargs,
                                           res,
+                                          jj,
                                           outlog=outlog,
                                           errlog=errlog,
                                           para_deg=para_deg,
@@ -147,6 +148,7 @@ class Batch(object) :
                           cmds,
                           args,
                           res,
+                          step = 0,
                           outlog = 'log',
                           errlog = 'err',
                           para_deg = 1,
@@ -168,13 +170,13 @@ class Batch(object) :
                 ret += '  %s 1>> %s 2>> %s &\n\n' % (tmp_cmd, outlog, errlog)
                 
             else:
-                ret += 'if [ ! -f tag_%d_finished ] ;then\n' % idx
+                ret += 'if [ ! -f tag_%d_finished ] ;then\n' % step
                 tmp_cmd = self.sub_script_cmd(icmd, iarg, res)
                 ret += '  %s 1>> %s 2>> %s \n' % (tmp_cmd, outlog, errlog)
                 if not allow_failure:
-                    ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % idx
+                    ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % step
                 else :
-                    ret += '  touch tag_%d_finished \n' % idx
+                    ret += '  touch tag_%d_finished \n' % step
                 ret += 'fi\n\n'
 
             ret += 'cd %s\n' % self.context.remote_root
