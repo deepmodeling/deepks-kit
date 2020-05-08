@@ -215,8 +215,8 @@ class GroupReader(object) :
     def sample_all_batch(self, idx=None):
         if idx is not None:
             all_data = self.sample_all(idx)
-            # n_split = all_data[0].shape[0] // self.batch_size
-            yield from zip(*[torch.split(all_data[i], self.batch_size, dim=0) for i in range(len(all_data))])
+            size = self.batch_size * self.group_batch
+            yield from zip(*[torch.split(all_data[i], size, dim=0) for i in range(len(all_data))])
         else:
             for i in range(self.nsystems):
                 yield from self.sample_all_batch(i)
