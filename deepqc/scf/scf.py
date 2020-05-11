@@ -40,12 +40,12 @@ class DeepSCF(scf.hf.RHF):
         # [1,1,1,...,3,3,3,...,5,5,5,...]
         self.shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self.pbas), [])
         # < mol_ao | alpha^I_rlm >, shape=[nao x natom x nproj]
-        self.t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double().to(self.device)
+        t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double()
         # split the projected coeffs by shell (different r and l)
-        self.t_ovlp_shells = torch.split(self.t_proj_ovlp, self.shell_sec, -1)
+        self.t_ovlp_shells = torch.split(t_proj_ovlp, self.shell_sec, -1)
         # < alpha^I_rlm | mol_ao >< mol_ao | aplha^I_rlm' >
-        # self.t_proj_ops = [torch.einsum('rap,saq->rsapq', po, po) 
-        #                      for po in self.t_ovlp_shells]
+        # t_proj_ops = [torch.einsum('rap,saq->rsapq', po, po) 
+        #                   for po in self.t_ovlp_shells]
 
         self.get_veff0 = super().get_veff
         self.nuc_grad_method0 = super().nuc_grad_method
@@ -99,7 +99,7 @@ class DeepSCF(scf.hf.RHF):
             dm = self.make_rdm1()
         if self.net is None:
             return 0., np.zeros_like(dm)
-        t_dm = torch.from_numpy(dm).double().to(self.device)
+        t_dm = torch.from_numpy(dm).double()
         t_ec, t_vc = self.t_get_ec(t_dm)
         return t_ec.item(), t_vc.detach().cpu().numpy()
 
@@ -110,8 +110,8 @@ class DeepSCF(scf.hf.RHF):
                         for po in self.t_ovlp_shells]
         proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
                         for dm in proj_dms]
-        ceig = torch.cat(proj_eigs, dim=-1).unsqueeze(0) # 1 x natoms x nproj
-        ec = self.net(ceig)
+        ceig = torch.cat(proj_eigs, dim=-1).to(self.device) # natoms x nproj
+        ec = self.net(ceig) # no batch dim here, unsqueeze(0) if needed
         grad_dms = torch.autograd.grad(ec, proj_dms)
         shell_vcs = [torch.einsum('rap,apq,saq->rs', po, gdm, po)
                         for po, gdm in zip(self.t_ovlp_shells, grad_dms)]

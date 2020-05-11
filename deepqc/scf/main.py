@@ -101,7 +101,7 @@ def solve_mol(mol, model, fields,
     cf.conv_tol = conv_tol
     cf.conv_tol_grad = conv_tol_grad
     cf.level_shift = 0.1
-    cf.diis_space = 12
+    cf.diis_space = 20
     cf.conv_check = False
     if chkfile:
         cf.set(chkfile=chkfile)
