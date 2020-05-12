@@ -32,7 +32,7 @@ class Reader(object):
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
-            print('#', self.data_path, f"reset batch size to {self.batch_size}")
+            print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
     
     def sample_train(self):
         if self.nframes == self.batch_size == 1:
@@ -90,7 +90,7 @@ class ForceReader(object):
         self.nframes = self.data_ec.shape[0]
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
-            print('#', self.data_path, f"reset batch size to {self.batch_size}")
+            print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
         self.data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
                          .reshape([self.nframes, self.natm, self.nproj])
         # load data in torch
