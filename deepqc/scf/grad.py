@@ -63,7 +63,7 @@ class Gradients(rhf_grad.Gradients):
         # mask to select specifc atom contribution from ipovlp
         mask = self.t_make_mask(atom_id)
         # \partial < mol_ao | aplha^I_rlm' > / \partial X^J
-        atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, *self.base.t_proj_ovlp.shape)
+        atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
         # grad X^I w.r.t atomic overlap coeff by shells
         govx_shells = torch.split(atom_ipovlp, self.base.shell_sec, -1)
         # \partial (D^I_rl)_mm' / \partial X^J by shells, lack of symmetrize
@@ -96,7 +96,7 @@ class Gradients(rhf_grad.Gradients):
         atom_gdmx_shells = []
         for atom_id in range(self.mol.natm):
             mask = self.t_make_mask(atom_id)
-            atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, *self.base.t_proj_ovlp.shape)
+            atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
             govx_shells = torch.split(atom_ipovlp, self.base.shell_sec, -1)
             gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
                                 for govx, po in zip(govx_shells, self.t_ovlp_shells)]
