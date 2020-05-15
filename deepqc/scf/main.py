@@ -64,6 +64,12 @@ GRAD_FIELDS = [
 ]
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
+DEFAULT_SCF_ARGS = {
+    "conv_tol": 1e-9,
+    "conv_tol_grad": None,
+    "level_shift": 0.1,
+    "diis_space": 20
+}
 
 def load_xyz_files(file_list):
     if isinstance(file_list, str):
@@ -92,17 +98,14 @@ def parse_xyz(filename, basis='ccpvdz', verbose=0):
 
 
 def solve_mol(mol, model, fields,
-              conv_tol=1e-9, conv_tol_grad=None,
-              chkfile=None, verbose=0):
+              chkfile=None, verbose=0,
+              **scf_args):
     if verbose:
         tic = time.time()
 
     cf = DeepSCF(mol, model)
-    cf.conv_tol = conv_tol
-    cf.conv_tol_grad = conv_tol_grad
-    cf.level_shift = 0.1
-    cf.diis_space = 20
-    cf.conv_check = False
+    for key in scf_args:
+        setattr(cf, key, scf_args[key])
     if chkfile:
         cf.set(chkfile=chkfile)
     cf.kernel()
@@ -169,8 +172,7 @@ def dump_data(dir_name, **data_dict):
 
 def main(xyz_files, model_file="model.pth", basis='ccpvdz',
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
-         conv_tol=1e-9, conv_tol_grad=None,
-         verbose=0):
+         scf_args=None, verbose=0):
     if model_file.upper() == "NONE":
         model = None
     else:
@@ -179,20 +181,24 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
         dump_dir = os.curdir
     if group:
         res_list = []
+    if scf_args is None:
+        scf_args = {}
+    scf_args = {**DEFAULT_SCF_ARGS, **scf_args}
     fields = select_fields(dump_fields)
 
     if verbose:
         print(f"starting calculation with OMP threads: {lib.num_threads()}")
-        print(f"basis: {basis}, conv_tol: {conv_tol}, conv_tol_grad: {conv_tol_grad}")
+        if verbose > 1:
+            print(f"basis: {basis}")
+            print(f"specified scf args:\n  {scf_args}")
 
     old_meta = None
     xyz_files = load_xyz_files(xyz_files)
     for fl in xyz_files:
         mol = parse_xyz(fl, basis=basis, verbose=verbose)
         try:
-            meta, result = solve_mol(mol, model, fields,
-                               conv_tol=conv_tol, conv_tol_grad=conv_tol_grad,
-                               verbose=verbose)
+            meta, result = solve_mol(mol, model, fields, 
+                                     verbose=verbose, **scf_args)
         except Exception as e:
             print(fl, 'failed! error:', e, file=sys.stderr)
             # continue
@@ -238,11 +244,20 @@ if __name__ == "__main__":
                         help="group results for all molecules, only works for same system")
     parser.add_argument("-v", "--verbose", type=int, choices=range(0,11),
                         help="output calculation information")
-    parser.add_argument("--conv-tol", type=float,
+    parser.add_argument("--scf-conv-tol", type=float,
                         help="converge threshold of scf iteration")
-    parser.add_argument("--conv-tol-grad", type=float,
+    parser.add_argument("--scf-conv-tol-grad", type=float,
                         help="gradient converge threshold of scf iteration")
+    parser.add_argument("--scf-max-cycle", type=int,
+                        help="max number of scf iteration cycles")
     args = parser.parse_args()
+
+    scf_args={}
+    for k, v in vars(args).copy().items():
+        if k.startswith("scf_"):
+            scf_args[k[4:]] = v
+            delattr(args, k)
+    args.scf_args = scf_args
 
     if hasattr(args, "input"):
         argdict = load_yaml(args.input)
