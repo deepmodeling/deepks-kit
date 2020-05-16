@@ -26,15 +26,15 @@ class DeepSCF(scf.hf.RHF):
     #   r,s: mol basis in pyscf
     """Self Consistant Field solver for given QC model"""
     
-    def __init__(self, mol, model, basis=None, device=DEVICE):
+    def __init__(self, mol, model, proj_basis=None, device=DEVICE):
         super().__init__(mol)
         self.device = device
         if isinstance(model, str):
             model = QCNet.load(model).double().to(self.device)
         self.net = model
 
-        # must be a list here, follow pyscf convention
-        self.pbas = basis if basis is not None else DEFAULT_BASIS
+        # should be a list here, follow pyscf convention
+        self.pbas = load_basis(proj_basis)
         # a virtual molecule to be projected on
         self.pmol = gen_proj_mol(mol, self.pbas)
         # [1,1,1,...,3,3,3,...,5,5,5,...]
@@ -168,6 +168,20 @@ def gen_proj_mol(mol, basis) :
     test_mol.build(0,0,unit="Ang")
     return test_mol
 
+
+def load_basis(basis):
+    if basis is None:
+        return DEFAULT_BASIS
+    elif not isinstance(basis, str):
+        return basis
+    elif basis.endswith(".npy"):
+        table = np.load(basis)
+        return [[ll, *table.tolist()] for ll in range(3)]
+    elif basis.endswith(".npz"):
+        all_tables = np.load(basis).values()
+        return [[ll, *table.tolist()] for ll, table in enumerate(all_tables)]
+    else:
+        return gto.basis.load(basis, symb="Ne")
 
 # if __name__ == '__main__':
 #     mol = gto.Mole()

@@ -30,19 +30,27 @@ SCF_FIELDS = [
     Field("rdm",
           ["dm"],
           lambda mf: mf.make_rdm1(),
-          "(nframe,nao,nao)"),
+          "(nframe, nao, nao)"),
     Field("proj_dm",
           ["pdm"],
           lambda mf: mf.make_proj_rdms(flatten=True),
-          "(nframe,natom,-1)"),
+          "(nframe, natom, -1)"),
     Field("dm_eig",
           ["eig"],
           lambda mf: mf.make_eig(),
-          "(nframe,natom,nproj)"),
+          "(nframe, natom, nproj)"),
     Field("conv", 
           ["converged", "convergence"], 
           lambda mf: mf.converged,
-          "(nframe, 1)")
+          "(nframe, 1)"),
+    Field("mo_coef_occ", 
+          ["mo_coeff_occ, orbital_coeff_occ"],
+          lambda mf: mf.mo_coeff[:,mf.mo_occ>0],
+          "(nframe, nao, -1)"),
+    Field("mo_ene_occ", 
+          ["mo_energy_occ, orbital_ene_occ"],
+          lambda mf: mf.mo_energy[mf.mo_occ>0],
+          "(nframe, -1)")
 ]
 GRAD_FIELDS = [
     Field("f_hf", 
@@ -64,8 +72,13 @@ GRAD_FIELDS = [
 ]
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
-DEFAULT_SCF_ARGS = {
+DEFAULT_HF_ARGS = {
     "conv_tol": 1e-9,
+    "conv_tol_grad": None
+}
+
+DEFAULT_SCF_ARGS = {
+    "conv_tol": 1e-7,
     "conv_tol_grad": None,
     "level_shift": 0.1,
     "diis_space": 20
@@ -98,16 +111,15 @@ def parse_xyz(filename, basis='ccpvdz', verbose=0):
 
 
 def solve_mol(mol, model, fields,
+              proj_basis=None, device=None,
               chkfile=None, verbose=0,
               **scf_args):
     if verbose:
         tic = time.time()
 
-    cf = DeepSCF(mol, model)
-    for key in scf_args:
-        setattr(cf, key, scf_args[key])
-    if chkfile:
-        cf.set(chkfile=chkfile)
+    cf = DeepSCF(mol, model, proj_basis, device)
+    cf.set(**scf_args)
+    cf.set(chkfile=chkfile)
     cf.kernel()
 
     natom = mol.natm
@@ -170,20 +182,23 @@ def dump_data(dir_name, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file="model.pth", basis='ccpvdz',
+def main(xyz_files, model_file="model.pth", 
+         basis='ccpvdz', proj_basis=None, device=None,
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          scf_args=None, verbose=0):
     if model_file.upper() == "NONE":
         model = None
+        default_scf_args = DEFAULT_HF_ARGS
     else:
         model = QCNet.load(model_file).double()
+        default_scf_args = DEFAULT_SCF_ARGS
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
         res_list = []
     if scf_args is None:
         scf_args = {}
-    scf_args = {**DEFAULT_SCF_ARGS, **scf_args}
+    scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
 
     if verbose:
@@ -197,7 +212,8 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
     for fl in xyz_files:
         mol = parse_xyz(fl, basis=basis, verbose=verbose)
         try:
-            meta, result = solve_mol(mol, model, fields, 
+            meta, result = solve_mol(mol, model, fields,
+                                     proj_basis=proj_basis, device=device, 
                                      verbose=verbose, **scf_args)
         except Exception as e:
             print(fl, 'failed! error:', e, file=sys.stderr)
@@ -235,7 +251,11 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
     parser.add_argument("-B", "--basis",
-                        help="basis set used to solve the model")                
+                        help="basis set used to solve the model") 
+    parser.add_argument("-P", "--proj_basis",
+                        help="basis set used to project dm, must match with model")   
+    parser.add_argument("-D", "--device",
+                        help="device name used in nn model inference")               
     parser.add_argument("-d", "--dump-dir",
                         help="dir of dumped files")
     parser.add_argument("-F", "--dump-fields", nargs="*",
@@ -250,6 +270,11 @@ if __name__ == "__main__":
                         help="gradient converge threshold of scf iteration")
     parser.add_argument("--scf-max-cycle", type=int,
                         help="max number of scf iteration cycles")
+    parser.add_argument("--scf-diis-space", type=int,
+                        help="subspace dimension used in diis mixing")
+    parser.add_argument("--scf-level-shift", type=float,
+                        help="level shift used in scf calculation")
+
     args = parser.parse_args()
 
     scf_args={}
