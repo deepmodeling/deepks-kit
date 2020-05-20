@@ -149,6 +149,12 @@ def parse_penalty(pnt_dict, basename="mol"):
         basename = basename.rstrip(".xyz")
         dm_name = f"{basename}.{suffix}"
         return DensityPenalty(dm_name, **pnt_dict)
+    if pnt_type.upper() == "COULOMB":
+        from deepqc.scf.penalty import CoulombPenalty
+        suffix = pnt_dict.pop("suffix", "dm.npy").lstrip(".")
+        basename = basename.rstrip(".xyz")
+        dm_name = f"{basename}.{suffix}"
+        return CoulombPenalty(dm_name, **pnt_dict)
     else:
         raise KeyError(f"unknown penalty type: {pnt_type}")
 
@@ -212,6 +218,7 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
         res_list = []
     if scf_args is None:
         scf_args = {}
+    print(scf_args)
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
 
@@ -297,13 +304,14 @@ if __name__ == "__main__":
         if k.startswith("scf_"):
             scf_args[k[4:]] = v
             delattr(args, k)
-    args.scf_args = scf_args
 
     if hasattr(args, "input"):
         argdict = load_yaml(args.input)
         del args.input
         argdict.update(vars(args))
+        argdict["scf_args"].update(scf_args)
     else:
         argdict = vars(args)
+        argdict["scf_args"] = scf_args
 
     main(**argdict)
