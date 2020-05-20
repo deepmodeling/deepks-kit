@@ -26,11 +26,13 @@ class DeepSCF(scf.hf.RHF):
     #   r,s: mol basis in pyscf
     """Self Consistant Field solver for given QC model"""
     
-    def __init__(self, mol, model, proj_basis=None, device=DEVICE):
+    def __init__(self, mol, model, proj_basis=None, penalties=None, device=DEVICE):
         super().__init__(mol)
         self.device = device
         if isinstance(model, str):
-            model = QCNet.load(model).double().to(self.device)
+            model = QCNet.load(model).double()
+        if isinstance(model, torch.nn.Module):
+            model = model.to(self.device)
         self.net = model
 
         # should be a list here, follow pyscf convention
@@ -43,12 +45,15 @@ class DeepSCF(scf.hf.RHF):
         t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double()
         # split the projected coeffs by shell (different r and l)
         self.t_ovlp_shells = torch.split(t_proj_ovlp, self.shell_sec, -1)
-        # < alpha^I_rlm | mol_ao >< mol_ao | aplha^I_rlm' >
-        # t_proj_ops = [torch.einsum('rap,saq->rsapq', po, po) 
-        #                   for po in self.t_ovlp_shells]
 
+        # some alias to call origin methods
         self.get_veff0 = super().get_veff
         self.nuc_grad_method0 = super().nuc_grad_method
+        # initialize penalty terms
+        self.penalties = check_arg_list(penalties)
+        for pnt in self.penalties:
+            pnt.init_hook(self)
+        # update keys to avoid pyscf warning
         self._keys.update(self.__dict__.keys())
 
     def energy_elec0(self, dm=None, h1e=None, vhf=None):
@@ -92,6 +97,23 @@ class DeepSCF(scf.hf.RHF):
         e_coul = np.einsum('ij,ji', vhf.v0, dm) * .5
         logger.debug(self, f'E1 = {e1}  Ecoul = {e_coul}  Ec = {ec}')
         return (e1+e_coul+ec).real, e_coul+ec
+    
+    def get_fock(self, h1e=None, s1e=None, vhf=None, dm=None, cycle=-1, 
+                 diis=None, diis_start_cycle=None, 
+                 level_shift_factor=None, damp_factor=None):
+        """modified get_fock method to apply penalty terms onto vhf"""
+        if dm is None:
+            dm = self.make_rdm1()
+        if h1e is None: 
+            h1e = self.get_hcore()
+        if vhf is None: 
+            vhf = self.get_veff(dm=dm)
+        vp = sum(pnt.fock_hook(self, dm=dm, h1e=h1e, vhf=vhf, cycle=cycle) 
+                    for pnt in self.penalties)
+        vhf = vhf + vp
+        return super().get_fock(h1e=h1e, s1e=s1e, vhf=vhf, dm=dm, cycle=cycle, 
+                        diis=diis, diis_start_cycle=diis_start_cycle, 
+                        level_shift_factor=level_shift_factor, damp_factor=damp_factor)
 
     def get_ec(self, dm=None):
         """return ec and vc corresponding to ec"""
@@ -182,6 +204,14 @@ def load_basis(basis):
         return [[ll, *table.tolist()] for ll, table in enumerate(all_tables)]
     else:
         return gto.basis.load(basis, symb="Ne")
+
+
+def check_arg_list(args):
+    if args is None:
+        return []
+    if not isinstance(args, (list, tuple)):
+        return [args]
+    return args
 
 # if __name__ == '__main__':
 #     mol = gto.Mole()

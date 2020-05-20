@@ -9,7 +9,7 @@ from collections import namedtuple
 from pyscf import gto, lib
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.scf.scf import DeepSCF
+from deepqc.scf.scf import DeepSCF, check_arg_list
 from deepqc.train.model import QCNet
 from deepqc.train.main import load_yaml
 
@@ -73,13 +73,11 @@ GRAD_FIELDS = [
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
 DEFAULT_HF_ARGS = {
-    "conv_tol": 1e-9,
-    "conv_tol_grad": None
+    "conv_tol": 1e-9
 }
 
 DEFAULT_SCF_ARGS = {
     "conv_tol": 1e-7,
-    "conv_tol_grad": None,
     "level_shift": 0.1,
     "diis_space": 20
 }
@@ -111,15 +109,15 @@ def parse_xyz(filename, basis='ccpvdz', verbose=0):
 
 
 def solve_mol(mol, model, fields,
-              proj_basis=None, device=None,
+              proj_basis=None, penalties=None, device=None,
               chkfile=None, verbose=0,
               **scf_args):
     if verbose:
         tic = time.time()
 
-    cf = DeepSCF(mol, model, proj_basis, device)
-    cf.set(**scf_args)
+    cf = DeepSCF(mol, model, proj_basis, penalties, device)
     cf.set(chkfile=chkfile)
+    cf.set(**scf_args)
     cf.kernel()
 
     natom = mol.natm
@@ -142,7 +140,21 @@ def solve_mol(mol, model, fields,
     return meta, res
 
 
+def parse_penalty(pnt_dict, basename="mol"):
+    pnt_dict = pnt_dict.copy()
+    pnt_type = pnt_dict.pop("type")
+    if pnt_type.upper() == "DENSITY":
+        from deepqc.scf.penalty import DensityPenalty
+        suffix = pnt_dict.pop("suffix", "dm.npy").lstrip(".")
+        basename = basename.rstrip(".xyz")
+        dm_name = f"{basename}.{suffix}"
+        return DensityPenalty(dm_name, **pnt_dict)
+    else:
+        raise KeyError(f"unknown penalty type: {pnt_type}")
+
+
 def select_fields(names):
+    names = [n.lower() for n in names]
     scfs  = [fd for fd in SCF_FIELDS 
                  if fd.name in names 
                  or any(al in names for al in fd.alias)]
@@ -182,8 +194,8 @@ def dump_data(dir_name, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file="model.pth", 
-         basis='ccpvdz', proj_basis=None, device=None,
+def main(xyz_files, model_file="model.pth", basis='ccpvdz', 
+         proj_basis=None, penalty_terms=None, device=None,
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          scf_args=None, verbose=0):
     if model_file.upper() == "NONE":
@@ -192,6 +204,8 @@ def main(xyz_files, model_file="model.pth",
     else:
         model = QCNet.load(model_file).double()
         default_scf_args = DEFAULT_SCF_ARGS
+    # check arguments
+    penalty_terms = check_arg_list(penalty_terms)
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
@@ -211,10 +225,11 @@ def main(xyz_files, model_file="model.pth",
     xyz_files = load_xyz_files(xyz_files)
     for fl in xyz_files:
         mol = parse_xyz(fl, basis=basis, verbose=verbose)
+        penalties = [parse_penalty(pd, fl) for pd in penalty_terms]
         try:
             meta, result = solve_mol(mol, model, fields,
-                                     proj_basis=proj_basis, device=device, 
-                                     verbose=verbose, **scf_args)
+                                     proj_basis=proj_basis, penalties=penalties,
+                                     device=device, verbose=verbose, **scf_args)
         except Exception as e:
             print(fl, 'failed! error:', e, file=sys.stderr)
             # continue
@@ -262,7 +277,7 @@ if __name__ == "__main__":
                         help="fields to be dumped into the folder")    
     parser.add_argument("-G", "--group", action='store_true',
                         help="group results for all molecules, only works for same system")
-    parser.add_argument("-v", "--verbose", type=int, choices=range(0,11),
+    parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
                         help="output calculation information")
     parser.add_argument("--scf-conv-tol", type=float,
                         help="converge threshold of scf iteration")
