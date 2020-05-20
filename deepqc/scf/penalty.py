@@ -72,3 +72,37 @@ class DensityPenalty(AbstructPenalty):
             logger.info(mf, f"  Density Penalty: |diff| = {diff_norm}")
             logger.timer(mf, "dens_pnt", *tic)
         return self.strength * v_p
+
+
+class CoulombPenalty(AbstructPenalty):
+    r"""
+    penalty given by the coulomb energy of density difference
+
+    """
+
+    def __init__(self, target_dm, strength=1, random=False, start_cycle=0):
+        if isinstance(target_dm, str):
+            target_dm = np.load(target_dm)
+        self.dm_t = target_dm
+        self.init_strength = strength
+        self.strength = strength * np.random.rand() if random else strength
+        self.start_cycle = start_cycle
+        # below are values to be initialized later in init_hook
+        self.vj_t = None
+
+    def init_hook(self, mf, **envs):
+        self.vj_t = mf.get_j(dm=self.dm_t)
+
+    def fock_hook(self, mf, dm=None, h1e=None, vhf=None, cycle=-1, **envs):
+        # cycle > 0 means it is doing scf iteration
+        if 0 <= cycle < self.start_cycle:
+            return 0
+        tic = (time.clock(), time.time())
+        vj = mf.get_j(dm=dm)
+        v_p = vj - self.vj_t
+        # cycle < 0 means it is just checking, we only print here
+        if cycle < 0 and mf.verbose >=4:
+            diff_norm = np.einsum("ij,ij", dm, v_p)
+            logger.info(mf, f"  Coulomb Penalty: |diff| = {diff_norm}")
+            logger.timer(mf, "coul_pnt", *tic)
+        return self.strength * v_p
