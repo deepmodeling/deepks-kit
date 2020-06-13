@@ -194,6 +194,8 @@ def gen_proj_mol(mol, basis) :
 def load_basis(basis):
     if basis is None:
         return DEFAULT_BASIS
+    elif isinstance(basis, np.ndarray) and basis.ndim == 2:
+        return [[ll, *basis.tolist()] for ll in range(3)]
     elif not isinstance(basis, str):
         return basis
     elif basis.endswith(".npy"):

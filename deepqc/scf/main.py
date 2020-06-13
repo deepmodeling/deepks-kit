@@ -45,7 +45,7 @@ SCF_FIELDS = [
           "(nframe, 1)"),
     Field("mo_coef_occ", 
           ["mo_coeff_occ, orbital_coeff_occ"],
-          lambda mf: mf.mo_coeff[:,mf.mo_occ>0],
+          lambda mf: mf.mo_coeff[:,mf.mo_occ>0].T,
           "(nframe, nao, -1)"),
     Field("mo_ene_occ", 
           ["mo_energy_occ, orbital_ene_occ"],
@@ -218,7 +218,6 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
         res_list = []
     if scf_args is None:
         scf_args = {}
-    print(scf_args)
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
 
