@@ -115,7 +115,10 @@ def solve_mol(mol, model, fields,
     if verbose:
         tic = time.time()
 
-    cf = DeepSCF(mol, model, proj_basis, penalties, device)
+    cf = DeepSCF(mol, model, 
+                 proj_basis=proj_basis, 
+                 penalties=penalties, 
+                 device=device)
     cf.set(chkfile=chkfile)
     cf.set(**scf_args)
     cf.kernel()
@@ -285,6 +288,8 @@ if __name__ == "__main__":
                         help="group results for all molecules, only works for same system")
     parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
                         help="output calculation information")
+    parser.add_argument("-X", "--scf-xc",
+                        help="base xc functional used in scf equation, default is HF")        
     parser.add_argument("--scf-conv-tol", type=float,
                         help="converge threshold of scf iteration")
     parser.add_argument("--scf-conv-tol-grad", type=float,

@@ -4,7 +4,7 @@ import numpy as np
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
-from pyscf import scf
+from pyscf import dft
 from deepqc.train.model import QCNet
 
 
@@ -16,7 +16,7 @@ DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolis
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class DeepSCF(scf.hf.RHF):
+class DeepSCF(dft.rks.RKS):
     # all variables and functions start with "t_" are torch related.
     # all variables and functions ends with "0" are original Hartree-Fock results
     # convention in einsum:
@@ -26,8 +26,8 @@ class DeepSCF(scf.hf.RHF):
     #   r,s: mol basis in pyscf
     """Self Consistant Field solver for given QC model"""
     
-    def __init__(self, mol, model, proj_basis=None, penalties=None, device=DEVICE):
-        super().__init__(mol)
+    def __init__(self, mol, model, xc="HF", proj_basis=None, penalties=None, device=DEVICE):
+        super().__init__(mol, xc=xc)
         self.device = device
         if isinstance(model, str):
             model = QCNet.load(model).double()

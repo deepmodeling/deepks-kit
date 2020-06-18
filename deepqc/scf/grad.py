@@ -1,10 +1,10 @@
 import torch
 import numpy as np
 from pyscf import lib
-from pyscf.grad import rhf as rhf_grad
+from pyscf.grad import rks as grad_base
 
 
-class Gradients(rhf_grad.Gradients):
+class Gradients(grad_base.Gradients):
     # all variables and functions start with "t_" are torch related.
     # convention in einsum:
     #   i,j: orbital
