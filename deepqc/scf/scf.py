@@ -92,11 +92,10 @@ class DeepSCF(dft.rks.RKS):
             h1e = self.get_hcore()
         if vhf is None or getattr(vhf, 'ec', None) is None: 
             vhf = self.get_veff(dm=dm)
+        etot, e2 = self.energy_elec0(dm, h1e, vhf.v0)
         ec = vhf.ec
-        e1 = np.einsum('ij,ji', h1e, dm)
-        e_coul = np.einsum('ij,ji', vhf.v0, dm) * .5
-        logger.debug(self, f'E1 = {e1}  Ecoul = {e_coul}  Ec = {ec}')
-        return (e1+e_coul+ec).real, e_coul+ec
+        logger.debug(self, f'Emod = {ec}')
+        return (etot+ec).real, e2+ec
     
     def get_fock(self, h1e=None, s1e=None, vhf=None, dm=None, cycle=-1, 
                  diis=None, diis_start_cycle=None, 
