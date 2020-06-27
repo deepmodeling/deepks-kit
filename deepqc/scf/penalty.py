@@ -68,7 +68,7 @@ class DensityPenalty(AbstructPenalty):
         v_p = numint.eval_mat(mf.mol, self.ao_value, self.grids.weights, rho_diff, rho_diff)
         # cycle < 0 means it is just checking, we only print here
         if cycle < 0 and mf.verbose >=4:
-            diff_norm = np.linalg.norm(rho_diff*self.grids.weights)
+            diff_norm = np.linalg.norm(rho_diff*self.grids.weights, 1)
             logger.info(mf, f"  Density Penalty: |diff| = {diff_norm}")
             logger.timer(mf, "dens_pnt", *tic)
         return self.strength * v_p
