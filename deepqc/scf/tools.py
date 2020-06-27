@@ -87,12 +87,24 @@ def collect_data(train_idx, test_idx=None,
     np.savetxt(f'{dump_dir}/e_result.out', np.stack([erefs, ecfs], axis=-1), header="real pred")
 
 
+def concat_data(sys_dir=".", dump_dir=".", pattern="*"):
+    systems = sorted(filter(os.path.isdir, map(os.path.abspath, glob.glob(f"{sys_dir}/*"))))
+    npy_names = list(map(os.path.basename, glob.glob(f"{systems[0]}/*.npy")))
+    os.makedirs(dump_dir, exist_ok=True)
+    for nm in npy_names:
+        tmp_array = np.concatenate([np.load(f"{sys}/{nm}") for sys in systems])
+        np.save(f"{dump_dir}/{nm}", tmp_array)
+    shutil.copy(f'{systems[0]}/system.raw', dump_dir)
+    
+    
 def collect_data_grouped(train_idx, test_idx=None, 
                          sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                          dump_dir=".", append=True, verbose=True):
     eref = get_array(ene_ref).reshape(-1, 1)
     fref = get_array(force_ref)
     nmol = eref.shape[0]
+    if not os.path.exists(f'{sys_dir}/e_cf.npy'):
+        concat_data(sys_dir, dump_dir=sys_dir)    
     ecf = np.load(f'{sys_dir}/e_cf.npy').reshape(-1, 1)
     assert ecf.shape[0] == nmol, f"{ene_ref} ref size: {nmol}, {sys_dir} data size: {ecf.shape[0]}"
     make_label(sys_dir, eref, fref)
