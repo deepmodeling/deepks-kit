@@ -139,6 +139,8 @@ def t_get_grad_dms(mf, dm=None):
     t_dm = torch.from_numpy(dm).double().to(mf.device)
     proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
                     for po in mf.t_ovlp_shells]
+    if mf.net is None:
+        return [torch.zeros_like(pdm) for pdm in proj_dms]
     proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
                     for dm in proj_dms]
     ceig = torch.cat(proj_eigs, dim=-1).unsqueeze(0) # 1 x natoms x nproj
