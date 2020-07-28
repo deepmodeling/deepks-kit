@@ -111,7 +111,7 @@ class Gradients(grad_base.Gradients):
         return self.t_make_grad_eig_x(t_dm).detach().cpu().numpy()
 
     def t_make_grad_eig_x(self, t_dm):
-        "v stands for "
+        # v stands for eigen values
         shell_pdm = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
                         for po in self.t_ovlp_shells]
         calc_eig = lambda dm: torch.symeig(dm, True)[0]
