@@ -207,7 +207,7 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
          proj_basis=None, penalty_terms=None, device=None,
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          scf_args=None, verbose=0):
-    if model_file.upper() == "NONE":
+    if model_file is None or model_file.upper() == "NONE":
         model = None
         default_scf_args = DEFAULT_HF_ARGS
     else:

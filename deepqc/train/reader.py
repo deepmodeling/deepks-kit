@@ -11,24 +11,31 @@ class Reader(object):
         self.batch_size = batch_size   
         self.e_name = e_name
         self.d_name = d_name if isinstance(d_name, (list, tuple)) else [d_name]
+        self.load_meta()
         self.prepare()
+
+    def load_meta(self):
+        try:
+            sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
+            self.natm = sys_meta[0]
+            self.nproj = sys_meta[-1]
+        except:
+            print('#', self.data_path, f"no system.raw, infer meta from data", file=sys.stderr)
+            sys_shape = np.load(os.path.join(self.data_path, f'{self.d_name[0]}.npy')).shape
+            assert len(sys_shape) == 3, \
+                f"{self.d_name[0]} has to be an order-3 array with shape [nframes, natom, nproj]"
+            self.natm = sys_shape[1]
+            self.nproj = sys_shape[2]
     
     def prepare(self):
         self.index_count_all = 0
-        sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
-        self.meta = sys_meta
-        self.natm = self.meta[0]
-        self.nao = self.meta[1]
-        # self.nocc = self.meta[2]
-        # self.nvir = self.meta[3]
-        nrawproj = self.meta[-1]
         self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
         self.nframes = self.data_ec.shape[0]
         self.data_dm = np.concatenate(
-            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, nrawproj])
+            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, self.nproj])
                 for dn in self.d_name], 
             axis=-1)
-        self.nproj = self.data_dm.shape[-1]
+        self.ndesc = self.data_dm.shape[-1]
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
@@ -74,15 +81,25 @@ class ForceReader(object):
         self.f_name = f_name
         self.d_name = d_name
         self.gv_name = gv_name
-        # load meta
-        sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
-        self.meta = sys_meta
-        self.natm = self.meta[0]
-        self.nao = self.meta[1]
-        self.nproj = self.meta[-1]
+        # load data
+        self.load_meta()
         self.prepare()
         # initialize sample index queue
         self.idx_queue = []
+
+    def load_meta(self):
+        try:
+            sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
+            self.natm = sys_meta[0]
+            self.nproj = sys_meta[-1]
+        except:
+            print('#', self.data_path, f"no system.raw, infer meta from data", file=sys.stderr)
+            sys_shape = np.load(os.path.join(self.data_path, f'{self.d_name}.npy')).shape
+            assert len(sys_shape) == 3, \
+                f"{self.d_name[0]} has to be an order-3 array with shape [nframes, natom, nproj]"
+            self.natm = sys_shape[1]
+            self.nproj = sys_shape[2]
+        self.ndesc = self.nproj
 
     def prepare(self):
         # load energy and check nframes
@@ -92,7 +109,7 @@ class ForceReader(object):
             self.batch_size = self.nframes
             print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
         self.data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
-                         .reshape([self.nframes, self.natm, self.nproj])
+                         .reshape([self.nframes, self.natm, self.ndesc])
         # load data in torch
         self.t_ec = torch.tensor(self.data_ec)
         self.t_eig = torch.tensor(self.data_dm)
@@ -101,7 +118,7 @@ class ForceReader(object):
               .reshape(self.nframes, self.natm, 3))
         self.t_gvx = torch.tensor(
             np.load(os.path.join(self.data_path, f'{self.gv_name}.npy'))\
-              .reshape(self.nframes, self.natm, 3, self.natm, self.nproj))
+              .reshape(self.nframes, self.natm, 3, self.natm, self.ndesc))
         # pin memory
         if torch.cuda.is_available():
             self.t_ec = self.t_ec.pin_memory()
@@ -229,7 +246,7 @@ class GroupReader(object) :
 
     def compute_data_stat(self):
         if not (hasattr(self, 'all_mean') and hasattr(self, 'all_std')):
-            all_dm = np.concatenate([r.data_dm.reshape(-1,r.nproj) for r in self.readers])
+            all_dm = np.concatenate([r.data_dm.reshape(-1,r.ndesc) for r in self.readers])
             self.all_mean, self.all_std = all_dm.mean(0), all_dm.std(0)
         return self.all_mean, self.all_std
 
