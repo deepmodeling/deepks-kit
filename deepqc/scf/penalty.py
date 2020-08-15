@@ -3,12 +3,23 @@ import numpy as np
 from pyscf.dft import numint, gen_grid
 from pyscf.lib import logger
 
+
+def select_penalty(name):
+    name = name.lower()
+    if name == "density":
+        return DensityPenalty
+    if name == "coulomb":
+        return CoulombPenalty
+    raise ValueError(f"unknown penalty type: {name}")
+
+
 class AbstructPenalty(object):
     """
     Abstruct class for penalty term in scf hamiltonian.
     To implement a penalty one needs to implement 
     fock_hook and (optional) init_hook methods.
     """
+    require_labels = [] # the label would be load and pass to __init__
 
     def init_hook(self, mf, **envs):
         """
@@ -37,6 +48,7 @@ class DensityPenalty(AbstructPenalty):
     V_p = \lambda * \int dx <ao_i|x> (\rho(x) - \rho_target(x)) <x|ao_j> 
     The target density should be given as density matrix in ao basis
     """
+    require_labels = ["dm"]
 
     def __init__(self, target_dm, strength=1, random=False, start_cycle=0):
         if isinstance(target_dm, str):
@@ -79,6 +91,7 @@ class CoulombPenalty(AbstructPenalty):
     penalty given by the coulomb energy of density difference
 
     """
+    require_labels = ["dm"]
 
     def __init__(self, target_dm, strength=1, random=False, start_cycle=0):
         if isinstance(target_dm, str):

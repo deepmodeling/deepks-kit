@@ -8,7 +8,7 @@ from sklearn import linear_model
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
 from deepqc.scf.scf import DeepSCF
-from deepqc.scf.main import parse_xyz, solve_mol
+from deepqc.scf.main import build_mol, solve_mol
 
 def get_linear_model(weig, wec):
 #     too_small = weig.reshape(-1,108).std(0) < 1e-3
@@ -37,7 +37,7 @@ nmol = 1000
 ntrain = 900
 niter = 10
 
-mol_list = [parse_xyz(f'../../../data/tom_miller/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
+mol_list = [build_mol(f'../../../data/tom_miller/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
 ehfs = np.load('../../../data/tom_miller/water/rproj_mb2/e_hf.npy').reshape(-1)[:nmol]
 wene = np.loadtxt('../../../data/tom_miller/water/energy.dat', usecols=(1,2,3,4))[:nmol]
 erefs = wene[:,3]

@@ -5,71 +5,14 @@ import torch
 import argparse
 import numpy as np
 import ruamel_yaml as yaml
-from collections import namedtuple
 from pyscf import gto, lib
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.scf.scf import DeepSCF
+from deepqc.scf.fields import select_fields
 from deepqc.train.model import QCNet
 from deepqc.utils import check_list, load_yaml, load_xyz_files
 
-
-BOHR = 0.52917721092
-
-
-Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
-SCF_FIELDS = [
-    Field("e_hf", 
-          ["ehf", "ene_hf", "e0"], 
-          lambda mf: mf.energy_tot0(),
-          "(nframe, 1)"),
-    Field("e_cf", 
-          ["ecf", "ene_cf", "e_tot", "etot", "ene", "energy", "e"],
-          lambda mf: mf.e_tot,
-          "(nframe, 1)"),
-    Field("rdm",
-          ["dm"],
-          lambda mf: mf.make_rdm1(),
-          "(nframe, nao, nao)"),
-    Field("proj_dm",
-          ["pdm"],
-          lambda mf: mf.make_proj_rdms(flatten=True),
-          "(nframe, natom, -1)"),
-    Field("dm_eig",
-          ["eig"],
-          lambda mf: mf.make_eig(),
-          "(nframe, natom, nproj)"),
-    Field("conv", 
-          ["converged", "convergence"], 
-          lambda mf: mf.converged,
-          "(nframe, 1)"),
-    Field("mo_coef_occ", 
-          ["mo_coeff_occ, orbital_coeff_occ"],
-          lambda mf: mf.mo_coeff[:,mf.mo_occ>0].T,
-          "(nframe, nao, -1)"),
-    Field("mo_ene_occ", 
-          ["mo_energy_occ, orbital_ene_occ"],
-          lambda mf: mf.mo_energy[mf.mo_occ>0],
-          "(nframe, -1)")
-]
-GRAD_FIELDS = [
-    Field("f_hf", 
-          ["fhf", "force_hf", "f0"], 
-          lambda grad: - grad.get_hf() / BOHR,
-          "(nframe, natom, 3)"),
-    Field("f_cf", 
-          ["fcf", "force_cf", "f_tot", "ftot", "force", "f"], 
-          lambda grad: - grad.de / BOHR,
-          "(nframe, natom, 3)"),
-    Field("gdmx",
-          ["grad_dm_x", "grad_pdm_x"],
-          lambda grad: grad.make_grad_pdm_x(flatten=True) / BOHR,
-          "(nframe,natom,3,natom,-1)"),
-    Field("grad_vx",
-          ["grad_eig_x", "geigx", "gvx"],
-          lambda grad: grad.make_grad_eig_x() / BOHR,
-          "(nframe,natom,3,natom,-1)"),
-]
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
 DEFAULT_HF_ARGS = {
@@ -81,19 +24,6 @@ DEFAULT_SCF_ARGS = {
     "level_shift": 0.1,
     "diis_space": 20
 }
-
-
-def parse_xyz(filename, basis='ccpvdz', verbose=0):
-    with open(filename) as fp:
-        natoms = int(fp.readline())
-        comments = fp.readline()
-        xyz_str = "".join(fp.readlines())
-    mol = gto.Mole()
-    mol.verbose = verbose
-    mol.atom = xyz_str
-    mol.basis  = basis
-    mol.build(0,0,unit="Ang")
-    return mol
 
 
 def solve_mol(mol, model, fields,
@@ -131,6 +61,17 @@ def solve_mol(mol, model, fields,
     return meta, res
 
 
+def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
+    # build a molecule using given atom input
+    # set the default basis to cc-pVDZ and use input unit 'Ang"
+    mol = gto.Mole(**kwargs)
+    mol.verbose = verbose
+    mol.atom = atom
+    mol.basis  = basis
+    mol.build(0,0,unit="Ang")
+    return mol
+
+
 def parse_penalty(pnt_dict, basename="mol"):
     pnt_dict = pnt_dict.copy()
     pnt_type = pnt_dict.pop("type")
@@ -148,17 +89,6 @@ def parse_penalty(pnt_dict, basename="mol"):
         return CoulombPenalty(dm_name, **pnt_dict)
     else:
         raise KeyError(f"unknown penalty type: {pnt_type}")
-
-
-def select_fields(names):
-    names = [n.lower() for n in names]
-    scfs  = [fd for fd in SCF_FIELDS 
-                 if fd.name in names 
-                 or any(al in names for al in fd.alias)]
-    grads = [fd for fd in GRAD_FIELDS 
-                 if fd.name in names 
-                 or any(al in names for al in fd.alias)]
-    return {"scf": scfs, "grad": grads}
 
 
 def collect_fields(fields, meta, res_list):
@@ -191,7 +121,7 @@ def dump_data(dir_name, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
-def main(xyz_files, model_file="model.pth", basis='ccpvdz', 
+def main(systems, model_file="model.pth", basis='ccpvdz', 
          proj_basis=None, penalty_terms=None, device=None,
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
          scf_args=None, verbose=0):
@@ -219,9 +149,9 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
             print(f"specified scf args:\n  {scf_args}")
 
     old_meta = None
-    xyz_files = load_xyz_files(xyz_files)
-    for fl in xyz_files:
-        mol = parse_xyz(fl, basis=basis, verbose=verbose)
+    systems = load_xyz_files(systems)
+    for fl in systems:
+        mol = build_mol(fl, basis=basis, verbose=verbose)
         penalties = [parse_penalty(pd, fl) for pd in penalty_terms]
         try:
             meta, result = solve_mol(mol, model, fields,
@@ -258,8 +188,8 @@ if __name__ == "__main__":
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
                         help='the input yaml file for args')
-    parser.add_argument("-x", "--xyz-files", nargs="*",
-                        help="input xyz files")
+    parser.add_argument("-s", "--systems", nargs="*",
+                        help="input molecule systems, can be xyz_files or folders with DP data")
     parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
     parser.add_argument("-B", "--basis",

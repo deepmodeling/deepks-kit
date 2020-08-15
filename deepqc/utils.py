@@ -1,5 +1,6 @@
 import os
 import shutil
+from glob import glob
 from pathlib import Path
 import ruamel_yaml as yaml
 import numpy as np
@@ -17,6 +18,7 @@ def check_list(arg, nullable=True):
     if not isinstance(arg, (list, tuple)):
         return [arg]
     return arg
+
 
 def check_array(arr, nullable=True):
     if arr is None:
@@ -42,8 +44,10 @@ def flat_file_list(file_list, filter_func=lambda p: True):
                 new_list.extend(f.read().splitlines())
     return new_list
 
+
 def load_sys_paths(path_list):
     return flat_file_list(path_list, os.path.isdir)
+
 
 def load_xyz_files(file_list):
     return flat_file_list(file_list, 
@@ -57,6 +61,7 @@ def load_yaml(file_path):
         res = yaml.safe_load(fp)
     return res
 
+
 def load_array(file):
     ext = os.path.splitext(file)[-1]
     if "npy" in ext:
@@ -67,6 +72,17 @@ def load_array(file):
         return np.loadtxt(file)
 
 
+def parse_xyz(filename):
+    with open(filename) as fp:
+        natom = int(fp.readline())
+        comments = fp.readline().strip()
+        atom_str = fp.readlines()
+    atom_list = [a.split() for a in atom_str]
+    elements = [a[0] for a in atom_list]
+    coords = np.array([a[1:] for a in atom_list], dtype=float)
+    return natom, comments, elements, coords
+
+
 # below are path related utils
 
 def get_abs_path(p):
@@ -74,6 +90,31 @@ def get_abs_path(p):
         return None
     else:
         return Path(p).absolute()
+
+
+def get_prefix(p, base=None, prefer=None):
+    """
+    Get file path by searching its prefix.
+    If `base` is a directory, equals to get "base/p*".
+    Otherwise, equals to get "base.p*".
+    Only one result will be return. 
+    If more than one match, give the first one with suffix in `prefer`.
+    """
+    if not base:
+        base = "./"
+    if os.path.isdir(base):
+        pattern = os.path.join(base, p)
+    else:
+        pattern = f"{base.rstrip('.')}.{p}"
+    matches = glob(pattern + "*")
+    if len(matches) == 1:
+        return matches[0]
+    prefer = check_list(prefer)
+    for suffix in prefer:
+        if pattern+suffix in matches:
+            return pattern+suffix
+    raise FileNotFoundError(f"{pattern}* not exists or has more than one matches")
+
     
 def link_file(src, dst):
     src, dst = Path(src), Path(dst)
@@ -86,6 +127,7 @@ def link_file(src, dst):
         os.remove(dst)
         os.symlink(os.path.relpath(src, dst.parent), dst)
 
+
 def copy_file(src, dst):
     src, dst = Path(src), Path(dst)
     assert src.exists(), f'{src} does not exist'
@@ -96,6 +138,7 @@ def copy_file(src, dst):
     elif not os.path.samefile(src, dst):
         os.remove(dst)
         shutil.copy2(src, dst)
+
 
 def create_dir(dirname, backup=False):
     dirname = Path(dirname)
