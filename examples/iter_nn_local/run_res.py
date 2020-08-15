@@ -11,7 +11,7 @@ from deepqc.train.main import main as train_main
 from deepqc.train.test import main as train_test
 from deepqc.scf.main import main as scf_main
 from deepqc.scf.tools import collect_data_grouped
-from deepqc.train.main import load_yaml
+from deepqc.utils import load_yaml
 from deepqc.iter.task import PythonTask
 from deepqc.iter.workflow import Sequence, Iteration
 

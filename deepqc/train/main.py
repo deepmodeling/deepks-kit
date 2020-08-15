@@ -1,30 +1,13 @@
 import argparse, os
 import numpy as np
 import torch
-import ruamel_yaml as yaml
 if __name__ == "__main__":
     import sys
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
 from deepqc.train.train import DEVICE, train, preprocess
-
-
-def load_yaml(file_path):
-    with open(file_path, 'r') as fp:
-        res = yaml.safe_load(fp)
-    return res
-
-
-def load_sys_paths(path_list):
-    new_list = []
-    for p in path_list:
-        if os.path.isdir(p):
-            new_list.append(p)
-        else:
-            with open(p) as f:
-                new_list.extend(f.read().splitlines())
-    return new_list
+from deepqc.utils import load_yaml, load_sys_paths
 
 
 def main(restart=None, **argdict):

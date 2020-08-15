@@ -1,14 +1,31 @@
 import os
-from deepqc.iter.utils import link_file, copy_file, create_dir
-from deepqc.iter.utils import check_arg_list
-from deepqc.iter.utils import get_abs_path
-from deepqc.iter.utils import AbstructStep
+from pathlib import Path
+from deepqc.utils import link_file, copy_file, create_dir
+from deepqc.utils import check_list
+from deepqc.utils import get_abs_path
 
 import sys
 import subprocess as sp
 from copy import deepcopy
 from contextlib import nullcontext, redirect_stdout, redirect_stderr
 from deepqc.iter.job.dispatcher import Dispatcher
+
+
+class AbstructStep(object):
+    def __init__(self, workdir):
+        self.workdir = Path(workdir)
+        
+    def __repr__(self):
+        return f'<{type(self).__module__}.{type(self).__name__} with workdir: {self.workdir}>'
+        
+    def run(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def prepend_workdir(self, path):
+        self.workdir = path / self.workdir
+        
+    def append_workdir(self, path):
+        self.workdir = self.workdir / path
 
 
 class AbstructTask(AbstructStep):
@@ -24,10 +41,10 @@ class AbstructTask(AbstructStep):
         self.prev_task = prev_task
         self.prev_folder = get_abs_path(prev_folder)
         self.share_folder = get_abs_path(share_folder)
-        self.link_prev_files = check_arg_list(link_prev_files)
-        self.copy_prev_files = check_arg_list(copy_prev_files)
-        self.link_share_files = check_arg_list(link_share_files)
-        self.copy_share_files = check_arg_list(copy_share_files)
+        self.link_prev_files = check_list(link_prev_files)
+        self.copy_prev_files = check_list(copy_prev_files)
+        self.link_share_files = check_list(link_share_files)
+        self.copy_share_files = check_list(copy_share_files)
         
     def preprocess(self):
         create_dir(self.workdir, self.backup)
@@ -122,7 +139,7 @@ class BatchTask(AbstructTask):
                  forward_files=None, backward_files=None,
                  **task_args):
         super().__init__(**task_args)
-        self.cmds = check_arg_list(cmds)
+        self.cmds = check_list(cmds)
         if dispatcher is None:
             dispatcher = Dispatcher()
         elif isinstance(dispatcher, dict):
@@ -132,8 +149,8 @@ class BatchTask(AbstructTask):
         self.resources = resources
         self.outlog = outlog
         self.errlog = errlog
-        self.forward_files = check_arg_list(forward_files)
-        self.backward_files = check_arg_list(backward_files)
+        self.forward_files = check_list(forward_files)
+        self.backward_files = check_list(backward_files)
     
     def execute(self):
         tdict = self.make_dict(base=self.workdir)
@@ -177,8 +194,8 @@ class GroupBatchTask(AbstructTask):
         self.resources = resources
         self.outlog = outlog
         self.errlog = errlog
-        self.forward_files = check_arg_list(forward_files)
-        self.backward_files = check_arg_list(backward_files)
+        self.forward_files = check_list(forward_files)
+        self.backward_files = check_list(backward_files)
 
     def execute(self):
         tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]

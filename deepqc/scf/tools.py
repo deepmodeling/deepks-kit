@@ -3,21 +3,7 @@ import sys
 import glob
 import numpy as np
 import shutil
-
-
-def get_array(arr):
-    if arr is None:
-        return arr
-    if isinstance(arr, str):
-        ext = os.path.splitext(arr)[-1]
-        if "npy" in ext:
-            return np.load(arr)
-        elif "npz" in ext:
-            raise NotImplementedError
-        else:
-            return np.loadtxt(arr)
-    else:
-        return np.array(arr)
+from deepqc.utils import check_array
 
 
 def print_stat(err, conv=None, train_idx=None, test_idx=None):
@@ -56,7 +42,7 @@ def make_label(sys_dir, eref, fref=None):
 def collect_data(train_idx, test_idx=None, 
                  sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                  dump_dir=".", verbose=True):
-    erefs = get_array(ene_ref).reshape(-1)
+    erefs = check_array(ene_ref).reshape(-1)
     nsys = erefs.shape[0]
     if nsys == 1 and "e_cf.npy" in os.listdir(sys_dir):
         systems = [os.path.abspath(sys_dir)]
@@ -100,8 +86,8 @@ def concat_data(sys_dir=".", dump_dir=".", pattern="*"):
 def collect_data_grouped(train_idx, test_idx=None, 
                          sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                          dump_dir=".", append=True, verbose=True):
-    eref = get_array(ene_ref).reshape(-1, 1)
-    fref = get_array(force_ref)
+    eref = check_array(ene_ref).reshape(-1, 1)
+    fref = check_array(force_ref)
     nmol = eref.shape[0]
     if not os.path.exists(f'{sys_dir}/e_cf.npy'):
         concat_data(sys_dir, dump_dir=sys_dir)    

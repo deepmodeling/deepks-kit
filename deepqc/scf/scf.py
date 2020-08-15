@@ -5,6 +5,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import dft
+from deepqc.utils import check_list
 from deepqc.train.model import QCNet
 
 
@@ -50,7 +51,7 @@ class DeepSCF(dft.rks.RKS):
         self.get_veff0 = super().get_veff
         self.nuc_grad_method0 = super().nuc_grad_method
         # initialize penalty terms
-        self.penalties = check_arg_list(penalties)
+        self.penalties = check_list(penalties)
         for pnt in self.penalties:
             pnt.init_hook(self)
         # update keys to avoid pyscf warning
@@ -206,13 +207,6 @@ def load_basis(basis):
     else:
         return gto.basis.load(basis, symb="Ne")
 
-
-def check_arg_list(args):
-    if args is None:
-        return []
-    if not isinstance(args, (list, tuple)):
-        return [args]
-    return args
 
 # if __name__ == '__main__':
 #     mol = gto.Mole()

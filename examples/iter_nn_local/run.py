@@ -9,7 +9,7 @@ sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
 import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.scf.main import main as scf_main
-from deepqc.train.main import load_yaml
+from deepqc.utils import load_yaml
 from deepqc.iter.task import PythonTask
 from deepqc.iter.workflow import Sequence, Iteration
 

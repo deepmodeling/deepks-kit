@@ -9,9 +9,9 @@ from collections import namedtuple
 from pyscf import gto, lib
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.scf.scf import DeepSCF, check_arg_list
+from deepqc.scf.scf import DeepSCF
 from deepqc.train.model import QCNet
-from deepqc.train.main import load_yaml
+from deepqc.utils import check_list, load_yaml, load_xyz_files
 
 
 BOHR = 0.52917721092
@@ -81,18 +81,6 @@ DEFAULT_SCF_ARGS = {
     "level_shift": 0.1,
     "diis_space": 20
 }
-
-def load_xyz_files(file_list):
-    if isinstance(file_list, str):
-        file_list = [file_list]
-    new_list = []
-    for p in file_list:
-        if os.path.splitext(p)[1] == '.xyz':
-            new_list.append(p)
-        else:
-            with open(p) as f:
-                new_list.extend(f.read().splitlines())
-    return new_list
 
 
 def parse_xyz(filename, basis='ccpvdz', verbose=0):
@@ -214,7 +202,7 @@ def main(xyz_files, model_file="model.pth", basis='ccpvdz',
         model = QCNet.load(model_file).double()
         default_scf_args = DEFAULT_SCF_ARGS
     # check arguments
-    penalty_terms = check_arg_list(penalty_terms)
+    penalty_terms = check_list(penalty_terms)
     if dump_dir is None:
         dump_dir = os.curdir
     if group:
