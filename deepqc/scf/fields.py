@@ -1,20 +1,23 @@
 from collections import namedtuple
 
 Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
+LabelField = namedtuple("LabelField", ["name", "alias", "calc", "shape", "required_labels"])
 
 def select_fields(names):
     names = [n.lower() for n in names]
-    scfs  = [fd for fd in SCF_FIELDS 
-                 if fd.name in names 
-                 or any(al in names for al in fd.alias)]
-    grads = [fd for fd in GRAD_FIELDS 
-                 if fd.name in names 
-                 or any(al in names for al in fd.alias)]
-    return {"scf": scfs, "grad": grads}
+    scfs   = [fd for fd in SCF_FIELDS 
+                  if fd.name in names 
+                  or any(al in names for al in fd.alias)]
+    grads  = [fd for fd in GRAD_FIELDS 
+                  if fd.name in names 
+                  or any(al in names for al in fd.alias)]
+    labels = [fd for fd in LABEL_FIELDS
+                  if fd.name in names
+                  or any(al in names for al in fd.alias)]
+    return {"scf": scfs, "grad": grads, "label": labels}
 
 
 BOHR = 0.52917721092
-
 
 SCF_FIELDS = [
     Field("e_hf", 
@@ -51,7 +54,6 @@ SCF_FIELDS = [
           "(nframe, -1)")
 ]
 
-
 GRAD_FIELDS = [
     Field("f_hf", 
           ["fhf", "force_hf", "f0"], 
@@ -64,9 +66,32 @@ GRAD_FIELDS = [
     Field("gdmx",
           ["grad_dm_x", "grad_pdm_x"],
           lambda grad: grad.make_grad_pdm_x(flatten=True) / BOHR,
-          "(nframe,natom,3,natom,-1)"),
+          "(nframe, natom, 3, natom, -1)"),
     Field("grad_vx",
           ["grad_eig_x", "geigx", "gvx"],
           lambda grad: grad.make_grad_eig_x() / BOHR,
-          "(nframe,natom,3,natom,-1)"),
+          "(nframe, natom, 3, natom, nproj)"),
+]
+
+LABEL_FIELDS = [
+    LabelField("l_e_ref", 
+               ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
+               lambda res, lbl: lbl["energy"],
+               "(nframe, 1)",
+               ["energy"]),
+    LabelField("l_f_ref", 
+               ["f_ref", "lbl_f_ref", "label_f_ref", "lf_ref"],
+               lambda res, lbl: lbl["force"],
+               "(nframe, natom, 3)",
+               ["force"]),
+    LabelField("l_e_delta", 
+               ["le_delta", "lbl_e_delta", "label_e_delta", "lbl_ed"],
+               lambda res, lbl: lbl["energy"] - res["e_hf"],
+               "(nframe, 1)",
+               ["energy"]),
+    LabelField("l_f_delta", 
+               ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
+               lambda res, lbl: lbl["force"] - res["f_hf"],
+               "(nframe, natom, 3)",
+               ["force"])
 ]

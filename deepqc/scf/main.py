@@ -136,9 +136,17 @@ def build_penalty(pnt_dict, label_dict={}):
     return PenaltyClass(*label_arrays, **pnt_dict)
 
 
+def make_labels(res, lbl, label_fields):
+    if isinstance(label_fields, dict):
+        label_fields = label_fields["label"]
+    for fd in label_fields:
+        res[fd.name] = fd.calc(res, lbl)
+    return res
+
+
 def collect_fields(fields, meta, res_list):
     if isinstance(fields, dict):
-        fields = fields["scf"] + fields["grad"]
+        fields = sum(fields.values(), [])
     if isinstance(res_list, dict):
         res_list = [res_list]
     nframe = len(res_list)
@@ -185,7 +193,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
         scf_args = {}
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
-    label_names = get_required_labels([], penalty_terms)
+    # check label names from label fields and penalties
+    label_names = get_required_labels(fields["label"], penalty_terms)
 
     if verbose:
         print(f"starting calculation with OMP threads: {lib.num_threads()}")
@@ -206,6 +215,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
                 meta, result = solve_mol(mol, model, fields,
                                         proj_basis=proj_basis, penalties=penalties,
                                         device=device, verbose=verbose, **scf_args)
+                result = make_labels(result, labels, fields["label"])
             except Exception as e:
                 print(fl, 'failed! error:', e, file=sys.stderr)
                 # continue
@@ -240,7 +250,7 @@ if __name__ == "__main__":
     parser.add_argument("input", nargs="?",
                         help='the input yaml file for args')
     parser.add_argument("-s", "--systems", nargs="*",
-                        help="input molecule systems, can be xyz_files or folders with DP data")
+                        help="input molecule systems, can be xyz_files or folders with npy data")
     parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
     parser.add_argument("-B", "--basis",

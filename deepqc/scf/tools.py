@@ -39,6 +39,16 @@ def make_label(sys_dir, eref, fref=None):
         np.save(f'{sys_dir}/f_cc.npy', fcc)
 
 
+def concat_data(sys_dir=".", dump_dir=".", pattern="*"):
+    systems = sorted(filter(os.path.isdir, map(os.path.abspath, glob.glob(f"{sys_dir}/*"))))
+    npy_names = list(map(os.path.basename, glob.glob(f"{systems[0]}/*.npy")))
+    os.makedirs(dump_dir, exist_ok=True)
+    for nm in npy_names:
+        tmp_array = np.concatenate([np.load(f"{sys}/{nm}") for sys in systems])
+        np.save(f"{dump_dir}/{nm}", tmp_array)
+    shutil.copy(f'{systems[0]}/system.raw', dump_dir)
+
+
 def collect_data(train_idx, test_idx=None, 
                  sys_dir="results", ene_ref="e_ref.npy", force_ref=None,
                  dump_dir=".", verbose=True):
@@ -71,16 +81,6 @@ def collect_data(train_idx, test_idx=None,
     np.savetxt(f'{dump_dir}/train_paths.raw', np.array(systems)[train_idx], fmt='%s')
     np.savetxt(f'{dump_dir}/test_paths.raw', np.array(systems)[test_idx], fmt='%s')
     np.savetxt(f'{dump_dir}/e_result.out', np.stack([erefs, ecfs], axis=-1), header="real pred")
-
-
-def concat_data(sys_dir=".", dump_dir=".", pattern="*"):
-    systems = sorted(filter(os.path.isdir, map(os.path.abspath, glob.glob(f"{sys_dir}/*"))))
-    npy_names = list(map(os.path.basename, glob.glob(f"{systems[0]}/*.npy")))
-    os.makedirs(dump_dir, exist_ok=True)
-    for nm in npy_names:
-        tmp_array = np.concatenate([np.load(f"{sys}/{nm}") for sys in systems])
-        np.save(f"{dump_dir}/{nm}", tmp_array)
-    shutil.copy(f'{systems[0]}/system.raw', dump_dir)
     
     
 def collect_data_grouped(train_idx, test_idx=None, 
