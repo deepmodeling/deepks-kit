@@ -10,8 +10,11 @@ if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.scf.scf import DeepSCF
 from deepqc.scf.fields import select_fields
+from deepqc.scf.penalty import select_penalty
 from deepqc.train.model import QCNet
-from deepqc.utils import check_list, load_yaml, load_xyz_files
+from deepqc.utils import check_list, flat_file_list, is_xyz
+from deepqc.utils import load_yaml, load_array
+from deepqc.utils import get_with_prefix
 
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
@@ -61,6 +64,58 @@ def solve_mol(mol, model, fields,
     return meta, res
 
 
+def load_sys_paths(sys_list):
+    return flat_file_list(sys_list, lambda p: os.path.isdir(p) or is_xyz(p))
+
+
+def get_required_labels(fields=None, penalty_dicts=None):
+    field_labels   = [check_list(f.required_labels)
+                        for f in check_list(fields)]
+    penalty_labels = [check_list(p.get("required_labels", 
+                                       select_penalty(p["type"]).required_labels))
+                        for p in check_list(penalty_dicts)]
+    return set(sum(field_labels + penalty_labels, []))
+
+
+def system_iter(path, labels=None):
+    """
+    return an iterator that gives atoms and required labels each time
+    path: either an xyz file, or a folder contains (atom.npy | (coord.npy @ type.raw))
+    labels: a set contains required label names, will be load by $base[.|/]$label.npy
+    $base will be the basename of the xyz file (followed by .) or the folder (followed by /)
+    """
+    if labels is None:
+        labels = set()
+    base = path.rstrip(".xyz")
+    label_paths = {lb: get_with_prefix(lb, base, prefer=".npy") for lb in labels}
+    # if xyz, will yield single frame. Assume all labels are single frame
+    if is_xyz(path):
+        atom = path
+        label_dict = {lb: load_array(label_paths[lb]) for lb in labels}
+        yield atom, label_dict
+        return
+    # a folder contains multiple frames data, yield one by one
+    else:
+        assert os.path.isdir(path), f"system {path} is neither .xyz or dir"
+        all_labels = {lb: load_array(label_paths[lb]) for lb in labels}
+        try:
+            atom_array = load_array(get_with_prefix("atom", path, prefer=".npy"))
+            assert len(atom_array.shape) == 3 and atom_array.shape[2] == 4, atom_array.shape
+            nframes = atom_array.shape[0]
+            elements = np.rint(atom_array[:, :, 0]).astype(int)
+            coords = atom_array[:, :, 1:]
+        except FileNotFoundError:
+            coords = load_array(get_with_prefix("coord", path, prefer=".npy"))
+            assert len(coords.shape) == 3 and coords.shape[2] == 3, coords.shape
+            nframes = coords.shape[0]
+            elements = np.loadtxt(os.path.join(path, "type.raw"), dtype='str')\
+                         .reshape(1,-1).repeat(nframes, axis=0)
+        for i in range(nframes):
+            atom = [[e,c] for e,c in zip(elements[i], coords[i])]
+            label_dict = {lb: all_labels[lb][i] for lb in labels}
+            yield atom, label_dict
+
+
 def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     # build a molecule using given atom input
     # set the default basis to cc-pVDZ and use input unit 'Ang"
@@ -72,23 +127,13 @@ def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     return mol
 
 
-def parse_penalty(pnt_dict, basename="mol"):
+def build_penalty(pnt_dict, label_dict={}):
     pnt_dict = pnt_dict.copy()
     pnt_type = pnt_dict.pop("type")
-    if pnt_type.upper() == "DENSITY":
-        from deepqc.scf.penalty import DensityPenalty
-        suffix = pnt_dict.pop("suffix", "dm.npy").lstrip(".")
-        basename = basename.rstrip(".xyz")
-        dm_name = f"{basename}.{suffix}"
-        return DensityPenalty(dm_name, **pnt_dict)
-    if pnt_type.upper() == "COULOMB":
-        from deepqc.scf.penalty import CoulombPenalty
-        suffix = pnt_dict.pop("suffix", "dm.npy").lstrip(".")
-        basename = basename.rstrip(".xyz")
-        dm_name = f"{basename}.{suffix}"
-        return CoulombPenalty(dm_name, **pnt_dict)
-    else:
-        raise KeyError(f"unknown penalty type: {pnt_type}")
+    PenaltyClass = select_penalty(pnt_type)
+    label_names = pnt_dict.pop("required_labels", PenaltyClass.required_labels)
+    label_arrays = [label_dict[lb] for lb in check_list(label_names)]
+    return PenaltyClass(*label_arrays, **pnt_dict)
 
 
 def collect_fields(fields, meta, res_list):
@@ -131,16 +176,16 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     else:
         model = QCNet.load(model_file).double()
         default_scf_args = DEFAULT_SCF_ARGS
+
     # check arguments
     penalty_terms = check_list(penalty_terms)
     if dump_dir is None:
         dump_dir = os.curdir
-    if group:
-        res_list = []
     if scf_args is None:
         scf_args = {}
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
+    label_names = get_required_labels([], penalty_terms)
 
     if verbose:
         print(f"starting calculation with OMP threads: {lib.num_threads()}")
@@ -149,29 +194,35 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print(f"specified scf args:\n  {scf_args}")
 
     old_meta = None
-    systems = load_xyz_files(systems)
+    res_list = []
+    systems = load_sys_paths(systems)
+
     for fl in systems:
-        mol = build_mol(fl, basis=basis, verbose=verbose)
-        penalties = [parse_penalty(pd, fl) for pd in penalty_terms]
-        try:
-            meta, result = solve_mol(mol, model, fields,
-                                     proj_basis=proj_basis, penalties=penalties,
-                                     device=device, verbose=verbose, **scf_args)
-        except Exception as e:
-            print(fl, 'failed! error:', e, file=sys.stderr)
-            # continue
-            raise
+        fl = fl.rstrip(os.path.sep)
+        for atom, labels in system_iter(fl, label_names):
+            mol = build_mol(atom, basis=basis, verbose=verbose)
+            penalties = [build_penalty(pd, labels) for pd in penalty_terms]
+            try:
+                meta, result = solve_mol(mol, model, fields,
+                                        proj_basis=proj_basis, penalties=penalties,
+                                        device=device, verbose=verbose, **scf_args)
+            except Exception as e:
+                print(fl, 'failed! error:', e, file=sys.stderr)
+                # continue
+                raise
+            if group and old_meta is not None and np.any(meta != old_meta):
+                break
+            res_list.append(result)
+
         if not group:
             sub_dir = os.path.join(dump_dir, os.path.splitext(os.path.basename(fl))[0])
             dump_meta(sub_dir, meta)
-            dump_data(sub_dir, **collect_fields(fields, meta, [result]))
-        else:
-            if not res_list or np.all(meta == old_meta):
-                res_list.append(result)
-                old_meta = meta
-            else:
-                print(fl, 'meta does not match! saving previous results only.', file=sys.stderr)
-                break
+            dump_data(sub_dir, **collect_fields(fields, meta, res_list))
+            res_list = []
+        elif old_meta is not None and np.any(meta != old_meta):
+            print(fl, 'meta does not match! saving previous results only.', file=sys.stderr)
+            break
+        old_meta = meta
         if verbose:
             print(fl, 'finished')
 

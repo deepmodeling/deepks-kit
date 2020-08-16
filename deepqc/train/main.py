@@ -7,7 +7,7 @@ if __name__ == "__main__":
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
 from deepqc.train.train import DEVICE, train, preprocess
-from deepqc.utils import load_yaml, load_sys_paths
+from deepqc.utils import load_yaml, load_sys_dirs
 
 
 def main(restart=None, **argdict):
@@ -17,11 +17,11 @@ def main(restart=None, **argdict):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    train_paths = load_sys_paths(argdict['train_paths'])
+    train_paths = load_sys_dirs(argdict['train_paths'])
     print(f'# training with {len(train_paths)} system(s)')
     g_reader = GroupReader(train_paths, **argdict['data_args'])
     if 'test_paths' in argdict:
-        test_paths = load_sys_paths(argdict['test_paths'])
+        test_paths = load_sys_dirs(argdict['test_paths'])
         print(f'# testing with {len(test_paths)} system(s)')
         test_reader = GroupReader(test_paths, **argdict['data_args'])
     else:

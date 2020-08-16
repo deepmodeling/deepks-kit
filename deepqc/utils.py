@@ -45,13 +45,16 @@ def flat_file_list(file_list, filter_func=lambda p: True):
     return new_list
 
 
-def load_sys_paths(path_list):
+def load_sys_dirs(path_list):
     return flat_file_list(path_list, os.path.isdir)
 
 
 def load_xyz_files(file_list):
-    return flat_file_list(file_list, 
-        lambda p: os.path.splitext(p)[1] == '.xyz')
+    return flat_file_list(file_list, is_xyz)
+
+
+def is_xyz(p):
+    return os.path.splitext(p)[1] == '.xyz'
 
 
 # below are file loading utils
@@ -92,7 +95,7 @@ def get_abs_path(p):
         return Path(p).absolute()
 
 
-def get_prefix(p, base=None, prefer=None):
+def get_with_prefix(p, base=None, prefer=None):
     """
     Get file path by searching its prefix.
     If `base` is a directory, equals to get "base/p*".
