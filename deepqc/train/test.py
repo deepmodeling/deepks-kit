@@ -53,7 +53,7 @@ def test(model, g_reader, dump_prefix="test"):
     return all_err_l1, all_err_l2
 
 
-def main(model_file, data_path, output_prefix='test', e_name='e_cc', d_name=['dm_eig']):
+def main(model_file, data_path, output_prefix='test', e_name='l_e_delta', d_name=['dm_eig']):
     data_path = load_sys_dirs(data_path)
     g_reader = GroupReader(data_path, e_name=e_name, d_name=d_name)
     if isinstance(model_file, str):
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                         help="the path to data .raw files for test")
     parser.add_argument("-o", "--output-prefix", default='test', type=str,
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
-    parser.add_argument("-E", "--e-name", default='e_cc', type=str,
+    parser.add_argument("-E", "--e-name", default='l_e_delta', type=str,
                         help="the name of energy file to be read (no .npy extension)")
     parser.add_argument("-D", "--d-name", default=['dm_eig'], type=str, nargs="+",
                         help="the name of descriptor file(s) to be read (no .npy extension)")

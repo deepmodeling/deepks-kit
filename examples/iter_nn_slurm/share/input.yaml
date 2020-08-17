@@ -6,7 +6,7 @@ model_args:
 data_args: 
   batch_size: 1
   group_batch: 16
-  e_name: e_cc
+  e_name: l_e_delta
   d_name: [dm_eig]
 preprocess_args:
   preshift: false

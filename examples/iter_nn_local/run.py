@@ -31,9 +31,9 @@ def collect_data(nmol, ntrain):
     print(f'  testing: {np.abs(err[ntrain:] - err[:ntrain].mean()).mean()}')
 
     ehf = np.load('results/e_hf.npy')
-    np.save('results/e_cc.npy', eref - ehf)
+    np.save('results/l_e_delta.npy', eref - ehf)
 
-    dd = ['dm_eig.npy', 'e_cc.npy']
+    dd = ['dm_eig.npy', 'l_e_delta.npy']
     os.makedirs('train', exist_ok=True)
     os.makedirs('test', exist_ok=True)
     for d in dd:

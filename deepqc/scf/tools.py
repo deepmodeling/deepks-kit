@@ -30,13 +30,13 @@ def make_label(sys_dir, eref, fref=None):
     ehf = np.load(f'{sys_dir}/e_hf.npy')
     assert ehf.shape[0] == nmol
     ecc = eref - ehf
-    np.save(f'{sys_dir}/e_cc.npy', ecc)
+    np.save(f'{sys_dir}/l_e_delta.npy', ecc)
     if fref is not None:
         fref = fref.reshape(nmol, -1, 3)
         fhf = np.load(f'{sys_dir}/f_hf.npy')
         assert fhf.shape == fref.shape
         fcc = fref - fhf
-        np.save(f'{sys_dir}/f_cc.npy', fcc)
+        np.save(f'{sys_dir}/l_f_delta.npy', fcc)
 
 
 def concat_data(sys_dir=".", dump_dir=".", pattern="*"):
@@ -65,7 +65,7 @@ def collect_data(train_idx, test_idx=None,
     for sys_i, ec_i in zip(systems, erefs):
         e0_i = np.load(os.path.join(sys_i, "e_hf.npy"))
         ecc_i = ec_i - e0_i
-        np.save(os.path.join(sys_i, "e_cc.npy"), ecc_i)
+        np.save(os.path.join(sys_i, "l_e_delta.npy"), ecc_i)
         convs.append(np.load(os.path.join(sys_i, "conv.npy")))
         ecfs.append(np.load(os.path.join(sys_i, "e_cf.npy")))
     convs = np.array(convs).reshape(-1)
@@ -95,7 +95,7 @@ def collect_data_grouped(train_idx, test_idx=None,
     assert ecf.shape[0] == nmol, f"{ene_ref} ref size: {nmol}, {sys_dir} data size: {ecf.shape[0]}"
     make_label(sys_dir, eref, fref)
     # ehf = np.load(f'{sys_dir}/e_hf.npy')
-    # np.save(f'{sys_dir}/e_cc.npy', eref - ehf)
+    # np.save(f'{sys_dir}/l_e_delta.npy', eref - ehf)
 
     err = eref - ecf
     conv = np.load(f'{sys_dir}/conv.npy').reshape(-1)

@@ -5,7 +5,7 @@ import torch
 
 class Reader(object):
     def __init__(self, data_path, batch_size, 
-                 e_name="e_cc", d_name="dm_eig", **kwargs):
+                 e_name="l_e_delta", d_name="dm_eig", **kwargs):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
@@ -73,8 +73,8 @@ class Reader(object):
 
 class ForceReader(object):
     def __init__(self, data_path, batch_size, 
-                 e_name="e_cc", d_name="dm_eig", 
-                 f_name="f_cc", gv_name="grad_vx", **kwargs):
+                 e_name="l_e_delta", d_name="dm_eig", 
+                 f_name="l_f_delta", gv_name="grad_vx", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_name = e_name

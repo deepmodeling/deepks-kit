@@ -23,7 +23,7 @@ train_args:
 data_args:
   batch_size: 64 # essential
   group_batch: 1
-  e_name: e_cc
+  e_name: l_e_delta
   d_name: [dm_eig]
 # path to training and testing folders
 train_paths: # essential
