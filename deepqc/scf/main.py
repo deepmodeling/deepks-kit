@@ -177,7 +177,7 @@ def dump_data(dir_name, **data_dict):
 def main(systems, model_file="model.pth", basis='ccpvdz', 
          proj_basis=None, penalty_terms=None, device=None,
          dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
-         scf_args=None, verbose=0):
+         mol_args=None, scf_args=None, verbose=0):
     if model_file is None or model_file.upper() == "NONE":
         model = None
         default_scf_args = DEFAULT_HF_ARGS
@@ -189,6 +189,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     penalty_terms = check_list(penalty_terms)
     if dump_dir is None:
         dump_dir = os.curdir
+    if mol_args is None:
+        mol_args = {}
     if scf_args is None:
         scf_args = {}
     scf_args = {**default_scf_args, **scf_args}
@@ -209,7 +211,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     for fl in systems:
         fl = fl.rstrip(os.path.sep)
         for atom, labels in system_iter(fl, label_names):
-            mol = build_mol(atom, basis=basis, verbose=verbose)
+            mol = build_mol(atom, basis=basis, verbose=verbose, **mol_args)
             penalties = [build_penalty(pd, labels) for pd in penalty_terms]
             try:
                 meta, result = solve_mol(mol, model, fields,
@@ -250,7 +252,7 @@ if __name__ == "__main__":
     parser.add_argument("input", nargs="?",
                         help='the input yaml file for args')
     parser.add_argument("-s", "--systems", nargs="*",
-                        help="input molecule systems, can be xyz_files or folders with npy data")
+                        help="input molecule systems, can be xyz files or folders with npy data")
     parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
     parser.add_argument("-B", "--basis",
