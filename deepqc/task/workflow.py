@@ -1,7 +1,7 @@
 from copy import deepcopy
 from deepqc.utils import check_list
 from deepqc.utils import get_abs_path
-from deepqc.iter.task import AbstructStep
+from deepqc.task.task import AbstructStep
 
 
 class Workflow(AbstructStep):

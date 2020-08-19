@@ -8,7 +8,7 @@ import sys
 import subprocess as sp
 from copy import deepcopy
 from contextlib import nullcontext, redirect_stdout, redirect_stderr
-from deepqc.iter.job.dispatcher import Dispatcher
+from deepqc.task.job.dispatcher import Dispatcher
 
 
 class AbstructStep(object):

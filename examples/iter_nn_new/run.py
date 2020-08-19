@@ -8,8 +8,8 @@ import numpy as np
 sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
 import deepqc
 from deepqc.scf.tools import collect_data_grouped
-from deepqc.iter.task import PythonTask, BatchTask, GroupBatchTask
-from deepqc.iter.workflow import Sequence, Iteration
+from deepqc.task.task import PythonTask, BatchTask, GroupBatchTask
+from deepqc.task.workflow import Sequence, Iteration
 
 nsys = 1
 niter = 10
