@@ -1,0 +1,13 @@
+basis: ccpvdz
+systems: [mol_files.raw]
+model_file: model.pth
+dump_dir: results
+dump_fields: [e_hf, e_cf, dm_eig, conv, f_hf, f_cf, grad_vx]
+group: true 
+verbose: 1
+scf_args:
+  conv_tol: 1e-7
+  conv_tol_grad: 3e-3
+  level_shift: 0.1
+  diis_space: 20
+  conv_check: false    
