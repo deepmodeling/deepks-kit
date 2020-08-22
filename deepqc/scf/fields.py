@@ -93,5 +93,15 @@ LABEL_FIELDS = [
                ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
                lambda res, lbl: lbl["force"] - res["f_hf"],
                "(nframe, natom, 3)",
+               ["force"]),
+    LabelField("err_e", 
+               ["e_err", "err_e_tot", "err_e_cf"],
+               lambda res, lbl: lbl["energy"] - res["e_cf"],
+               "(nframe, 1)",
+               ["energy"]),
+    LabelField("err_f", 
+               ["f_err", "err_f_tot", "err_f_cf"],
+               lambda res, lbl: lbl["force"] - res["f_cf"],
+               "(nframe, natom, 3)",
                ["force"])
 ]
