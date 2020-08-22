@@ -245,7 +245,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print('group finished')
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(
                 description="Calculate and save SCF energies and descriptors using given model.",
                 argument_default=argparse.SUPPRESS)
@@ -300,3 +300,7 @@ if __name__ == "__main__":
         argdict["scf_args"] = scf_args
 
     main(**argdict)
+
+
+if __name__ == "__main__":
+    cli()

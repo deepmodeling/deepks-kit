@@ -38,8 +38,9 @@ def main(restart=None, **argdict):
     train(model, g_reader, test_reader=test_reader, **argdict['train_args'])
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="*** Train a model according to givven input. ***")
+def cli():
+    parser = argparse.ArgumentParser(
+        description="Train a model according to given input.")
     parser.add_argument('input', type=str, 
                         help='the input yaml file for args')
     parser.add_argument('--restart', default=None,
@@ -48,3 +49,7 @@ if __name__ == "__main__":
     argdict = load_yaml(args.input)
 
     main(restart=args.restart, **argdict)
+
+
+if __name__ == "__main__":
+    cli()

@@ -8,7 +8,7 @@ if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
-from deepqc.train.main import load_sys_dirs
+from deepqc.utils import load_yaml, load_sys_dirs, check_list
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -53,11 +53,11 @@ def test(model, g_reader, dump_prefix="test"):
     return all_err_l1, all_err_l2
 
 
-def main(model_file, data_path, output_prefix='test', e_name='l_e_delta', d_name=['dm_eig']):
-    data_path = load_sys_dirs(data_path)
-    g_reader = GroupReader(data_path, e_name=e_name, d_name=d_name)
-    if isinstance(model_file, str):
-        model_file = [model_file]
+def main(data_paths, model_file="model.pth", 
+         output_prefix='test', e_name='l_e_delta', d_name=['dm_eig']):
+    data_paths = load_sys_dirs(data_paths)
+    g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name)
+    model_file = check_list(model_file)
     for f in model_file:
         print(f)
         p = os.path.dirname(f)
@@ -69,18 +69,42 @@ def main(model_file, data_path, output_prefix='test', e_name='l_e_delta', d_name
         test(model, g_reader, dump_prefix=dump)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model-file", default=['model.pth'], type=str, nargs='+',
+def cli():
+    parser = argparse.ArgumentParser(
+                description="Test a model with given data (Not SCF)",
+                argument_default=argparse.SUPPRESS)
+    parser.add_argument("input", nargs="?",
+                        help='the input yaml file used for training')
+    parser.add_argument("-d", "--data-paths", type=str, nargs='+',
+                        help="the paths to data folders containing .npy files for test")
+    parser.add_argument("-m", "--model-file", type=str, nargs='+',
                         help="the dumped model file to test")
-    parser.add_argument("-d", "--data-path", default=['data'], type=str, nargs='+',
-                        help="the path to data .raw files for test")
-    parser.add_argument("-o", "--output-prefix", default='test', type=str,
+    parser.add_argument("-o", "--output-prefix", type=str,
                         help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
-    parser.add_argument("-E", "--e-name", default='l_e_delta', type=str,
+    parser.add_argument("-E", "--e-name", type=str,
                         help="the name of energy file to be read (no .npy extension)")
-    parser.add_argument("-D", "--d-name", default=['dm_eig'], type=str, nargs="+",
+    parser.add_argument("-D", "--d-name", type=str, nargs="+",
                         help="the name of descriptor file(s) to be read (no .npy extension)")
     args = parser.parse_args()
 
-    main(**vars(args))
+    if hasattr(args, "input"):
+        rawdict = load_yaml(args.input)
+        del args.input
+        argdict = {}
+        if "ckpt_file" in rawdict["train_args"]:
+            argdict["model_file"] = rawdict["train_args"]["ckpt_file"]
+        if "e_name" in rawdict["data_args"]:
+            argdict["e_name"] = rawdict["data_args"]["e_name"]
+        if "d_name" in rawdict["data_args"]:
+            argdict["d_name"] = rawdict["data_args"]["d_name"]
+        if "test_paths" in rawdict:
+            argdict["data_paths"] = rawdict["test_paths"]
+        argdict.update(vars(args))
+    else:
+        argdict = vars(args)
+
+    main(**argdict)
+
+
+if __name__ == "__main__":
+    cli()
