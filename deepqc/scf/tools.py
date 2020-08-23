@@ -19,13 +19,17 @@ def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
         shutil.copy(f'{systems[0]}/system.raw', dump_dir)
 
 
-def print_stat(train_sys=None, test_sys=None, 
-               group=False, dump_dir=".",
+def print_stat(systems=None, test_sys=None, 
+               dump_dir=None, test_dump=None, group=False,
                with_conv=True, with_e=True, e_name="e_cf", 
                with_f=True, f_name="f_cf"):
     load_func = load_stat if not group else load_stat_grouped
-    if train_sys:
-        tr_c, tr_e, tr_f = load_func(train_sys, dump_dir, with_conv, 
+    if dump_dir is None:
+        dump_dir = "."
+    if test_dump is None:
+        test_dump = dump_dir
+    if systems:
+        tr_c, tr_e, tr_f = load_func(systems, dump_dir, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Training:")
         if with_conv:
@@ -35,14 +39,14 @@ def print_stat(train_sys=None, test_sys=None,
             print_stat_e(tr_e, shift=shift, indent=2)
         if with_f:
             print_stat_f(tr_f, indent=2)
-    if test_sys and not group:
-        ts_c, ts_e, ts_f = load_func(test_sys, dump_dir, with_conv, 
+    if test_sys:
+        ts_c, ts_e, ts_f = load_func(test_sys, test_dump, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Testing:")
         if with_conv:
             print_stat_conv(ts_c, indent=2)
         if with_e:
-            if not train_sys: shift = None
+            if not systems: shift = None
             print_stat_e(ts_e, shift=shift, indent=2)
         if with_f:
             print_stat_f(ts_f, indent=2)
@@ -70,7 +74,7 @@ def print_stat_f(f_err, indent=0):
     print(ind+f'  MAE: \t {np.abs(f_err).mean()}')
 
 
-def load_stat(systems, dump_dir=".",
+def load_stat(systems, dump_dir,
               with_conv=True, with_e=True, e_name="e_cf", 
               with_f=True, f_name="f_cf"):
     systems = check_list(systems)
