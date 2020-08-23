@@ -95,7 +95,7 @@ def get_abs_path(p):
         return Path(p).absolute()
 
 
-def get_with_prefix(p, base=None, prefer=None):
+def get_with_prefix(p, base=None, prefer=None, nullable=False):
     """
     Get file path by searching its prefix.
     If `base` is a directory, equals to get "base/p*".
@@ -116,6 +116,8 @@ def get_with_prefix(p, base=None, prefer=None):
     for suffix in prefer:
         if pattern+suffix in matches:
             return pattern+suffix
+    if nullable:
+        return None
     raise FileNotFoundError(f"{pattern}* not exists or has more than one matches")
 
     

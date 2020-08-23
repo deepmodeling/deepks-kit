@@ -59,7 +59,7 @@ def solve_mol(mol, model, fields,
     
     if verbose:
         tac = time.time()
-        print(f"time of scf: {tac - tic}, converged: {cf.converged}")
+        print(f"time of scf: {tac - tic:6.2f}s, converged:   {cf.converged}")
 
     return meta, res
 
@@ -215,8 +215,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             penalties = [build_penalty(pd, labels) for pd in penalty_terms]
             try:
                 meta, result = solve_mol(mol, model, fields,
-                                        proj_basis=proj_basis, penalties=penalties,
-                                        device=device, verbose=verbose, **scf_args)
+                                         proj_basis=proj_basis, penalties=penalties,
+                                         device=device, verbose=verbose, **scf_args)
                 result = make_labels(result, labels, fields["label"])
             except Exception as e:
                 print(fl, 'failed! error:', e, file=sys.stderr)
@@ -227,7 +227,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             res_list.append(result)
 
         if not group:
-            sub_dir = os.path.join(dump_dir, os.path.splitext(os.path.basename(fl))[0])
+            sub_dir = os.path.join(dump_dir, os.path.basename(fl).rstrip(".xyz"))
             dump_meta(sub_dir, meta)
             dump_data(sub_dir, **collect_fields(fields, meta, res_list))
             res_list = []
