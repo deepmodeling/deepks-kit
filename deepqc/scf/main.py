@@ -176,7 +176,7 @@ def dump_data(dir_name, **data_dict):
 
 def main(systems, model_file="model.pth", basis='ccpvdz', 
          proj_basis=None, penalty_terms=None, device=None,
-         dump_dir=None, dump_fields=DEFAULT_FNAMES, group=False, 
+         dump_dir=".", dump_fields=DEFAULT_FNAMES, group=False, 
          mol_args=None, scf_args=None, verbose=0):
     if model_file is None or model_file.upper() == "NONE":
         model = None
@@ -187,12 +187,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
 
     # check arguments
     penalty_terms = check_list(penalty_terms)
-    if dump_dir is None:
-        dump_dir = os.curdir
-    if mol_args is None:
-        mol_args = {}
-    if scf_args is None:
-        scf_args = {}
+    if mol_args is None: mol_args = {}
+    if scf_args is None: scf_args = {}
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
     # check label names from label fields and penalties

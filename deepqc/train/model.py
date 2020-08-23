@@ -70,13 +70,16 @@ class DenseNet(nn.Module):
 class QCNet(nn.Module):
 
     @log_args('_init_args')
-    def __init__(self, layer_sizes, actv_fn='softplus', use_resnet=True, input_shift=0, input_scale=1, output_scale=1):
+    def __init__(self, input_dim, hidden_sizes=(100,100,100), 
+                 actv_fn='mygelu', use_resnet=True, 
+                 input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
+        layer_sizes = [input_dim, *hidden_sizes, 1]
         self.densenet = DenseNet(layer_sizes, actv_fn, use_resnet).double()
-        self.linear = nn.Linear(layer_sizes[0], layer_sizes[-1]).double()
-        self.input_shift = nn.Parameter(torch.tensor(input_shift, dtype=torch.float64).expand(layer_sizes[0]).clone(), requires_grad=False)
-        self.input_scale = nn.Parameter(torch.tensor(input_scale, dtype=torch.float64).expand(layer_sizes[0]).clone(), requires_grad=False)
+        self.linear = nn.Linear(input_dim, 1).double()
+        self.input_shift = nn.Parameter(torch.tensor(input_shift, dtype=torch.float64).expand(input_dim).clone(), requires_grad=False)
+        self.input_scale = nn.Parameter(torch.tensor(input_scale, dtype=torch.float64).expand(input_dim).clone(), requires_grad=False)
         self.output_scale = nn.Parameter(torch.tensor(output_scale, dtype=torch.float64), requires_grad=False)
         self.energy_const = nn.Parameter(torch.tensor(0, dtype=torch.float64), requires_grad=False)
     

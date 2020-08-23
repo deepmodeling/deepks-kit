@@ -175,6 +175,7 @@ class GroupReader(object) :
         self.nframes = []
         for ii in self.readers :
             self.nframes.append(ii.get_nframes())
+        self.ndesc = self.readers[0].ndesc
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
         
         self.group_batch = max(group_batch, 1)
