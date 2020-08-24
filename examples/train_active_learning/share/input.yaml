@@ -1,5 +1,5 @@
 model_args:
-  layer_sizes: [324, 100, 100, 100, 1]
+  hidden_sizes: [100, 100, 100] 
   output_scale: 100
   use_resnet: true
   actv_fn: gelu

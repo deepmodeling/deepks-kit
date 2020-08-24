@@ -1,6 +1,6 @@
 # args to be passed to model construction
 model_args: 
-  layer_sizes: [108, 100, 100, 100, 1] # essential
+  hidden_sizes: [100, 100, 100] # essential
   use_resnet: true
   actv_fn: 'softplus'
   output_scale: 100
