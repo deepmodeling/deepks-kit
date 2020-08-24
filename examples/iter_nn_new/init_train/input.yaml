@@ -1,0 +1,27 @@
+model_args:
+  hidden_sizes: [100, 100, 100]
+  output_scale: 100
+  use_resnet: true
+  actv_fn: mygelu
+data_args: 
+  batch_size: 16
+  group_batch: 1
+  e_name: e_cc
+  d_name: [dm_eig]
+preprocess_args:
+  preshift: true 
+  prescale: true
+  prescale_clip: 0.05
+  prefit_ridge: 1e1
+  prefit_trainable: false
+train_args: 
+  ckpt_file: model.pth
+  decay_rate: 0.96
+  decay_steps: 300
+  display_epoch: 100
+  n_epoch: 30000
+  start_lr: 0.0001
+train_paths:
+  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/data/sGDML/malonaldehyde/proj_ccsd_dz/train.1000
+test_paths:
+  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/data/sGDML/malonaldehyde/proj_ccsd_dz/test.1000

@@ -1,15 +1,6 @@
 *~
-*.pb
-*.out
-*log
-log*
-tmp*
-data_*_*
-*.raw
 __pycache__
 checkpoint
 model.ckpt.*
-*bk[0-9]
-*bk
 .vscode
 .ipynb*
