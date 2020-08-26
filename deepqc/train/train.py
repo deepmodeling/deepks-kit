@@ -34,8 +34,8 @@ def eval_sample(model, sample, force_factor=0, loss_fn=nn.MSELoss()):
     
 
 def preprocess(model, g_reader, 
-                preshift=False, prescale=False, prescale_sqrt=False, prescale_clip=0,
-                prefit=True, prefit_ridge=0, prefit_trainable=False):
+                preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
+                prefit=True, prefit_ridge=1, prefit_trainable=False):
     shift = model.input_shift.cpu().detach().numpy()
     scale = model.input_scale.cpu().detach().numpy()
     if preshift or prescale:
@@ -54,10 +54,10 @@ def preprocess(model, g_reader,
         model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
-def train(model, g_reader, n_epoch, 
-            test_reader=None, force_factor=0,
-            start_lr=0.01, decay_steps=100, decay_rate=0.96, weight_decay=0.0,
-            display_epoch=100, ckpt_file=None):
+def train(model, g_reader, n_epoch=1000, 
+          test_reader=None, force_factor=0,
+          start_lr=0.01, decay_steps=100, decay_rate=0.96, weight_decay=0.0,
+          display_epoch=100, ckpt_file="model.pth"):
     if test_reader is None:
         test_reader = g_reader
     optimizer = optim.Adam(model.parameters(), lr=start_lr, weight_decay=weight_decay)

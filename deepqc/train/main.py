@@ -11,9 +11,10 @@ from deepqc.utils import load_yaml, load_sys_dirs
 
 
 def main(train_paths, test_paths=None,
-         restart=None, model_args=None, 
-         data_args=None, preprocess_args=None, 
-         train_args=None, seed=None, **kwargs):
+         restart=None, ckpt_file=None, 
+         model_args=None, data_args=None, 
+         preprocess_args=None, train_args=None, 
+         seed=None):
    
     if seed is None: 
         seed = np.random.randint(0, 2**32)
@@ -25,6 +26,8 @@ def main(train_paths, test_paths=None,
     if data_args is None: data_args = {}
     if preprocess_args is None: preprocess_args = {}
     if train_args is None: train_args = {}
+    if ckpt_file is not None:
+        train_args["ckpt_file"] = ckpt_file
 
     train_paths = load_sys_dirs(train_paths)
     print(f'# training with {len(train_paths)} system(s)')
@@ -64,6 +67,8 @@ def cli():
                         help='paths to the folders of training data')
     parser.add_argument('-t', '--test-paths', nargs="*",
                         help='paths to the folders of testing data')
+    parser.add_argument('-o', '--ckpt_file',
+                        help='file to save the model parameters, default: model.pth')
     parser.add_argument('-S', '--seed', type=int,
                         help='use specified seed in initialization and training')
     args = parser.parse_args()
