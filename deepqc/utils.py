@@ -15,7 +15,7 @@ def check_list(arg, nullable=True):
             return []
         else:
             raise TypeError("arg cannot be None")
-    if not isinstance(arg, (list, tuple)):
+    if not isinstance(arg, (list, tuple, np.ndarray)):
         return [arg]
     return arg
 
