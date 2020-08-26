@@ -3,8 +3,9 @@ import sys
 import glob
 import numpy as np
 import shutil
+import argparse
 from deepqc.utils import check_list, check_array
-from deepqc.utils import load_array, get_with_prefix
+from deepqc.utils import load_array, load_yaml, get_with_prefix
 
 
 def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
@@ -132,6 +133,47 @@ def load_stat_grouped(systems, dump_dir=".",
            f_err if with_f else None
 
 
+def cli():
+    parser = argparse.ArgumentParser(
+                description="Print the stat of SCF results",
+                argument_default=argparse.SUPPRESS)
+    parser.add_argument("input", nargs="?",
+                        help='the input yaml file used for SCF calculation')
+    parser.add_argument("-s", "--systems", nargs="*",
+                        help='system paths used as training set (i.e. calculate shift)')
+    parser.add_argument("-d", "--dump-dir",
+                        help="directory used to save SCF results of training systems")
+    parser.add_argument("-ts", "--test-sys", nargs="*",
+                        help='system paths used as testing set (i.e. not calculate shift)')
+    parser.add_argument("-td", "--test-dump",
+                        help="directory used to save SCF results of testing systems")
+    parser.add_argument("-G", "--group", action='store_true',
+                        help="if set, assume results are grouped")
+    parser.add_argument("-NC", action="store_false", dest="with_conv",
+                        help="do not print convergence results")
+    parser.add_argument("-NE", action="store_false", dest="with_e",
+                        help="do not print energy results")
+    parser.add_argument("-NF", action="store_false", dest="with_f",
+                        help="do not print force results")
+    parser.add_argument("--e-name",
+                        help="name of the energy file (no extension)")
+    parser.add_argument("--f-name",
+                        help="name of the force file (no extension)")
+    args = parser.parse_args()
+
+    if hasattr(args, "input"):
+        rawdict = load_yaml(args.input)
+        del args.input
+        argdict = {fd: rawdict[fd]
+                     for fd in ("systems", "dump_dir", "group")
+                     if fd in rawdict}
+        argdict.update(vars(args))
+    else:
+        argdict = vars(args)
+
+    print_stat(**argdict)
+
+
 # Below are legacy tools, kept for old examples
 
 def print_stat_per_sys(err, conv=None, train_idx=None, test_idx=None):
@@ -242,3 +284,6 @@ def collect_data_grouped(train_idx, test_idx=None,
     with open(f'{dump_dir}/test_paths.raw', mode) as fp:
         fp.write(os.path.abspath(f'{sys_dir}/test') + "\n")
 
+
+if __name__ == "__main__":
+    cli()
