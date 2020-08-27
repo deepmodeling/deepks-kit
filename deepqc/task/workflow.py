@@ -7,11 +7,21 @@ from deepqc.task.task import AbstructStep
 class Workflow(AbstructStep):
     def __init__(self, child_tasks, workdir='.', record_file=None):
         super().__init__(workdir)
-        self.child_tasks = [deepcopy(task) for task in child_tasks]
-        for task in self.child_tasks:
-            assert not task.workdir.is_absolute()
-            task.prepend_workdir(self.workdir)
+        self.child_tasks = [self.make_child(task) for task in child_tasks]
+        self.postmod_hook()
         self.set_record_file(record_file)
+    
+    def make_child(self, task):
+        if not isinstance(task, AbstructStep):
+            raise TypeError("Workflow only accept tasks and other workflows as childs, "
+                            "but got " + type(task).__name__)
+        assert not task.workdir.is_absolute()
+        copied = deepcopy(task)
+        copied.prepend_workdir(self.workdir)
+        return copied
+    
+    def postmod_hook(self):
+        pass
         
     def run(self, parent_tag=(), restart_tag=None):
         start_idx = 0
@@ -70,16 +80,41 @@ class Workflow(AbstructStep):
     def __getitem__(self, idx):
         return self.child_tasks[idx]
 
+    def __setitem__(self, idx, task):
+        self.child_tasks[idx] = self.make_child(task)
+        self.postmod_hook()
+
+    def __delitem__(self, idx):
+        self.child_tasks.__delitem__(idx)
+        self.postmod_hook()
+    
+    def __len__(self):
+        return len(self.child_tasks)
+
+    def __iter__(self):
+        return self.child_tasks.__iter__()
+    
+    def insert(self, index, task):
+        self.child_tasks.insert(index, self.make_child(task))
+        self.postmod_hook()
+    
+    def append(self, task):
+        self.child_tasks.append(self.make_child(task))
+        self.postmod_hook()
+
+    def prepend(self, task):
+        self.child_tasks.insert(0, self.make_child(task))
+        self.postmod_hook()
+
 
 class Sequence(Workflow):
     def __init__(self, child_tasks, workdir='.', record_file=None, init_folder=None):
         # would reset all tasks' prev folder into their prev task, except for the first one
         super().__init__(child_tasks, workdir, record_file)
-        self.chain_tasks()
         start = self.child_tasks[0]
         while isinstance(start, Workflow):
             start = start.child_tasks[0]
-        if start.prev_folder is None:
+        if start.prev_folder is None and init_folder is not None:
             start.set_prev_folder(get_abs_path(init_folder))
         
     def chain_tasks(self):    
@@ -90,6 +125,8 @@ class Sequence(Workflow):
                 curr = curr.child_tasks[0]
             curr.set_prev_task(prev)
 
+    def postmod_hook(self):
+        self.chain_tasks()
 
 class Iteration(Sequence):
     def __init__(self, task, iternum, workdir='.', record_file=None, init_folder=None):
