@@ -168,9 +168,9 @@ class BatchTask(AbstructTask):
 
 class GroupBatchTask(AbstructTask):
     # after grouping up, the following individual setting would be ignored:
-    # dispatcher, resources, outlog, errlog
+    # dispatcher, outlog, errlog
     # only grouped one setting in this task would be effective
-    def __init__(self, batch_tasks, group_size=1, parallel_degree=1,
+    def __init__(self, batch_tasks, group_size=1, ingroup_parallel=1,
                  dispatcher=None, resources=None, 
                  outlog='log', errlog='err', 
                  forward_files=None, backward_files=None,
@@ -184,7 +184,7 @@ class GroupBatchTask(AbstructTask):
             if task.prev_folder is None:
                 task.prev_folder = self.prev_folder
         self.group_size = group_size
-        self.para_deg = parallel_degree
+        self.para_deg = ingroup_parallel
         if dispatcher is None:
             dispatcher = Dispatcher()
         elif isinstance(dispatcher, dict):
