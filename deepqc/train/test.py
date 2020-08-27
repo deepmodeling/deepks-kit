@@ -3,7 +3,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
-if __name__ == "__main__":
+try:
+    import deepqc
+except ImportError as e:
     import sys
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet

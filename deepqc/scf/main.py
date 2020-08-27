@@ -6,7 +6,9 @@ import argparse
 import numpy as np
 import ruamel_yaml as yaml
 from pyscf import gto, lib
-if __name__ == "__main__":
+try:
+    import deepqc
+except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.scf.scf import DeepSCF
 from deepqc.scf.fields import select_fields
@@ -119,10 +121,13 @@ def system_iter(path, labels=None):
 def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     # build a molecule using given atom input
     # set the default basis to cc-pVDZ and use input unit 'Ang"
-    mol = gto.Mole(**kwargs)
+    mol = gto.Mole()
+    # change minimum max memory to 16G
+    # mol.max_memory = max(16000, mol.max_memory) 
+    mol.set(**kwargs)
     mol.verbose = verbose
     mol.atom = atom
-    mol.basis  = basis
+    mol.basis = basis
     mol.build(0,0,unit="Ang")
     return mol
 

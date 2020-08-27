@@ -1,7 +1,9 @@
 import argparse, os, sys
 import numpy as np
 import torch
-if __name__ == "__main__":
+try:
+    import deepqc
+except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader

@@ -4,7 +4,9 @@ import glob
 import numpy as np
 import shutil
 import argparse
-if __name__ == "__main__":
+try:
+    import deepqc
+except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.utils import check_list, check_array
 from deepqc.utils import load_array, load_yaml, get_with_prefix
