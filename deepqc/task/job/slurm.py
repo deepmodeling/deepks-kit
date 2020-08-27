@@ -174,7 +174,6 @@ class Slurm(Batch) :
         else :
             return JobStatus.unknown                    
 
-
     def _check_sub_limit(self, task_max, **kwarg) :
         if task_max <= 0:
             return True

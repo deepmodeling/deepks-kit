@@ -4,6 +4,8 @@ import glob
 import numpy as np
 import shutil
 import argparse
+if __name__ == "__main__":
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.utils import check_list, check_array
 from deepqc.utils import load_array, load_yaml, get_with_prefix
 
@@ -29,7 +31,7 @@ def print_stat(systems=None, test_sys=None,
         dump_dir = "."
     if test_dump is None:
         test_dump = dump_dir
-    if systems:
+    if systems is not None:
         tr_c, tr_e, tr_f = load_func(systems, dump_dir, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Training:")
@@ -40,7 +42,7 @@ def print_stat(systems=None, test_sys=None,
             print_stat_e(tr_e, shift=shift, indent=2)
         if with_f:
             print_stat_f(tr_f, indent=2)
-    if test_sys:
+    if test_sys is not None:
         ts_c, ts_e, ts_f = load_func(test_sys, test_dump, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Testing:")
