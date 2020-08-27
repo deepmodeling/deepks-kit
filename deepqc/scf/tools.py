@@ -106,9 +106,9 @@ def load_stat(systems, dump_dir,
                 f_err.append(load_array(lf) - load_array(rf))
             except FileNotFoundError as e:
                 print("Warning! force file not found:", e, file=sys.stderr)
-    return np.concatenate(c_res, 0) if with_conv else None, \
-           np.concatenate(e_err, 0) if with_e else None, \
-           np.concatenate(f_err, 0) if with_f else None
+    return np.concatenate(c_res, 0) if c_res else None, \
+           np.concatenate(e_err, 0) if e_err else None, \
+           np.concatenate(f_err, 0) if f_err else None
 
 
 def load_stat_grouped(systems, dump_dir=".",
