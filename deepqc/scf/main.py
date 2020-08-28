@@ -14,7 +14,8 @@ from deepqc.scf.scf import DeepSCF
 from deepqc.scf.fields import select_fields
 from deepqc.scf.penalty import select_penalty
 from deepqc.train.model import QCNet
-from deepqc.utils import check_list, flat_file_list, is_xyz
+from deepqc.utils import check_list, flat_file_list
+from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
 from deepqc.utils import get_with_prefix
 
@@ -64,10 +65,6 @@ def solve_mol(mol, model, fields,
         print(f"time of scf: {tac - tic:6.2f}s, converged:   {cf.converged}")
 
     return meta, res
-
-
-def load_sys_paths(sys_list):
-    return flat_file_list(sys_list, lambda p: os.path.isdir(p) or is_xyz(p))
 
 
 def get_required_labels(fields=None, penalty_dicts=None):
@@ -200,7 +197,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     label_names = get_required_labels(fields["label"], penalty_terms)
 
     if verbose:
-        print(f"starting calculation with OMP threads: {lib.num_threads()}")
+        print(f"starting calculation with OMP threads: {lib.num_threads()}",
+              f"and max memory: {lib.param.MAX_MEMORY}")
         if verbose > 1:
             print(f"basis: {basis}")
             print(f"specified scf args:\n  {scf_args}")
@@ -265,9 +263,12 @@ def cli():
     parser.add_argument("-d", "--dump-dir",
                         help="dir of dumped files")
     parser.add_argument("-F", "--dump-fields", nargs="*",
-                        help="fields to be dumped into the folder")    
-    parser.add_argument("-G", "--group", action='store_true',
-                        help="group results for all molecules, only works for same system")
+                        help="fields to be dumped into the folder") 
+    group0 = parser.add_mutually_exclusive_group()   
+    group0.add_argument("-G", "--group", action='store_true', dest="group",
+                        help="group results for all systems, only works for same system")
+    group0.add_argument("-NG", "--no-group", action='store_false', dest="group",
+                        help="Do not group results for different systems")
     parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
                         help="output calculation information")
     parser.add_argument("-X", "--scf-xc",

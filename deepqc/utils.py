@@ -49,13 +49,14 @@ def flat_file_list(file_list, filter_func=lambda p: True):
     return new_list
 
 
-def load_sys_dirs(path_list):
+def load_dirs(path_list):
     return flat_file_list(path_list, os.path.isdir)
-
 
 def load_xyz_files(file_list):
     return flat_file_list(file_list, is_xyz)
 
+def load_sys_paths(sys_list):
+    return flat_file_list(sys_list, lambda p: os.path.isdir(p) or is_xyz(p))
 
 def is_xyz(p):
     return os.path.splitext(p)[1] == '.xyz'

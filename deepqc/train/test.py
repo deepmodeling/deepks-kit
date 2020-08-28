@@ -10,7 +10,7 @@ except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
-from deepqc.utils import load_yaml, load_sys_dirs, check_list
+from deepqc.utils import load_yaml, load_dirs, check_list
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -58,7 +58,7 @@ def test(model, g_reader, dump_prefix="test", group=False):
 def main(data_paths, model_file="model.pth", 
          output_prefix='test', group=False,
          e_name='l_e_delta', d_name=['dm_eig']):
-    data_paths = load_sys_dirs(data_paths)
+    data_paths = load_dirs(data_paths)
     g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name)
     model_file = check_list(model_file)
     for f in model_file:

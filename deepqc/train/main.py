@@ -8,7 +8,7 @@ except ImportError as e:
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
 from deepqc.train.train import DEVICE, train, preprocess
-from deepqc.utils import load_yaml, load_sys_dirs
+from deepqc.utils import load_yaml, load_dirs
 
 
 def main(train_paths, test_paths=None,
@@ -30,11 +30,11 @@ def main(train_paths, test_paths=None,
     if ckpt_file is not None:
         train_args["ckpt_file"] = ckpt_file
 
-    train_paths = load_sys_dirs(train_paths)
+    train_paths = load_dirs(train_paths)
     print(f'# training with {len(train_paths)} system(s)')
     g_reader = GroupReader(train_paths, **data_args)
     if test_paths is not None:
-        test_paths = load_sys_dirs(test_paths)
+        test_paths = load_dirs(test_paths)
         print(f'# testing with {len(test_paths)} system(s)')
         test_reader = GroupReader(test_paths, **data_args)
     else:
@@ -68,7 +68,7 @@ def cli():
                         help='paths to the folders of training data')
     parser.add_argument('-t', '--test-paths', nargs="*",
                         help='paths to the folders of testing data')
-    parser.add_argument('-o', '--ckpt_file',
+    parser.add_argument('-o', '--ckpt-file',
                         help='file to save the model parameters, default: model.pth')
     parser.add_argument('-S', '--seed', type=int,
                         help='use specified seed in initialization and training')

@@ -111,11 +111,8 @@ class Sequence(Workflow):
     def __init__(self, child_tasks, workdir='.', record_file=None, init_folder=None):
         # would reset all tasks' prev folder into their prev task, except for the first one
         super().__init__(child_tasks, workdir, record_file)
-        start = self.child_tasks[0]
-        while isinstance(start, Workflow):
-            start = start.child_tasks[0]
-        if start.prev_folder is None and init_folder is not None:
-            start.set_prev_folder(get_abs_path(init_folder))
+        if init_folder is not None:
+            self.set_init_folder(init_folder)
         
     def chain_tasks(self):    
         for prev, curr in zip(self.child_tasks[:-1], self.child_tasks[1:]):
@@ -124,9 +121,16 @@ class Sequence(Workflow):
             while isinstance(curr, Workflow):
                 curr = curr.child_tasks[0]
             curr.set_prev_task(prev)
+    
+    def set_init_folder(self, init_folder):
+        start = self.child_tasks[0]
+        while isinstance(start, Workflow):
+            start = start.child_tasks[0]
+        start.set_prev_folder(get_abs_path(init_folder))
 
     def postmod_hook(self):
         self.chain_tasks()
+
 
 class Iteration(Sequence):
     def __init__(self, task, iternum, workdir='.', record_file=None, init_folder=None):
