@@ -266,7 +266,7 @@ def make_train_task(*, workdir=".",
     )
 
 
-def make_run_train(source_train="data_train", source_test="data_test", *
+def make_run_train(source_train="data_train", source_test="data_test", *,
                    restart=True, source_model="model.pth", 
                    save_model="model.pth", source_arg="train_input.yaml", 
                    workdir=".", share_folder="share", outlog="log.train",
@@ -307,7 +307,7 @@ def make_test_train(data_paths, model_file="model.pth", *,
     )
 
 
-def make_train(source_train="data_train", source_test="data_test", *
+def make_train(source_train="data_train", source_test="data_test", *,
                restart=True, source_model="model.pth", 
                save_model="model.pth", source_arg="train_input.yaml", 
                workdir="01.train", share_folder="share",

@@ -52,7 +52,7 @@ def check_share_folder(data, name, share_folder="share"):
     # if data is a file name, copy it to share.
     # if data is a dict, save it as an yaml file in share.
     dst_name = os.path.join(share_folder, name)
-    if data is None:
+    if data is None or data is True:
         assert_exist(dst_name)
     elif isinstance(data, str) and os.path.exists(data):
         copy_file(data, dst_name)
@@ -63,6 +63,8 @@ def check_share_folder(data, name, share_folder="share"):
 
 
 def check_arg_dict(data, default, strict=True):
+    if data is None:
+        data = {}
     allowed = {k:v for k,v in data.items() if k in default}
     outside = {k:v for k,v in data.items() if k not in default}
     if outside:
