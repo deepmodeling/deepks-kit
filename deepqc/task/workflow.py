@@ -7,17 +7,20 @@ from deepqc.task.task import AbstructStep
 class Workflow(AbstructStep):
     def __init__(self, child_tasks, workdir='.', record_file=None):
         super().__init__(workdir)
+        self.record_file = get_abs_path(record_file)
         self.child_tasks = [self.make_child(task) for task in child_tasks]
         self.postmod_hook()
-        self.set_record_file(record_file)
+        # self.set_record_file(record_file)
     
     def make_child(self, task):
         if not isinstance(task, AbstructStep):
-            raise TypeError("Workflow only accept tasks and other workflows as childs, "
+            raise TypeError("Workflow only accept tasks and other task as childs, "
                             "but got " + type(task).__name__)
         assert not task.workdir.is_absolute()
         copied = deepcopy(task)
         copied.prepend_workdir(self.workdir)
+        if isinstance(task, Workflow):
+            copied.set_record_file(self.record_file)
         return copied
     
     def postmod_hook(self):

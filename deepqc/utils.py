@@ -6,6 +6,9 @@ import ruamel_yaml as yaml
 import numpy as np
 
 
+QCDIR = os.path.dirname(os.path.realpath(__file__))
+
+
 # below are argument chekcing utils
 
 def check_list(arg, nullable=True):
@@ -35,6 +38,7 @@ def check_array(arr, nullable=True):
 def flat_file_list(file_list, filter_func=lambda p: True):
     # make sure file list contains desired files
     # flat all wildcards and files contains other files (once)
+    # if no satisfied files, return empty list
     file_list = check_list(file_list)
     file_list = sorted(sum([glob(p) for p in file_list], []))
     new_list = []
@@ -68,6 +72,11 @@ def load_yaml(file_path):
     with open(file_path, 'r') as fp:
         res = yaml.safe_load(fp)
     return res
+
+
+def save_yaml(data, file_path):
+    with open(file_path, 'w') as fp:
+        yaml.safe_dump(data, fp)
 
 
 def load_array(file):

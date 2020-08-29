@@ -268,7 +268,7 @@ def cli():
     group0.add_argument("-G", "--group", action='store_true', dest="group",
                         help="group results for all systems, only works for same system")
     group0.add_argument("-NG", "--no-group", action='store_false', dest="group",
-                        help="Do not group results for different systems")
+                        help="Do not group results for different systems (default behavior)")
     parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
                         help="output calculation information")
     parser.add_argument("-X", "--scf-xc",
