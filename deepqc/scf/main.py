@@ -244,7 +244,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print('group finished')
 
 
-def cli():
+def cli(args=None):
     parser = argparse.ArgumentParser(
                 description="Calculate and save SCF energies and descriptors using given model.",
                 argument_default=argparse.SUPPRESS)
@@ -284,7 +284,7 @@ def cli():
     parser.add_argument("--scf-level-shift", type=float,
                         help="level shift used in scf calculation")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     scf_args={}
     for k, v in vars(args).copy().items():

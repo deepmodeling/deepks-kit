@@ -137,7 +137,7 @@ def load_stat_grouped(systems, dump_dir=".",
            f_err if with_f else None
 
 
-def cli():
+def cli(args=None):
     parser = argparse.ArgumentParser(
                 description="Print the stat of SCF results",
                 argument_default=argparse.SUPPRESS)
@@ -163,7 +163,7 @@ def cli():
                         help="name of the energy file (no extension)")
     parser.add_argument("--f-name",
                         help="name of the force file (no extension)")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if hasattr(args, "input"):
         rawdict = load_yaml(args.input)

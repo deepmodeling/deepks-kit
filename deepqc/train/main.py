@@ -56,7 +56,7 @@ def main(train_paths, test_paths=None,
     train(model, g_reader, test_reader=test_reader, **train_args)
 
 
-def cli():
+def cli(args=None):
     parser = argparse.ArgumentParser(
         description="Train a model according to given input.",
         argument_default=argparse.SUPPRESS)
@@ -72,7 +72,7 @@ def cli():
                         help='file to save the model parameters, default: model.pth')
     parser.add_argument('-S', '--seed', type=int,
                         help='use specified seed in initialization and training')
-    args = parser.parse_args()
+    args = parser.parse_args(args)
     
     if hasattr(args, "input"):
         argdict = load_yaml(args.input)

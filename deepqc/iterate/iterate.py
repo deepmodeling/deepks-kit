@@ -1,7 +1,7 @@
 import os
 import sys
 import numpy as np
-from deepqc.utils import copy_file, save_yaml
+from deepqc.utils import copy_file, load_yaml, save_yaml
 from deepqc.task.workflow import Sequence, Iteration
 from deepqc.iterate.template import make_scf, make_train
 
@@ -73,6 +73,8 @@ def check_share_folder(data, name, share_folder="share"):
 def check_arg_dict(data, default, strict=True):
     if data is None:
         data = {}
+    if isinstance(data, str):
+        data = load_yaml(data)
     allowed = {k:v for k,v in data.items() if k in default}
     outside = {k:v for k,v in data.items() if k not in default}
     if outside:

@@ -72,7 +72,7 @@ def main(data_paths, model_file="model.pth",
         test(model, g_reader, dump_prefix=dump, group=group)
 
 
-def cli():
+def cli(args=None):
     parser = argparse.ArgumentParser(
                 description="Test a model with given data (Not SCF)",
                 argument_default=argparse.SUPPRESS)
@@ -90,7 +90,7 @@ def cli():
                         help="the name of descriptor file(s) to be read (no .npy extension)")
     parser.add_argument("-G", "--group", action='store_true',
                         help="group test results for all systems")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if hasattr(args, "input"):
         rawdict = load_yaml(args.input)
