@@ -33,27 +33,27 @@ def print_stat(systems=None, test_sys=None,
         dump_dir = "."
     if test_dump is None:
         test_dump = dump_dir
+    shift = None
     if systems is not None:
         tr_c, tr_e, tr_f = load_func(systems, dump_dir, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Training:")
-        if with_conv:
+        if tr_c is not None:
             print_stat_conv(tr_c, indent=2)
-        if with_e:
+        if tr_e is not None:
             shift = tr_e.mean()
             print_stat_e(tr_e, shift=shift, indent=2)
-        if with_f:
+        if tr_f is not None:
             print_stat_f(tr_f, indent=2)
     if test_sys is not None:
         ts_c, ts_e, ts_f = load_func(test_sys, test_dump, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Testing:")
-        if with_conv:
+        if ts_c is not None:
             print_stat_conv(ts_c, indent=2)
-        if with_e:
-            if not systems: shift = None
+        if ts_e is not None:
             print_stat_e(ts_e, shift=shift, indent=2)
-        if with_f:
+        if ts_f is not None:
             print_stat_f(ts_f, indent=2)
     
 

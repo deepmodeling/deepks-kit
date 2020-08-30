@@ -66,6 +66,8 @@ def make_scf_task(*, workdir=".",
         if source_model is not None:
             link_prev.append((source_model, model_file))
     if systems:
+        if not isinstance(systems, str):
+            systems = " ".join(check_list(systems, nullable=False))
         command += f" -s {systems}"
     if dump_dir:
         command += f" -d {dump_dir}"
@@ -240,11 +242,11 @@ def make_train_task(*, workdir=".",
         if source_model is not None:
             link_prev.append((source_model, restart))
     if data_train:
-        command += f" -d {data_train}" + "" if group_data else "/*"
+        command += f" -d {data_train}" + ("" if group_data else "/*")
         if source_train is not None:
             link_prev.append((source_train, data_train))
     if data_test:
-        command += f" -t {data_test}" + "" if group_data else "/*"
+        command += f" -t {data_test}" + ("" if group_data else "/*")
         if source_test is not None:
             link_prev.append((source_test, data_test))
     if save_model:

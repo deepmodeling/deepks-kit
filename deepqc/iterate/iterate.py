@@ -48,16 +48,24 @@ def assert_exist(path):
 
 def check_share_folder(data, name, share_folder="share"):
     # save data to share_folder/name. 
-    # if data is None, check the existence in share.
-    # if data is a file name, copy it to share.
-    # if data is a dict, save it as an yaml file in share.
+    # if data is None or False, do nothing, return None
+    # otherwise, return name, and do one of the following:
+    #   if data is True, check the existence in share.
+    #   if data is a file name, copy it to share.
+    #   if data is a dict, save it as an yaml file in share.
+    #   otherwise, throw an error
+    if not data:
+        return None
     dst_name = os.path.join(share_folder, name)
-    if data is None or data is True:
+    if data is True:
         assert_exist(dst_name)
+        return name
     elif isinstance(data, str) and os.path.exists(data):
         copy_file(data, dst_name)
+        return name
     elif isinstance(data, dict):
         save_yaml(data, dst_name)
+        return name
     else:
         raise ValueError(f"Invalid argument: {data}")
 
@@ -77,19 +85,21 @@ def check_arg_dict(data, default, strict=True):
 
 
 def make_iterate(systems_train=None, systems_test=None,
-                 niter=5, workdir=".", share_folder="share",
-                 scf_args=None, scf_machine=None,
-                 train_args=None, train_machine=None,
-                 init_model=None, init_scf=None, init_train=None,
+                 n_iter=5, workdir=".", share_folder="share",
+                 scf_args=True, scf_machine=None,
+                 train_args=True, train_machine=None,
+                 init_model=False, init_scf=True, init_train=True,
                  cleanup=False, strict=True):
     # check share folder contains required data
     if systems_train is None:
         systems_train = os.path.join(share_folder, DEFAUFT_SYS_TRN)
-        assert_exist(systems_train) # must have training systems. test can be empty
-    if systems_test is None:
+        assert_exist(systems_train) # must have training systems.
+    if systems_test is None: # testing systems can be empty
         systems_test = os.path.join(share_folder, DEFAUFT_SYS_TST)
-    check_share_folder(scf_args, SCF_ARGS_NAME, share_folder)
-    check_share_folder(train_args, TRN_ARGS_NAME, share_folder)
+    # check share folder contains required yaml file
+    scf_args_name = check_share_folder(scf_args, SCF_ARGS_NAME, share_folder)
+    train_args_name = check_share_folder(train_args, TRN_ARGS_NAME, share_folder)
+    # check required machine parameters
     scf_machine = check_arg_dict(scf_machine, DEFAULT_SCF_MACHINE, strict)
     train_machine = check_arg_dict(train_machine, DEFAULT_TRN_MACHINE, strict)
     # make tasks
@@ -97,37 +107,37 @@ def make_iterate(systems_train=None, systems_test=None,
         systems_train=systems_train, systems_test=systems_test,
         train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
         workdir=SCF_STEP_DIR, share_folder=share_folder,
-        source_arg=SCF_ARGS_NAME, source_model=MODEL_FILE,
+        source_arg=scf_args_name, source_model=MODEL_FILE,
         cleanup=cleanup, **scf_machine
     )
     train_step = make_train(
         source_train=DATA_TRAIN, source_test=DATA_TEST,
         restart=True, source_model=MODEL_FILE, 
-        save_model=MODEL_FILE, source_arg=TRN_ARGS_NAME, 
+        save_model=MODEL_FILE, source_arg=train_args_name, 
         workdir=TRN_STEP_DIR, share_folder=share_folder,
         cleanup=cleanup, **train_machine
     )
     per_iter = Sequence([scf_step, train_step])
-    iterate = Iteration(per_iter, niter, workdir=".", record_file=RECORD)
+    iterate = Iteration(per_iter, n_iter, workdir=".", record_file=RECORD)
     # make init
     if init_model: # if set true or give str, check share/init/model.pth
         init_folder=os.path.join(share_folder, "init")
         check_share_folder(init_model, MODEL_FILE, init_folder)
         iterate.set_init_folder(init_folder)
-    else:
-        check_share_folder(scf_args, INIT_SCF_NAME, share_folder)
-        check_share_folder(train_args, INIT_TRN_NAME, share_folder)
+    else: # otherwise, make an init iteration to train the first model
+        init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
+        init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
         scf_init = make_scf(
         systems_train=systems_train, systems_test=systems_test,
         train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
         workdir=SCF_STEP_DIR, share_folder=share_folder,
-        source_arg=INIT_SCF_NAME, source_model=MODEL_FILE,
+        source_arg=init_scf_name, source_model=None,
         cleanup=cleanup, **scf_machine
         )
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
             restart=False, source_model=MODEL_FILE, 
-            save_model=MODEL_FILE, source_arg=INIT_TRN_NAME, 
+            save_model=MODEL_FILE, source_arg=init_train_name, 
             workdir=TRN_STEP_DIR, share_folder=share_folder,
             cleanup=cleanup, **train_machine
         )
