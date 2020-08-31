@@ -5,12 +5,15 @@ import torch
 
 class Reader(object):
     def __init__(self, data_path, batch_size, 
-                 e_name="l_e_delta", d_name="dm_eig", **kwargs):
+                 e_name="l_e_delta", d_name="dm_eig", 
+                 conv_filter=True, conv_name="conv", **kwargs):
         # copy from config
         self.data_path = data_path
         self.batch_size = batch_size   
         self.e_name = e_name
         self.d_name = d_name if isinstance(d_name, (list, tuple)) else [d_name]
+        self.c_filter = conv_filter
+        self.c_name = conv_name
         self.load_meta()
         self.prepare()
 
@@ -29,12 +32,20 @@ class Reader(object):
     
     def prepare(self):
         self.index_count_all = 0
-        self.data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
-        self.nframes = self.data_ec.shape[0]
-        self.data_dm = np.concatenate(
-            [np.load(os.path.join(self.data_path,f'{dn}.npy')).reshape([self.nframes, self.natm, self.nproj])
-                for dn in self.d_name], 
+        data_ec = np.load(os.path.join(self.data_path,f'{self.e_name}.npy')).reshape([-1, 1])
+        raw_nframes = data_ec.shape[0]
+        data_dm = np.concatenate(
+            [np.load(os.path.join(self.data_path,f'{dn}.npy'))\
+               .reshape([raw_nframes, self.natm, self.nproj])
+            for dn in self.d_name], 
             axis=-1)
+        if self.c_filter:
+            conv = np.load(os.path.join(self.data_path,f'{self.c_name}.npy')).reshape(raw_nframes)
+        else:
+            conv = np.ones(raw_nframes, dtype=bool)
+        self.data_ec = data_ec[conv]
+        self.data_dm = data_dm[conv]
+        self.nframes = conv.sum()
         self.ndesc = self.data_dm.shape[-1]
         # print(np.shape(self.inputs_train))
         if self.nframes < self.batch_size:
@@ -74,13 +85,16 @@ class Reader(object):
 class ForceReader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
-                 f_name="l_f_delta", gv_name="grad_vx", **kwargs):
+                 f_name="l_f_delta", gv_name="grad_vx", 
+                 conv_filter=True, conv_name="conv", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_name = e_name
         self.f_name = f_name
         self.d_name = d_name
         self.gv_name = gv_name
+        self.c_filter = conv_filter
+        self.c_name = conv_name
         # load data
         self.load_meta()
         self.prepare()
@@ -103,22 +117,31 @@ class ForceReader(object):
 
     def prepare(self):
         # load energy and check nframes
-        self.data_ec = np.load(os.path.join(self.data_path, f'{self.e_name}.npy')).reshape([-1, 1])
-        self.nframes = self.data_ec.shape[0]
+        data_ec = np.load(os.path.join(self.data_path, f'{self.e_name}.npy')).reshape([-1, 1])
+        raw_nframes = data_ec.shape[0]
+        data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
+                    .reshape([raw_nframes, self.natm, self.ndesc])
+        if self.c_filter:
+            conv = np.load(os.path.join(self.data_path,f'{self.c_name}.npy')).reshape(raw_nframes)
+        else:
+            conv = np.ones(raw_nframes, dtype=bool)
+        self.data_ec = data_ec[conv]
+        self.data_dm = data_dm[conv]
+        self.nframes = conv.sum()
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
             print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
-        self.data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
-                         .reshape([self.nframes, self.natm, self.ndesc])
         # load data in torch
         self.t_ec = torch.tensor(self.data_ec)
         self.t_eig = torch.tensor(self.data_dm)
         self.t_fc = torch.tensor(
             np.load(os.path.join(self.data_path, f'{self.f_name}.npy'))\
-              .reshape(self.nframes, self.natm, 3))
+              .reshape(self.nframes, self.natm, 3)[conv]
+        )
         self.t_gvx = torch.tensor(
             np.load(os.path.join(self.data_path, f'{self.gv_name}.npy'))\
-              .reshape(self.nframes, self.natm, 3, self.natm, self.ndesc))
+              .reshape(self.nframes, self.natm, 3, self.natm, self.ndesc)[conv]
+        )
         # pin memory
         if torch.cuda.is_available():
             self.t_ec = self.t_ec.pin_memory()
