@@ -136,11 +136,11 @@ class ForceReader(object):
         self.t_eig = torch.tensor(self.data_dm)
         self.t_fc = torch.tensor(
             np.load(os.path.join(self.data_path, f'{self.f_name}.npy'))\
-              .reshape(self.nframes, self.natm, 3)[conv]
+              .reshape(raw_nframes, self.natm, 3)[conv]
         )
         self.t_gvx = torch.tensor(
             np.load(os.path.join(self.data_path, f'{self.gv_name}.npy'))\
-              .reshape(self.nframes, self.natm, 3, self.natm, self.ndesc)[conv]
+              .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv]
         )
         # pin memory
         if torch.cuda.is_available():
