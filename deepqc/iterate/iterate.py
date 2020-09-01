@@ -92,12 +92,90 @@ def make_iterate(systems_train=None, systems_test=None,
                  train_args=True, train_machine=None,
                  init_model=False, init_scf=True, init_train=True,
                  cleanup=False, strict=True):
+    r"""
+    Make a `Workflow` to do the iterative training procedure.
+
+    The procedure will be conducted in `workdir` for `n_iter` iterations.
+    Each iteration of the procedure is done in sub-folder ``iter.XX``, 
+    which further containes two sub-folders, ``00.scf`` and ``01.train``.
+    The `Workflow` is only created but not executed.
+
+    Parameters
+    ----------
+    systems_train: optional str or list of str 
+        System paths used as training set in the procedure. These paths 
+        can refer to systems or a file that contains multiple system paths.
+        Systems must be .xyz files or folder contains .npy files.
+        If given `None`, use ``$share_folder/systems_train.raw`` as default.
+    systems_test: optional str or list of str
+        System paths used as testing (or validation) set in the procedure. 
+        The format is same as `systems_train`. If given `None`, use the last
+        system in the training set as testing system.
+    n_iter: int
+        The number of iterations to do. Default is 5.
+    workdir: str
+        The working directory. Default is current directory (`.`).
+    share_folder: str
+        The folder to store shared files in the iteration, including
+        ``scf_input.yaml``, ``train_input.yaml``, and possibly files for
+        initialization. Default is ``share``.
+    scf_args: bool or str or dict
+        Arguments used to specify the SCF calculation. If given `None` or 
+        `False`, use program default (unreliable). Otherwise, the arguments 
+        would be saved as a YAML file at ``$share_folder/scf_input.yaml``
+        and used for SCF calculation. If given `True`, use the existing file.
+        If given a string of file path, copy the corresponding file into 
+        target location. If given a dict, dump it into the target file.
+    scf_machine: str or dict
+        Arguments used to specify the job settings of SCF calculation,
+        including submitting method, resources, group size, etc..
+        If given a string of file path, load that file as a dict using 
+        YAML format. If `strict` is set to false, additional arguments
+        can be passed to `Task` constructor to do more customization.
+    train_args: bool or str or dict
+        Arguments used to specify the training of neural network. 
+        It follows the same rule as `scf_args`, only that the target 
+        location is ``$share_folder/train_input.yaml``.
+    train_machine: str or dict
+        Arguments used to specify the job settings of NN training. 
+        It Follows the same rule as `scf_machine`, but without group.
+    init_model: bool or str
+        Decide whether to use an existing model as the starting point.
+        If set to `True`, look for a model at ``$share_folder/init/model.pth``
+        If set to `False`, use `init_scf` and `init_train` to run an
+        extra initialization iteration in folder ``iter.init``. 
+        If given a string of path, copy that file into target location.
+    init_scf: bool or str or dict
+        Similar to `scf_args` but used for init calculation. The target
+        location is ``$share_folder/init_scf.yaml``.
+    init_train: bool or str or dict
+        Similar to `train_args` but used for init calculation. The target
+        location is ``$share_folder/init_train.yaml``.
+    cleanup:
+        Whether to remove job files during calculation, such as `slurm-*.out`.
+    strict:
+        Whether to allow additional arguments to be passed to task constructor.
+
+    Returns
+    -------
+    iterate: Iteration (subclass of Workflow)
+        An instance of workflow that can be executed by `iterate.run()`.
+    
+    Raises
+    ------
+    FileNotFoundError
+        Raise an Error when the system or argument files are required but 
+        not found in the share folder.
+    """
     # check share folder contains required data
-    if systems_train is None:
-        systems_train = os.path.join(share_folder, DEFAUFT_SYS_TRN)
-        assert_exist(systems_train) # must have training systems.
-    if systems_test is None: # testing systems can be empty
-        systems_test = os.path.join(share_folder, DEFAUFT_SYS_TST)
+    if systems_train is None: # load default training systems
+        default_train = os.path.join(share_folder, DEFAUFT_SYS_TRN)
+        assert_exist(default_train) # must have training systems.
+        systems_train = default_train
+    if systems_test is None: # try to load default testing systems
+        default_test = os.path.join(share_folder, DEFAUFT_SYS_TST)
+        if os.path.exists(default_test): # if exists then use it
+            systems_test = default_test
     # check share folder contains required yaml file
     scf_args_name = check_share_folder(scf_args, SCF_ARGS_NAME, share_folder)
     train_args_name = check_share_folder(train_args, TRN_ARGS_NAME, share_folder)
@@ -120,7 +198,8 @@ def make_iterate(systems_train=None, systems_test=None,
         cleanup=cleanup, **train_machine
     )
     per_iter = Sequence([scf_step, train_step])
-    iterate = Iteration(per_iter, n_iter, workdir=".", record_file=RECORD)
+    iterate = Iteration(per_iter, n_iter, 
+                        workdir=".", record_file=os.path.join(workdir, RECORD))
     # make init
     if init_model: # if set true or give str, check share/init/model.pth
         init_folder=os.path.join(share_folder, "init")
