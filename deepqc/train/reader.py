@@ -282,12 +282,10 @@ class GroupReader(object) :
             scale = all_std
         all_sdm = np.concatenate([((r.data_dm - shift) / scale).sum(1) for r in self.readers])
         all_natm = np.concatenate([[float(r.data_dm.shape[1])]*r.data_dm.shape[0] for r in self.readers])
-        all_x = np.concatenate([all_sdm, all_natm.reshape(-1,1)], -1)
-        all_y = np.concatenate([r.data_ec for r in self.readers])
         
-        from sklearn.linear_model import Ridge 
-        reg = Ridge(alpha=ridge_alpha, fit_intercept=False, tol=1e-9)
-        reg.fit(all_x, all_y)
-        coef = reg.coef_.reshape(-1)
-        # coef, _, _, _ = np.linalg.lstsq(all_x, all_y, None)
+        X = np.concatenate([all_sdm, all_natm.reshape(-1,1)], -1)
+        y = np.concatenate([r.data_ec for r in self.readers])
+        I = np.identity(X.shape[1])
+        # solve ridge reg
+        coef = np.linalg.solve(X.T @ X + ridge_alpha * I, X.T @ y).reshape(-1)
         return coef[:-1], coef[-1]
