@@ -10,7 +10,8 @@ from deepqc.utils import QCDIR
 
 SCF_CMD = " ".join([
     "{python} -u",
-    os.path.join(QCDIR, "scf/main.py")
+    "-m deepqc.scf.main"
+    # os.path.join(QCDIR, "scf/main.py") # this is the backup choice
 ])
 
 DEFAULT_SCF_RES = {
@@ -24,7 +25,8 @@ DEFAULT_SCF_RES = {
 
 TRN_CMD = " ".join([
     "{python} -u",
-    os.path.join(QCDIR, "train/main.py")
+    "-m deepqc.train.main"
+    # os.path.join(QCDIR, "train/main.py") # this is the backup choice
 ])
 
 DEFAULT_TRN_RES = {

@@ -11,6 +11,7 @@ systems_train: # can also be files that containing system paths
 
 systems_test: # if empty, use the last system of training set
   - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.063
+  
 # directory setting
 workdir: "."
 share_folder: "share" # folder that stores all other settings

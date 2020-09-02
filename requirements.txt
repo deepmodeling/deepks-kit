@@ -1,0 +1,5 @@
+numpy
+paramiko
+ruamel.yaml
+torch
+pyscf
