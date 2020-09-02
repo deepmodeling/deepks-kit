@@ -75,6 +75,9 @@ def load_yaml(file_path):
 
 
 def save_yaml(data, file_path):
+    dirname = os.path.dirname(file_path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     with open(file_path, 'w') as fp:
         yaml.safe_dump(data, fp)
 
