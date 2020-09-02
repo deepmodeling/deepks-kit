@@ -126,7 +126,7 @@ def make_iterate(systems_train=None, systems_test=None,
         and used for SCF calculation. If given `True`, use the existing file.
         If given a string of file path, copy the corresponding file into 
         target location. If given a dict, dump it into the target file.
-    scf_machine: str or dict
+    scf_machine: optional str or dict
         Arguments used to specify the job settings of SCF calculation,
         including submitting method, resources, group size, etc..
         If given a string of file path, load that file as a dict using 
@@ -136,7 +136,7 @@ def make_iterate(systems_train=None, systems_test=None,
         Arguments used to specify the training of neural network. 
         It follows the same rule as `scf_args`, only that the target 
         location is ``$share_folder/train_input.yaml``.
-    train_machine: str or dict
+    train_machine: optional str or dict
         Arguments used to specify the job settings of NN training. 
         It Follows the same rule as `scf_machine`, but without group.
     init_model: bool or str
@@ -151,9 +151,9 @@ def make_iterate(systems_train=None, systems_test=None,
     init_train: bool or str or dict
         Similar to `train_args` but used for init calculation. The target
         location is ``$share_folder/init_train.yaml``.
-    cleanup:
+    cleanup: bool
         Whether to remove job files during calculation, such as `slurm-*.out`.
-    strict:
+    strict: bool
         Whether to allow additional arguments to be passed to task constructor.
 
     Returns
