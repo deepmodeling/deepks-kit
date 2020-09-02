@@ -1,0 +1,14 @@
+basis: ccpvdz
+model_file: null
+dump_fields: [e_hf, e_cf, dm_eig, conv, l_e_delta]
+verbose: 1
+mol_args:
+  incore_anyway: True
+scf_args:
+  conv_tol: 1e-8
+  conv_check: false
+#penalty_terms:
+#  - type: coulomb
+#    required_labels: dm
+#    strength: 1
+#    random: true    

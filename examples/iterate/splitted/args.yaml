@@ -1,0 +1,25 @@
+# all value here are defaults parameters
+# except for `scf_machine` which shows grouping and ingroup parallelization
+n_iter: 5
+systems_train: null # use share_folder/systems_train.raw (check exist)
+systems_test: null # use share_folder/systems_test.raw
+workdir: "."
+share_folder: "share" # folder that contains all other settings
+# scf parameters
+scf_input: true # use share_folder/scf_input.yaml (check exist)
+scf_machine: 
+  sub_size: 5 # 5 systems will be in one task, default is 1
+  group_size: 2 # 2 tasks will be gathered into one group and submitted together
+  ingroup_parallel: 2 # 2 tasks in one group submission can run toghther
+# train parameters
+train_input: true # use share_folder/train_input.yaml (check exist)
+train_machine: 
+  resources: # add 1 gpu
+    numb_gpu: 1
+# init parameters
+init_model: false # do not use existing model in share_folder/init/model.pth
+init_scf: true # use share_folder/init_scf.yaml (check exist)
+init_train: true # use share_folder/init_train.yaml (check exist)
+# other settings
+cleanup: false
+strict: true
