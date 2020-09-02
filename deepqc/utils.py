@@ -2,7 +2,7 @@ import os
 import shutil
 from glob import glob
 from pathlib import Path
-import ruamel_yaml as yaml
+import ruamel.yaml as yaml
 import numpy as np
 
 

@@ -4,7 +4,6 @@ import time
 import torch
 import argparse
 import numpy as np
-import ruamel_yaml as yaml
 from pyscf import gto, lib
 try:
     import deepqc
