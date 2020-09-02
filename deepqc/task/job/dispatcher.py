@@ -9,8 +9,9 @@ from .slurm import Slurm
 from .shell import Shell
 from .job_status import JobStatus
 from hashlib import sha1
-from monty.serialization import dumpfn,loadfn
+# from monty.serialization import dumpfn,loadfn
 from copy import deepcopy
+import json
 
 
 def _split_tasks(tasks,
@@ -218,28 +219,32 @@ class FinRecord(object):
 
 
 class PMap(object):
-   '''
-   Path map class to operate {read,write,delte} the pmap.json file
-   '''
+    '''
+    Path map class to operate {read,write,delte} the pmap.json file
+    '''
 
-   def __init__(self,path,fname="pmap.json"):
-       self.f_path_map=os.path.join(path,fname)
+    def __init__(self,path,fname="pmap.json"):
+        self.f_path_map=os.path.join(path,fname)
 
-   def load(self):
-      f_path_map=self.f_path_map
-      if os.path.isfile(f_path_map):
-         path_map=loadfn(f_path_map)
-      else:
-         path_map={}
-      return path_map
+    def load(self):
+        f_path_map=self.f_path_map
+        if os.path.isfile(f_path_map):
+            # path_map=loadfn(f_path_map)
+            with open(f_path_map, 'r') as fp:
+                path_map = json.load(fp)
+        else:
+            path_map={}
+        return path_map
 
-   def dump(self,pmap,indent=4):
-      f_path_map=self.f_path_map
-      dumpfn(pmap,f_path_map,indent=indent)
+    def dump(self,pmap,indent=4):
+        f_path_map=self.f_path_map
+        # dumpfn(pmap,f_path_map,indent=indent)
+        with open(f_path_map, "w") as fp:
+            json.dump(pmap, fp, indent=indent)
 
-   def delete(self):
-      f_path_map=self.f_path_map
-      try:
-         os.remove(f_path_map)
-      except:
-         pass
+    def delete(self):
+        f_path_map=self.f_path_map
+        try:
+            os.remove(f_path_map)
+        except:
+            pass
