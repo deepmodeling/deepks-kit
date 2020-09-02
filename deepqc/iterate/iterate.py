@@ -88,8 +88,8 @@ def check_arg_dict(data, default, strict=True):
 
 def make_iterate(systems_train=None, systems_test=None,
                  n_iter=5, workdir=".", share_folder="share",
-                 scf_args=True, scf_machine=None,
-                 train_args=True, train_machine=None,
+                 scf_input=True, scf_machine=None,
+                 train_input=True, train_machine=None,
                  init_model=False, init_scf=True, init_train=True,
                  cleanup=False, strict=True):
     r"""
@@ -119,7 +119,7 @@ def make_iterate(systems_train=None, systems_test=None,
         The folder to store shared files in the iteration, including
         ``scf_input.yaml``, ``train_input.yaml``, and possibly files for
         initialization. Default is ``share``.
-    scf_args: bool or str or dict
+    scf_input: bool or str or dict
         Arguments used to specify the SCF calculation. If given `None` or 
         `False`, use program default (unreliable). Otherwise, the arguments 
         would be saved as a YAML file at ``$share_folder/scf_input.yaml``
@@ -132,9 +132,9 @@ def make_iterate(systems_train=None, systems_test=None,
         If given a string of file path, load that file as a dict using 
         YAML format. If `strict` is set to false, additional arguments
         can be passed to `Task` constructor to do more customization.
-    train_args: bool or str or dict
+    train_input: bool or str or dict
         Arguments used to specify the training of neural network. 
-        It follows the same rule as `scf_args`, only that the target 
+        It follows the same rule as `scf_input`, only that the target 
         location is ``$share_folder/train_input.yaml``.
     train_machine: optional str or dict
         Arguments used to specify the job settings of NN training. 
@@ -146,10 +146,10 @@ def make_iterate(systems_train=None, systems_test=None,
         extra initialization iteration in folder ``iter.init``. 
         If given a string of path, copy that file into target location.
     init_scf: bool or str or dict
-        Similar to `scf_args` but used for init calculation. The target
+        Similar to `scf_input` but used for init calculation. The target
         location is ``$share_folder/init_scf.yaml``.
     init_train: bool or str or dict
-        Similar to `train_args` but used for init calculation. The target
+        Similar to `train_input` but used for init calculation. The target
         location is ``$share_folder/init_train.yaml``.
     cleanup: bool
         Whether to remove job files during calculation, such as `slurm-*.out`.
@@ -177,8 +177,8 @@ def make_iterate(systems_train=None, systems_test=None,
         if os.path.exists(default_test): # if exists then use it
             systems_test = default_test
     # check share folder contains required yaml file
-    scf_args_name = check_share_folder(scf_args, SCF_ARGS_NAME, share_folder)
-    train_args_name = check_share_folder(train_args, TRN_ARGS_NAME, share_folder)
+    scf_args_name = check_share_folder(scf_input, SCF_ARGS_NAME, share_folder)
+    train_args_name = check_share_folder(train_input, TRN_ARGS_NAME, share_folder)
     # check required machine parameters
     scf_machine = check_arg_dict(scf_machine, DEFAULT_SCF_MACHINE, strict)
     train_machine = check_arg_dict(train_machine, DEFAULT_TRN_MACHINE, strict)

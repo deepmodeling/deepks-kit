@@ -39,7 +39,7 @@ def main(*args, **kwargs):
         The folder to store shared files in the iteration, including
         ``scf_input.yaml``, ``train_input.yaml``, and possibly files for
         initialization. Default is ``share``.
-    scf_args: bool or str or dict
+    scf_input: bool or str or dict
         Arguments used to specify the SCF calculation. If given `None` or 
         `False`, use program default (unreliable). Otherwise, the arguments 
         would be saved as a YAML file at ``$share_folder/scf_input.yaml``
@@ -52,9 +52,9 @@ def main(*args, **kwargs):
         If given a string of file path, load that file as a dict using 
         YAML format. If `strict` is set to false, additional arguments
         can be passed to `Task` constructor to do more customization.
-    train_args: bool or str or dict
+    train_input: bool or str or dict
         Arguments used to specify the training of neural network. 
-        It follows the same rule as `scf_args`, only that the target 
+        It follows the same rule as `scf_input`, only that the target 
         location is ``$share_folder/train_input.yaml``.
     train_machine: optional str or dict
         Arguments used to specify the job settings of NN training. 
@@ -66,10 +66,10 @@ def main(*args, **kwargs):
         extra initialization iteration in folder ``iter.init``. 
         If given a string of path, copy that file into target location.
     init_scf: bool or str or dict
-        Similar to `scf_args` but used for init calculation. The target
+        Similar to `scf_input` but used for init calculation. The target
         location is ``$share_folder/init_scf.yaml``.
     init_train: bool or str or dict
-        Similar to `train_args` but used for init calculation. The target
+        Similar to `train_input` but used for init calculation. The target
         location is ``$share_folder/init_train.yaml``.
     cleanup: bool
         Whether to remove job files during calculation, such as `slurm-*.out`.
@@ -118,7 +118,7 @@ def cli(args=None):
     parser.add_argument("--no-strict", action="store_false", dest="strict",
                         help='if set, allow other arguments to be passed to task')
     # allow cli specified argument files
-    sub_names = ["scf-args", "scf-machine", "train-args", "train-machine",
+    sub_names = ["scf-input", "scf-machine", "train-input", "train-machine",
                  "init-model", "init-scf", "init-train"]
     for name in sub_names:
         parser.add_argument(f"--{name}",

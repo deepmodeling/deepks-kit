@@ -29,8 +29,9 @@ TRN_CMD = " ".join([
 
 DEFAULT_TRN_RES = {
     "time_limit": "24:00:00",
-    "mem_limit": 8,
-    "numb_gpu": 1
+    "cpus_per_task": 8,
+    # "numb_gpu": 1, # do not use gpu by default
+    "mem_limit": 8
 }
 
 
