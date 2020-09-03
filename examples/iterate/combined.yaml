@@ -40,11 +40,14 @@ scf_machine:
     batch_type: slurm
     remote_profile: null # use lazy local
   resources:
+    numb_node: 2 # parallel in two nodes
     time_limit: '24:00:00'
     cpus_per_task: 8
     mem_limit: 8
     envs:
       PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
+  sub_res: # resources for each sub task
+    cpus_per_task: 8
   python: "python" # use python in path
 
 # train settings

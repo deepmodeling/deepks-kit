@@ -122,7 +122,7 @@ class SSHContext (object):
             for jj in local_up_files :
                 file_list.append(os.path.join(ii,jj))   
             if not file_list:
-                self.block_checkcall('mkdir %s' % ii)
+                self.block_checkcall('mkdir -p %s' % ii)
         self._put_files(file_list, dereference = dereference)
         os.chdir(cwd)
 
