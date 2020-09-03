@@ -96,7 +96,8 @@ def main(*args, **kwargs):
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-                description="Run the iteration procedure to train a SCF model",
+                prog="deepqc iterate",
+                description="Run the iteration procedure to train a SCF model.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("argfile", nargs="*", default=[],
                         help='the input yaml file for args, '

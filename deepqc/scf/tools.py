@@ -139,7 +139,8 @@ def load_stat_grouped(systems, dump_dir=".",
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-                description="Print the stat of SCF results",
+                prog="deepqc stat",
+                description="Print the stat of SCF results.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
                         help='the input yaml file used for SCF calculation')

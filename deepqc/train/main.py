@@ -58,8 +58,9 @@ def main(train_paths, test_paths=None,
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-        description="Train a model according to given input.",
-        argument_default=argparse.SUPPRESS)
+                prog="deepqc train",
+                description="Train a model according to given input.",
+                argument_default=argparse.SUPPRESS)
     parser.add_argument('input', type=str, nargs="?",
                         help='the input yaml file for args')
     parser.add_argument('-r', '--restart',

@@ -1,15 +1,11 @@
 import os
 import sys
 import argparse
-try:
-    import deepqc
-except ImportError as e:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../")
-
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-                description="deepqc")
+                prog="deepqc",
+                description="A program to generate accurate energy functionals.")
     parser.add_argument("command", 
                         help="specify the sub-command to run, possible choices: "
                              "train, test, scf, stat, iterate")
@@ -17,6 +13,12 @@ def cli(args=None):
                         help="arguments to be passed to the sub-command")
 
     args = parser.parse_args(args)
+    
+    try:
+        import deepqc
+    except ImportError as e:
+        sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../")
+
     if args.command.upper() == "TRAIN":
         from deepqc.train.main import cli as subcli
     elif args.command.upper() == "TEST":

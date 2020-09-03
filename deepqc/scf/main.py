@@ -245,7 +245,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-                description="Calculate and save SCF energies and descriptors using given model.",
+                prog="deepqc scf",
+                description="Calculate and save SCF results using given model.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
                         help='the input yaml file for args')

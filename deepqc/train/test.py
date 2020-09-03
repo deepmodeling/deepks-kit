@@ -74,7 +74,8 @@ def main(data_paths, model_file="model.pth",
 
 def cli(args=None):
     parser = argparse.ArgumentParser(
-                description="Test a model with given data (Not SCF)",
+                prog="deepqc test",
+                description="Test a model with given data (Not SCF).",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
                         help='the input yaml file used for training')
