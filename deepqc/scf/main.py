@@ -1,9 +1,9 @@
 import os
 import sys
 import time
-import torch
-import argparse
 import numpy as np
+import argparse
+import torch
 from pyscf import gto, lib
 try:
     import deepqc
