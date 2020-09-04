@@ -9,6 +9,7 @@ from deepqc.iterate.template import make_scf, make_train
 # args not specified here may cause error
 DEFAULT_SCF_MACHINE = {
     "sub_size": 1, # how many systems is put in one task (folder)
+    "sub_res": None, # the resources for sub step when ingroup_parallel > 1
     "group_size": 1, # how many tasks are submitted in one job
     "ingroup_parallel": 1, #how many tasks can run at same time in one job
     "dispatcher": None, # use default lazy-local slurm defined in task.py
