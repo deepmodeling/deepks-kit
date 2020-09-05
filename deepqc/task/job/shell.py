@@ -10,15 +10,25 @@ def _default_item(resources, key, value) :
 class Shell(Batch) :
 
     def check_status(self) :
-        if not hasattr(self, 'proc'):
-            return JobStatus.unsubmitted
-        if not self.context.check_finish(self.proc) :
-            return JobStatus.running
-        elif (self.context.get_return(self.proc))[0] == 0 :
+        if self.check_finish_tag():
             return JobStatus.finished
-        else :
+        elif self.check_running():
+            return JobStatus.running
+        else:
             return JobStatus.terminated
+        ## warn: cannont distinguish terminated from unsubmitted.
 
+    def check_running(self):
+        uuid_names = self.context.job_uuid
+        ## Check if the uuid.sub is running on remote machine
+        cnt = 0
+        ret, stdin, stdout, stderr = self.context.block_call("ps aux | grep %s"%uuid_names)
+        response_list = stdout.read().decode('utf-8').split("\n")
+        for response in response_list:
+            if  uuid_names + ".sub" in response:
+                return True
+        return False
+    
     def exec_sub_script(self, script_str):
         self.context.write_file(self.sub_script_name, script_str)
         self.proc = self.context.call('cd %s && exec bash %s' % (self.context.remote_root, self.sub_script_name))

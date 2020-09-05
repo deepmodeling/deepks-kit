@@ -354,6 +354,7 @@ class JobRecord(object):
                 'context': None,
                 'finished': False,
                 'fail_count': 0,
-                'task_chunk': jj,
+                'task_chunk': [{"dir": t["dir"], 
+                                "cmds":t["cmds"]} for t in jj],
             }
 

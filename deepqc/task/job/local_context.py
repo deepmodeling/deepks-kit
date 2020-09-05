@@ -87,6 +87,8 @@ class LocalContext(object) :
     def download(self, 
                  job_dirs,
                  remote_down_files,
+                 check_exists = False,
+                 mark_failure = True,
                  back_error=False) :
         cwd = os.getcwd()
         for ii in job_dirs :
@@ -106,7 +108,13 @@ class LocalContext(object) :
                 lfile = os.path.join(local_job, jj)
                 if not os.path.realpath(rfile) == os.path.realpath(lfile) :
                     if (not os.path.exists(rfile)) and (not os.path.exists(lfile)):
-                        raise RuntimeError('do not find download file ' + rfile)
+                        if check_exists :
+                            if mark_failure:
+                                with open(os.path.join(self.local_root, ii, 'tag_failure_download_%s' % jj), 'w') as fp: pass
+                            else :
+                                pass
+                        else :
+                            raise RuntimeError('do not find download file ' + rfile)
                     elif (not os.path.exists(rfile)) and (os.path.exists(lfile)) :
                         # already downloaded
                         pass
@@ -117,7 +125,10 @@ class LocalContext(object) :
                     elif (os.path.exists(rfile)) and (os.path.exists(lfile)) :
                         # both exists, replace!
                         # dlog.info('find existing %s, replacing by %s' % (lfile, rfile))
-                        shutil.rmtree(lfile)
+                        if os.path.isdir(lfile):
+                            shutil.rmtree(lfile, ignore_errors=True)
+                        elif os.path.isfile(lfile) or os.path.islink(lfile):
+                            os.remove(lfile)
                         os.makedirs(os.path.dirname(lfile), exist_ok=True)
                         shutil.move(rfile, lfile)
                     else :
@@ -154,7 +165,7 @@ class LocalContext(object) :
         return code, None, stdout, stderr
 
     def clean(self) :
-        shutil.rmtree(self.remote_root)
+        shutil.rmtree(self.remote_root, ignore_errors=True)
 
     def write_file(self, fname, write_str):
         with open(os.path.join(self.remote_root, fname), 'w') as fp :
