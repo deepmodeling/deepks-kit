@@ -14,6 +14,13 @@ SCF_CMD = " ".join([
     # os.path.join(QCDIR, "scf/main.py") # this is the backup choice
 ])
 
+TRN_CMD = " ".join([
+    "{python} -u",
+    "-m deepqc.train.main"
+    # os.path.join(QCDIR, "train/main.py") # this is the backup choice
+])
+
+
 DEFAULT_SCF_RES = {
     "time_limit": "24:00:00",
     "cpus_per_task": 8,
@@ -23,11 +30,10 @@ DEFAULT_SCF_RES = {
     }
 }
 
-TRN_CMD = " ".join([
-    "{python} -u",
-    "-m deepqc.train.main"
-    # os.path.join(QCDIR, "train/main.py") # this is the backup choice
-])
+DEFAULT_SCF_SUB_RES = {
+    "cpus_per_task": 8,
+    # "mem_limit": 8,
+}
 
 DEFAULT_TRN_RES = {
     "time_limit": "24:00:00",
@@ -76,9 +82,6 @@ def make_scf_task(*, workdir=".",
         command += f" -d {dump_dir}"
     if group_data is not None:
         command += " -G" if group_data else " -NG"
-    if resources is None:
-        resources = {}
-    resources = {**DEFAULT_SCF_RES, **resources}
     # make task
     return BatchTask(
         command, 
@@ -118,6 +121,9 @@ def make_run_scf(systems_train, systems_test=None, *,
     # make subtasks
     model_file = "../model.pth" if not no_model else "NONE"
     nd = max(len(str(ntask_trn+ntask_tst)), 2)
+    if sub_res is None:
+        sub_res = {}
+    sub_res = {**DEFAULT_SCF_SUB_RES, **sub_res}
     trn_tasks = [
         make_scf_task(systems=sset, workdir=f"task.trn.{i:0{nd}}", 
                       arg_file="../scf_input.yaml", source_arg=None,
