@@ -6,13 +6,16 @@ from .job_status import JobStatus
 class Batch(object) :
     def __init__ (self,
                   context, 
-                  uuid_names = False) :
+                  uuid_names = True) :
         self.context = context
+        self.uuid_names = uuid_names
         if uuid_names:
+            self.upload_tag_name = '%s_tag_upload' % self.context.job_uuid
             self.finish_tag_name = '%s_tag_finished' % self.context.job_uuid
             self.sub_script_name = '%s.sub' % self.context.job_uuid
             self.job_id_name = '%s_job_id' % self.context.job_uuid
         else:
+            self.upload_tag_name = 'tag_upload'
             self.finish_tag_name = 'tag_finished'
             self.sub_script_name = 'run.sub'
             self.job_id_name = 'job_id'
@@ -71,7 +74,7 @@ class Batch(object) :
         make submit script
 
         job_dirs(list):         directories of jobs. size: n_job
-        cmds(list):             commands to be executed in each dir. size: n_job x n_cmd
+        cmds(list of list):     commands to be executed in each dir. size: n_job x n_cmd
         args(list of list):     args of commands. size: n_job x n_cmd
                                 can be None
         res(dict):              resources available
@@ -138,6 +141,8 @@ class Batch(object) :
             self.do_submit(job_dirs, cmds, args, res, 
                            outlog=outlog, errlog=errlog, 
                            para_deg=para_deg, para_res=para_res)
+        if res is not None:
+            sleep = res.get('submit_wait_time', sleep)
         time.sleep(sleep) # For preventing the crash of the tasks while submitting        
 
     def check_finish_tag(self) :
@@ -176,6 +181,7 @@ class Batch(object) :
                 if not allow_failure:
                     ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % step
                 else :
+                    ret += '  if test $? -ne 0; then touch tag_failure_%d; fi \n' % step
                     ret += '  touch tag_%d_finished \n' % step
                 ret += 'fi\n\n'
 

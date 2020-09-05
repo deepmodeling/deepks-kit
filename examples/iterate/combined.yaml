@@ -36,8 +36,8 @@ scf_machine:
   group_size: 2 # 2 tasks will be gathered into one group and submitted together
   ingroup_parallel: 2 # this will set numb_node to 2 in resources
   dispatcher: 
-    context_type: local
-    batch_type: slurm
+    context: local
+    batch: slurm
     remote_profile: null # use lazy local
   resources:
     numb_node: 2 # parallel in two nodes
@@ -74,8 +74,8 @@ train_input:
 
 train_machine: 
   dispatcher: 
-    context_type: local
-    batch_type: slurm
+    context: local
+    batch: slurm
     remote_profile: null # use lazy local
   resources:
     time_limit: '24:00:00'

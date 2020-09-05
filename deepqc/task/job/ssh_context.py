@@ -138,7 +138,7 @@ class SSHContext (object):
             for jj in remote_down_files:
                 file_list.append(os.path.join(ii,jj))
             if back_error:
-                file_list.append(os.path.join(ii,'error*'))
+                file_list.append(os.path.join(ii,'err*'))
         self._get_files(file_list)
         os.chdir(cwd)
         
