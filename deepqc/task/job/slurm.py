@@ -116,12 +116,16 @@ class Slurm(Batch) :
         _default_item(step_res, "numb_node", 1)
         _default_item(step_res, "task_per_node", 1)
         _default_item(step_res, "cpus_per_task", 1)
+        _default_item(step_res, 'numb_gpu', 0)
+
         params = f" -N {step_res['numb_node']} "
         params += f" -n {step_res['task_per_node']*step_res['numb_node']} "
         if step_res["cpus_per_task"] > 1:
             params += f" -c {step_res['cpus_per_task']} "
         if step_res["exclusive"]:
             params += " --exclusive "
+        if step_res['numb_gpu'] > 0 :
+            params += " --gres=gpu:%d\n " % step_res['numb_gpu']
         return f"srun {params} "
 
     def sub_script_cmd(self,
