@@ -96,16 +96,16 @@ def load_stat(systems, dump_dir,
                 print("Warning! conv.npy not found:", e, file=sys.stderr)
         if with_e:
             try:
-                le = get_with_prefix("energy", lbase, ".npy")
-                re = get_with_prefix(e_name, rbase, ".npy")
-                e_err.append(load_array(le) - load_array(re))
+                re = load_array(get_with_prefix(e_name, rbase, ".npy")).reshape(-1,1)
+                le = load_array(get_with_prefix("energy", lbase, ".npy")).reshape(-1,1)
+                e_err.append(le - re)
             except FileNotFoundError as e:
                 print("Warning! energy file not found:", e, file=sys.stderr)
         if with_f:
             try:
-                lf = get_with_prefix("force", lbase, ".npy")
-                rf = get_with_prefix(f_name, rbase, ".npy")
-                f_err.append(load_array(lf) - load_array(rf))
+                rf = load_array(get_with_prefix(f_name, rbase, ".npy"))
+                lf = load_array(get_with_prefix("force", lbase, ".npy")).reshape(rf.shape)
+                f_err.append(lf - rf)
             except FileNotFoundError as e:
                 print("Warning! force file not found:", e, file=sys.stderr)
     return np.concatenate(c_res, 0) if c_res else None, \
@@ -124,13 +124,13 @@ def load_stat_grouped(systems, dump_dir=".",
         e_res = load_array(get_with_prefix(e_name, dump_dir, ".npy"))
         e_lbl = np.concatenate([
             load_array(get_with_prefix("energy", lb, ".npy")) for lb in lbases
-        ], 0)
+        ], 0).reshape(-1,1)
         e_err = e_lbl - e_res
     if with_f:
         f_res = load_array(get_with_prefix(f_name, dump_dir, ".npy"))
         f_lbl = np.concatenate([
             load_array(get_with_prefix("force", lb, ".npy")) for lb in lbases
-        ], 0)
+        ], 0).reshape(f_res.shape)
         f_err = f_lbl - f_res
     return c_res if with_conv else None, \
            e_err if with_e else None, \
