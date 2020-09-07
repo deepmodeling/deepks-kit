@@ -243,66 +243,6 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print('group finished')
 
 
-def cli(args=None):
-    parser = argparse.ArgumentParser(
-                prog="deepqc scf",
-                description="Calculate and save SCF results using given model.",
-                argument_default=argparse.SUPPRESS)
-    parser.add_argument("input", nargs="?",
-                        help='the input yaml file for args')
-    parser.add_argument("-s", "--systems", nargs="*",
-                        help="input molecule systems, can be xyz files or folders with npy data")
-    parser.add_argument("-m", "--model-file",
-                        help="file of the trained model")
-    parser.add_argument("-B", "--basis",
-                        help="basis set used to solve the model") 
-    parser.add_argument("-P", "--proj_basis",
-                        help="basis set used to project dm, must match with model")   
-    parser.add_argument("-D", "--device",
-                        help="device name used in nn model inference")               
-    parser.add_argument("-d", "--dump-dir",
-                        help="dir of dumped files")
-    parser.add_argument("-F", "--dump-fields", nargs="*",
-                        help="fields to be dumped into the folder") 
-    group0 = parser.add_mutually_exclusive_group()   
-    group0.add_argument("-G", "--group", action='store_true', dest="group",
-                        help="group results for all systems, only works for same system")
-    group0.add_argument("-NG", "--no-group", action='store_false', dest="group",
-                        help="Do not group results for different systems (default behavior)")
-    parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
-                        help="output calculation information")
-    parser.add_argument("-X", "--scf-xc",
-                        help="base xc functional used in scf equation, default is HF")        
-    parser.add_argument("--scf-conv-tol", type=float,
-                        help="converge threshold of scf iteration")
-    parser.add_argument("--scf-conv-tol-grad", type=float,
-                        help="gradient converge threshold of scf iteration")
-    parser.add_argument("--scf-max-cycle", type=int,
-                        help="max number of scf iteration cycles")
-    parser.add_argument("--scf-diis-space", type=int,
-                        help="subspace dimension used in diis mixing")
-    parser.add_argument("--scf-level-shift", type=float,
-                        help="level shift used in scf calculation")
-
-    args = parser.parse_args(args)
-
-    scf_args={}
-    for k, v in vars(args).copy().items():
-        if k.startswith("scf_"):
-            scf_args[k[4:]] = v
-            delattr(args, k)
-
-    if hasattr(args, "input"):
-        argdict = load_yaml(args.input)
-        del args.input
-        argdict.update(vars(args))
-        argdict["scf_args"].update(scf_args)
-    else:
-        argdict = vars(args)
-        argdict["scf_args"] = scf_args
-
-    main(**argdict)
-
-
 if __name__ == "__main__":
+    from deepqc.main import scf_cli as cli
     cli()

@@ -56,34 +56,6 @@ def main(train_paths, test_paths=None,
     train(model, g_reader, test_reader=test_reader, **train_args)
 
 
-def cli(args=None):
-    parser = argparse.ArgumentParser(
-                prog="deepqc train",
-                description="Train a model according to given input.",
-                argument_default=argparse.SUPPRESS)
-    parser.add_argument('input', type=str, nargs="?",
-                        help='the input yaml file for args')
-    parser.add_argument('-r', '--restart',
-                        help='the restart file to load model from, would ignore model_args if given')
-    parser.add_argument('-d', '--train-paths', nargs="*",
-                        help='paths to the folders of training data')
-    parser.add_argument('-t', '--test-paths', nargs="*",
-                        help='paths to the folders of testing data')
-    parser.add_argument('-o', '--ckpt-file',
-                        help='file to save the model parameters, default: model.pth')
-    parser.add_argument('-S', '--seed', type=int,
-                        help='use specified seed in initialization and training')
-    args = parser.parse_args(args)
-    
-    if hasattr(args, "input"):
-        argdict = load_yaml(args.input)
-        del args.input
-        argdict.update(vars(args))
-    else:
-        argdict = vars(args)
-
-    main(**argdict)
-
-
 if __name__ == "__main__":
+    from deepqc.main import train_cli as cli
     cli()

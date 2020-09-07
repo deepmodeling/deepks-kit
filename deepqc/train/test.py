@@ -72,45 +72,6 @@ def main(data_paths, model_file="model.pth",
         test(model, g_reader, dump_prefix=dump, group=group)
 
 
-def cli(args=None):
-    parser = argparse.ArgumentParser(
-                prog="deepqc test",
-                description="Test a model with given data (Not SCF).",
-                argument_default=argparse.SUPPRESS)
-    parser.add_argument("input", nargs="?",
-                        help='the input yaml file used for training')
-    parser.add_argument("-d", "--data-paths", type=str, nargs='+',
-                        help="the paths to data folders containing .npy files for test")
-    parser.add_argument("-m", "--model-file", type=str, nargs='+',
-                        help="the dumped model file to test")
-    parser.add_argument("-o", "--output-prefix", type=str,
-                        help=r"the prefix of output file, would wite into file %%prefix.%%sysidx.out")
-    parser.add_argument("-E", "--e-name", type=str,
-                        help="the name of energy file to be read (no .npy extension)")
-    parser.add_argument("-D", "--d-name", type=str, nargs="+",
-                        help="the name of descriptor file(s) to be read (no .npy extension)")
-    parser.add_argument("-G", "--group", action='store_true',
-                        help="group test results for all systems")
-    args = parser.parse_args(args)
-
-    if hasattr(args, "input"):
-        rawdict = load_yaml(args.input)
-        del args.input
-        argdict = {}
-        if "ckpt_file" in rawdict["train_args"]:
-            argdict["model_file"] = rawdict["train_args"]["ckpt_file"]
-        if "e_name" in rawdict["data_args"]:
-            argdict["e_name"] = rawdict["data_args"]["e_name"]
-        if "d_name" in rawdict["data_args"]:
-            argdict["d_name"] = rawdict["data_args"]["d_name"]
-        if "test_paths" in rawdict:
-            argdict["data_paths"] = rawdict["test_paths"]
-        argdict.update(vars(args))
-    else:
-        argdict = vars(args)
-
-    main(**argdict)
-
-
 if __name__ == "__main__":
+    from deepqc.main import test_cli as cli
     cli()
