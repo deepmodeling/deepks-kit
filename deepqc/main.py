@@ -30,7 +30,7 @@ def main_cli(args=None):
     elif args.command.upper() == "STAT":
         sub_cli = stat_cli
     elif args.command.upper().startswith("ITER"):
-        from deepqc.iterate.main import cli as sub_cli
+        sub_cli = iter_cli
     else:
         return ValueError(f"unsupported sub-command: {args.command}")
     
