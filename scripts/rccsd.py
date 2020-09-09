@@ -40,7 +40,8 @@ if __name__ == "__main__":
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
     args = parser.parse_args()
     
-    os.makedirs(args.dump_dir, exist_ok = True)
+    if args.dump_dir is not None:
+        os.makedirs(args.dump_dir, exist_ok = True)
     for fn in args.files:
         tic = time.time()
         mol = parse_xyz(fn, args.basis, args.verbose)
