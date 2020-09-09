@@ -158,38 +158,53 @@ class Batch(object) :
                           errlog = 'err',
                           para_deg = 1,
                           para_res = None) :
+        # job_dirs: a list of dirs
+        # cmds: a list of cmds, `cmds[i]` will be run in directory `job_dirs[i]`
+        # args: a list of args, `args[i]` will be passed to `cmd[i]` in `job_dirs[i]`
+        # res: common resources to be used
+        # para_res: a list of resources for each cmd, used to make sub-steps
         try:
             allow_failure = res['allow_failure']
         except:
             allow_failure = False
         ret = ""
+        # additional checker for ingroup parallel
+        if para_deg > 1:
+            ret += 'pids=""\nFAIL=0\n\n'
         # iter over job dirs
         for idx, (idir, icmd, iarg) in enumerate(zip(job_dirs, cmds, args)) :
             ret += 'cd %s\n' % idir
-            ret += 'test $? -ne 0 && exit\n\n'
+            ret += 'test $? -ne 0 && exit\n'
 
+            # check if finished
+            sub = "\n"
+            sub += 'if [ ! -f tag_%d_finished ] ;then\n' % step
+            # build command
+            tmp_cmd = self.sub_script_cmd(icmd, iarg, res)
+            if para_deg > 1 and not res.get("with_mpi", False) and para_res:
+                tmp_cmd = self.sub_step_head(para_res[idx]) + tmp_cmd
+            sub += '  %s 1>> %s 2>> %s \n' % (tmp_cmd, outlog, errlog)
+            # check failure
+            if not allow_failure:
+                sub += '  if test $? -ne 0; then exit 1; else touch tag_%d_finished; fi \n' % step
+            else :
+                sub += '  if test $? -ne 0; then touch tag_failure_%d; fi \n' % step
+                sub += '  touch tag_%d_finished \n' % step
+            sub += 'fi\n'
+
+            # if parallel put step into subshell
             if para_deg > 1:
-                tmp_cmd = self.sub_script_cmd(icmd, iarg, res)
-                if not res.get("with_mpi", False):
-                    tmp_cmd = self.sub_step_head(para_res[idx]) + tmp_cmd
-                ret += '  %s 1>> %s 2>> %s &\n\n' % (tmp_cmd, outlog, errlog)
-                
-            else:
-                ret += 'if [ ! -f tag_%d_finished ] ;then\n' % step
-                tmp_cmd = self.sub_script_cmd(icmd, iarg, res)
-                ret += '  %s 1>> %s 2>> %s \n' % (tmp_cmd, outlog, errlog)
-                if not allow_failure:
-                    ret += '  if test $? -ne 0; then exit; else touch tag_%d_finished; fi \n' % step
-                else :
-                    ret += '  if test $? -ne 0; then touch tag_failure_%d; fi \n' % step
-                    ret += '  touch tag_%d_finished \n' % step
-                ret += 'fi\n\n'
+                sub = f'\n({sub})&\n'
+                sub += 'pids+=" $!"\n'
+            sub += "\n"
 
+            ret += sub
             ret += 'cd %s\n' % self.context.remote_root
             ret += 'test $? -ne 0 && exit\n'
             if para_deg > 1 and (idx+1) % para_deg == 0:
-                ret += "\nwait\n"
+                ret += '\n\nfor p in $pids; do wait $p || let "FAIL+=1"; done\n'
+                ret += 'test $FAIL -ne 0 && exit\n'
+    
             ret += "\n\n"
-
-        ret += "\nwait\n"
+        
         return ret

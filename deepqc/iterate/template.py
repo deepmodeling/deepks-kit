@@ -31,8 +31,10 @@ DEFAULT_SCF_RES = {
 }
 
 DEFAULT_SCF_SUB_RES = {
+    "numb_node": 1,
+    "task_per_node": 1,
     "cpus_per_task": 8,
-    # "mem_limit": 8,
+    "exclusive": True
 }
 
 DEFAULT_TRN_RES = {

@@ -109,22 +109,24 @@ class Slurm(Batch) :
             ret += '\n'        
         return ret
     
-    def sub_step_head(self, step_res=None):
+    def sub_step_head(self, step_res=None, **kwargs):
         if step_res is None:
-            step_res = {}
-        _default_item(step_res, "exclusive", True)
-        _default_item(step_res, "numb_node", 1)
-        _default_item(step_res, "task_per_node", 1)
-        _default_item(step_res, "cpus_per_task", 1)
-        _default_item(step_res, 'numb_gpu', 0)
-
-        params = f" -N {step_res['numb_node']} "
-        params += f" -n {step_res['task_per_node']*step_res['numb_node']} "
-        if step_res["cpus_per_task"] > 1:
+            return ""
+        # exclusive = step_res.get("exclusive", False)
+        # numb_node = step_res.get("numb_node", 1)
+        # task_per_node = step_res.get("task_per_node", 1)
+        # cpus_per_task = step_res.get("cpus_per_task", 1)
+        # numb_gpu = step_res.get('numb_gpu', 0)
+        params = ""
+        if "numb_node" in step_res:
+            params += f" -N {step_res['numb_node']} "
+        if "task_per_node" in step_res:
+            params += f" -n {step_res['task_per_node'] * step_res.get('numb_node', 1)} "
+        if "cpus_per_task" in step_res:
             params += f" -c {step_res['cpus_per_task']} "
-        if step_res["exclusive"]:
+        if step_res.get("exclusive", False):
             params += " --exclusive "
-        if step_res['numb_gpu'] > 0 :
+        if step_res.get('numb_gpu', 0) > 0 :
             params += " --gres=gpu:%d\n " % step_res['numb_gpu']
         return f"srun {params} "
 
