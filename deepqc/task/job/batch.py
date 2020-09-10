@@ -201,10 +201,10 @@ class Batch(object) :
             ret += sub
             ret += 'cd %s\n' % self.context.remote_root
             ret += 'test $? -ne 0 && exit\n'
-            if para_deg > 1 and (idx+1) % para_deg == 0:
+            if para_deg > 1 and ((idx+1) % para_deg == 0 or idx + 1 == len(job_dirs)):
                 ret += '\n\nfor p in $pids; do wait $p || let "FAIL+=1"; done\n'
                 ret += 'test $FAIL -ne 0 && exit\n'
-    
+                ret += 'pids=""\nFAIL=0\n'
             ret += "\n\n"
         
         return ret
