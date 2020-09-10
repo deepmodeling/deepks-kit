@@ -107,8 +107,8 @@ def make_run_scf(systems_train, systems_test=None, *,
                  sub_size=1, group_size=1, ingroup_parallel=1, 
                  sub_res=None, python='python', **task_args):
     # if no test systems, use last one in train systems
-    systems_train = load_sys_paths(systems_train)
-    systems_test = load_sys_paths(systems_test)
+    systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
+    systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
     if not systems_test:
         systems_test.append(systems_train[-1])
         # if len(systems_train) > 1:
