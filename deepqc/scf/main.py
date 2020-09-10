@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import numpy as np
-import argparse
 import torch
 from pyscf import gto, lib
 try:
@@ -84,7 +83,7 @@ def system_iter(path, labels=None):
     """
     if labels is None:
         labels = set()
-    base = path.rstrip(".xyz")
+    base = path.rstrip(os.path.sep).rstrip(".xyz")
     label_paths = {lb: get_with_prefix(lb, base, prefer=".npy") for lb in labels}
     # if xyz, will yield single frame. Assume all labels are single frame
     if is_xyz(path):
@@ -106,12 +105,13 @@ def system_iter(path, labels=None):
             coords = load_array(get_with_prefix("coord", path, prefer=".npy"))
             assert len(coords.shape) == 3 and coords.shape[2] == 3, coords.shape
             nframes = coords.shape[0]
-            elements = np.loadtxt(os.path.join(path, "type.raw"), dtype='str')\
+            elements = np.loadtxt(os.path.join(path, "type.raw"), dtype=str)\
                          .reshape(1,-1).repeat(nframes, axis=0)
         for i in range(nframes):
             atom = [[e,c] for e,c in zip(elements[i], coords[i])]
             label_dict = {lb: all_labels[lb][i] for lb in labels}
             yield atom, label_dict
+        return
 
 
 def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):

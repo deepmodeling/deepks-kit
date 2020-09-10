@@ -1,8 +1,7 @@
-import argparse, os
+import os
 import numpy as np
 import torch
 import torch.nn as nn
-import os
 try:
     import deepqc
 except ImportError as e:

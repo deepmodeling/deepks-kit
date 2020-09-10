@@ -3,7 +3,6 @@ import sys
 import glob
 import numpy as np
 import shutil
-import argparse
 try:
     import deepqc
 except ImportError as e:
