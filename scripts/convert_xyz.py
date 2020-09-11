@@ -68,9 +68,10 @@ def load_system(xyz_file):
 
 
 def dump_systems(xyz_files, dump_dir, ext_type=False):
+    print(f"saving to {dump_dir} ... ", end="")
     os.makedirs(dump_dir, exist_ok=True)
     if not xyz_files:
-        print("Empty list! Do nothing")
+        print("empty list! did nothing")
         return
     a_ele, a_coord, a_energy, a_force, a_dm = zip(*[load_system(fl) for fl in xyz_files])
     if ext_type:
@@ -91,7 +92,7 @@ def dump_systems(xyz_files, dump_dir, ext_type=False):
     if not all(dm is None for dm in a_dm):
         assert not any(dm is None for dm in a_dm)
         np.save(os.path.join(dump_dir, "dm.npy"), a_dm)
-    print(f"{dump_dir} finished")
+    print(f"finished")
     return
 
 
