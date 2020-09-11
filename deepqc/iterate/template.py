@@ -169,8 +169,8 @@ def make_stat_scf(systems_train, systems_test=None, *,
                   train_dump="data_train", test_dump="data_test", group_data=False,
                   workdir='.', outlog="log.data", **stat_args):
     # follow same convention for systems as run_scf
-    systems_train = load_sys_paths(systems_train)
-    systems_test = load_sys_paths(systems_test)
+    systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
+    systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
     if not systems_test:
         systems_test.append(systems_train[-1])
         # if len(systems_train) > 1:
