@@ -170,7 +170,7 @@ class Batch(object) :
         ret = ""
         # additional checker for ingroup parallel
         if para_deg > 1:
-            ret += 'pids=""\nFAIL=0\n\n'
+            ret += 'pids=""; FAIL=0\n\n'
         # iter over job dirs
         for idx, (idir, icmd, iarg) in enumerate(zip(job_dirs, cmds, args)) :
             ret += 'cd %s\n' % idir
@@ -204,7 +204,7 @@ class Batch(object) :
             if para_deg > 1 and ((idx+1) % para_deg == 0 or idx + 1 == len(job_dirs)):
                 ret += '\n\nfor p in $pids; do wait $p || let "FAIL+=1"; done\n'
                 ret += 'test $FAIL -ne 0 && exit\n'
-                ret += 'pids=""\nFAIL=0\n'
+                ret += 'pids=""; FAIL=0\n'
             ret += "\n\n"
         
         return ret

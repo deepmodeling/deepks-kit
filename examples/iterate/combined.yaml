@@ -1,16 +1,18 @@
 # all arguments are flatten into this file
 # they can also be splitted into separate files and referenced here
+
+# number of iterations to do, can be set to zero for deephf training
 n_iter: 5
 
 # training and testing systems
 systems_train: # can also be files that containing system paths
-  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.0[0-5]* # support glob
-  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.060
-  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.061
-  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.062
+  - ../system/batch/set.0[0-5]* # support glob
+  - ../system/batch/set.060
+  - ../system/batch/set.061
+  - ../system/batch/set.062
 
 systems_test: # if empty, use the last system of training set
-  - /scratch/gpfs/yixiaoc/yixiaoc/deep.qc/test/system/batch/set.063
+  - ../system/batch/set.063
   
 # directory setting
 workdir: "."
