@@ -1,0 +1,54 @@
+# this is only part of input settings. 
+# should be used together with systems.yaml and machines.yaml
+
+# number of iterations to do, can be set to zero for DeePHF training
+n_iter: 0
+  
+# directory setting (these are default choices, can be omitted)
+workdir: "."
+share_folder: "share" # folder that stores all other settings
+
+# scf settings, set to false when n_iter = 0 to skip checking
+scf_input: false
+
+# train settings, set to false when n_iter = 0 to skip checking
+train_input: false
+
+# init settings, these are for DeePHF task
+init_model: false # do not use existing model to restart from
+
+init_scf: 
+  basis: ccpvdz
+  # this is for pure energy training
+  dump_fields: [e_hf, e_cf, dm_eig, conv, l_e_delta]
+  verbose: 1
+  mol_args:
+    incore_anyway: True
+  scf_args:
+    conv_tol: 1e-8
+    conv_check: false # pyscf conv_check has a bug
+
+init_train: 
+  model_args: # necessary as this is init training
+    hidden_sizes: [100, 100, 100]
+    output_scale: 100
+    use_resnet: true
+    actv_fn: mygelu
+  data_args: 
+    batch_size: 16
+    group_batch: 1
+  preprocess_args:
+    preshift: true
+    prescale: false
+    prefit_ridge: 1e1
+    prefit_trainable: false
+  train_args: 
+    decay_rate: 0.96
+    decay_steps: 500
+    display_epoch: 100
+    n_epoch: 50000
+    start_lr: 0.0003
+
+# other settings
+cleanup: false
+strict: true

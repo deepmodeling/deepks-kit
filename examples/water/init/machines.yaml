@@ -1,0 +1,33 @@
+# this is only part of input settings. 
+# should be used together with systems.yaml and params.yaml
+
+scf_machine: 
+  sub_size: 5 # 5 systems will be in one task, default is 1
+  group_size: 2 # 2 tasks will be gathered into one group and submitted together
+  ingroup_parallel: 2 # this will set numb_node to 2 in resources
+  dispatcher: 
+    context: local
+    batch: slurm
+    remote_profile: null # use lazy local
+  resources:
+    numb_node: 2 # parallel in two nodes
+    time_limit: '24:00:00'
+    cpus_per_task: 8
+    mem_limit: 8
+    envs:
+      PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
+  sub_res: # resources for each sub task
+    cpus_per_task: 8
+  python: "python" # use python in path
+
+train_machine: 
+  dispatcher: 
+    context: local
+    batch: slurm
+    remote_profile: null # use lazy local
+  resources:
+    time_limit: '24:00:00'
+    cpus_per_task: 4
+    numb_gpu: 1
+    mem_limit: 8
+  python: "python" # use python in path
