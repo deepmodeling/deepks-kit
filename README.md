@@ -1,7 +1,7 @@
 # DeePQC
 
 DeePQC is a program to generate accurate energy functionals for quantum chemistry systems,
-for both post-Hartree-Fock (perturbation) scheme (DeePHF) and self-consistent scheme (DeePKS).
+for both perturbative scheme (DeePHF) and self-consistent scheme (DeePKS).
 
 The program contains five sub-commands, 
 - `train`: train an neural network based post-HF energy functional model
@@ -21,4 +21,4 @@ The program contains five sub-commands,
 
 ## Usage
 
-Please see [`examples`](./examples) folder for the usage of `deepqc` library.  
+Please see [`examples`](./examples) folder for the usage of `deepqc` library. A detailed example with executable data for water molecules can be found [here](./examples/water).

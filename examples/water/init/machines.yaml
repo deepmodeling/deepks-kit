@@ -4,12 +4,12 @@
 scf_machine: 
   sub_size: 5 # 5 systems will be in one task, default is 1
   group_size: 2 # 2 tasks will be gathered into one group and submitted together
-  ingroup_parallel: 2 # this will set numb_node to 2 in resources
+  ingroup_parallel: 2 # this will set numb_node default to 2 in resources
   dispatcher: 
     context: local
     batch: slurm
     remote_profile: null # use lazy local
-  resources:
+  resources: # follows `dpgen` definition
     numb_node: 2 # parallel in two nodes
     time_limit: '24:00:00'
     cpus_per_task: 8
@@ -25,9 +25,13 @@ train_machine:
     context: local
     batch: slurm
     remote_profile: null # use lazy local
-  resources:
+  resources: # follows `dpgen` definition
     time_limit: '24:00:00'
     cpus_per_task: 4
     numb_gpu: 1
     mem_limit: 8
   python: "python" # use python in path
+
+# other settings (these are default, can be omitted)
+cleanup: false # whether to delete slurm and err files
+strict: true # do not allow undefined machine parameters

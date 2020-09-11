@@ -17,38 +17,38 @@ train_input: false
 # init settings, these are for DeePHF task
 init_model: false # do not use existing model to restart from
 
-init_scf: 
+init_scf: # parameters for SCF calculation
   basis: ccpvdz
   # this is for pure energy training
-  dump_fields: [e_hf, e_cf, dm_eig, conv, l_e_delta]
+  dump_fields: 
+    - e_hf # Hartree Fock energy
+    - dm_eig # Descriptors
+    - conv # whether converged or not
+    - l_e_delta # delta energy betweem e_hf and reference, label
   verbose: 1
-  mol_args:
+  mol_args: # args to be passed to pyscf.gto.Mole.build
     incore_anyway: True
-  scf_args:
+  scf_args: # args to be passed to pyscf.scf.RHF.run
     conv_tol: 1e-8
     conv_check: false # pyscf conv_check has a bug
 
-init_train: 
-  model_args: # necessary as this is init training
-    hidden_sizes: [100, 100, 100]
-    output_scale: 100
-    use_resnet: true
-    actv_fn: mygelu
+init_train: # parameters for nn training
+  model_args:
+    hidden_sizes: [100, 100, 100] # neurons in hidden layers
+    output_scale: 100 # the output will be divided by 100 before compare with label
+    use_resnet: true # skip connection
+    actv_fn: mygelu # same as gelu, support force calculation
   data_args: 
     batch_size: 16
-    group_batch: 1
+    group_batch: 1 # can collect multiple system in one batch
   preprocess_args:
-    preshift: true
-    prescale: false
-    prefit_ridge: 1e1
+    preshift: true # shift the descriptor by its mean
+    prescale: false # scale the descriptor by its variance (can cause convergence problem)
+    prefit_ridge: 1e1 # do a ridge regression as prefitting
     prefit_trainable: false
   train_args: 
-    decay_rate: 0.96
-    decay_steps: 500
+    decay_rate: 0.96 # learning rate decay factor
+    decay_steps: 500 # decay the learning rate every this steps
     display_epoch: 100
     n_epoch: 50000
     start_lr: 0.0003
-
-# other settings
-cleanup: false
-strict: true

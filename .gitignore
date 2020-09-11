@@ -4,6 +4,7 @@ checkpoint
 model.ckpt.*
 .vscode
 .ipynb_*
+*.swp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
