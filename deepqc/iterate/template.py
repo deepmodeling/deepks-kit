@@ -159,6 +159,7 @@ def make_run_scf(systems_train, systems_test=None, *,
         dispatcher=dispatcher,
         resources=resources,
         outlog=outlog,
+        errlog="err",
         share_folder=share_folder,
         link_share_files=link_share,
         link_prev_files=link_prev
@@ -188,6 +189,7 @@ def make_stat_scf(systems_train, systems_test=None, *,
         print_stat,
         call_kwargs=stat_args,
         outlog=outlog,
+        errlog="err",
         workdir=workdir
     )
 
@@ -272,6 +274,7 @@ def make_train_task(*, workdir=".",
         dispatcher=dispatcher,
         resources=resources,
         outlog=outlog,
+        errlog='err',
         share_folder=share_folder,
         link_share_files=link_share,
         link_prev_files=link_prev,
@@ -316,6 +319,7 @@ def make_test_train(data_paths, model_file="model.pth", *,
         test_func,
         call_kwargs=test_args,
         outlog=outlog,
+        errlog="err",
         workdir=workdir
     )
 
