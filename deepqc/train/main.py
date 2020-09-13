@@ -7,7 +7,7 @@ except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.train.model import QCNet
 from deepqc.train.reader import GroupReader
-from deepqc.train.train import DEVICE, train, preprocess
+from deepqc.train.train import train, preprocess
 from deepqc.utils import load_yaml, load_dirs
 
 
@@ -15,7 +15,7 @@ def main(train_paths, test_paths=None,
          restart=None, ckpt_file=None, 
          model_args=None, data_args=None, 
          preprocess_args=None, train_args=None, 
-         seed=None):
+         seed=None, device=None):
    
     if seed is None: 
         seed = np.random.randint(0, 2**32)
@@ -29,6 +29,8 @@ def main(train_paths, test_paths=None,
     if train_args is None: train_args = {}
     if ckpt_file is not None:
         train_args["ckpt_file"] = ckpt_file
+    if device is not None:
+        train_args["device"] = device
 
     train_paths = load_dirs(train_paths)
     print(f'# training with {len(train_paths)} system(s)')
@@ -49,10 +51,9 @@ def main(train_paths, test_paths=None,
             print(f"# `input_dim` in `model_args` does not match data",
                   "({input_dim}).", "Use the one in data.", file=sys.stderr)
         model_args["input_dim"] = input_dim
-        model = QCNet(**model_args)
+        model = QCNet(**model_args).double()
+        
     preprocess(model, g_reader, **preprocess_args)
-    model = model.double().to(DEVICE)
-
     train(model, g_reader, test_reader=test_reader, **train_args)
 
 

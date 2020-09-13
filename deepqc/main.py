@@ -54,6 +54,8 @@ def train_cli(args=None):
                         help='file to save the model parameters, default: model.pth')
     parser.add_argument('-S', '--seed', type=int,
                         help='use specified seed in initialization and training')
+    parser.add_argument("-D", "--device",
+                        help="device name used in training the model")    
     args = parser.parse_args(args)
     
     if hasattr(args, "input"):
