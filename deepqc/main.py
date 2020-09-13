@@ -121,23 +121,23 @@ def scf_cli(args=None):
                         help="input molecule systems, can be xyz files or folders with npy data")
     parser.add_argument("-m", "--model-file",
                         help="file of the trained model")
+    parser.add_argument("-d", "--dump-dir",
+                        help="dir of dumped files")
+    parser.add_argument("-v", "--verbose", type=int, choices=range(0,6),
+                        help="output level of calculation information")
+    parser.add_argument("-F", "--dump-fields", nargs="*",
+                        help="fields to be dumped into the folder") 
     parser.add_argument("-B", "--basis",
                         help="basis set used to solve the model") 
     parser.add_argument("-P", "--proj_basis",
                         help="basis set used to project dm, must match with model")   
     parser.add_argument("-D", "--device",
                         help="device name used in nn model inference")               
-    parser.add_argument("-d", "--dump-dir",
-                        help="dir of dumped files")
-    parser.add_argument("-F", "--dump-fields", nargs="*",
-                        help="fields to be dumped into the folder") 
     group0 = parser.add_mutually_exclusive_group()   
     group0.add_argument("-G", "--group", action='store_true', dest="group",
-                        help="group results for all systems, only works for same system")
+                        help="group results for all systems, only works for same number of atoms")
     group0.add_argument("-NG", "--no-group", action='store_false', dest="group",
                         help="Do not group results for different systems (default behavior)")
-    parser.add_argument("-v", "--verbose", type=int, choices=range(0,10),
-                        help="output calculation information")
     parser.add_argument("-X", "--scf-xc",
                         help="base xc functional used in scf equation, default is HF")        
     parser.add_argument("--scf-conv-tol", type=float,

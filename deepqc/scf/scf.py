@@ -95,7 +95,7 @@ class DeepSCF(dft.rks.RKS):
             vhf = self.get_veff(dm=dm)
         etot, e2 = self.energy_elec0(dm, h1e, vhf.v0)
         ec = vhf.ec
-        logger.debug(self, f'Emod = {ec}')
+        logger.debug(self, f'Emodel = {ec}')
         return (etot+ec).real, e2+ec
     
     def get_fock(self, h1e=None, s1e=None, vhf=None, dm=None, cycle=-1, 
