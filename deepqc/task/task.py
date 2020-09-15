@@ -31,7 +31,8 @@ class AbstructStep(object):
 class AbstructTask(AbstructStep):
     def __init__(self, workdir='.', backup=False, prev_task=None,
                  prev_folder=None, link_prev_files=None, copy_prev_files=None, 
-                 share_folder=None, link_share_files=None, copy_share_files=None):
+                 share_folder=None, link_share_files=None, copy_share_files=None,
+                 link_abs_files=None, copy_abs_files=None):
         # workdir has to be relative in order to be chained
         # prev_task is dereferenced to folder dynamically.
         # folders are absolute.
@@ -45,6 +46,8 @@ class AbstructTask(AbstructStep):
         self.copy_prev_files = check_list(copy_prev_files)
         self.link_share_files = check_list(link_share_files)
         self.copy_share_files = check_list(copy_share_files)
+        self.link_abs_files = check_list(link_abs_files)
+        self.copy_abs_files = check_list(copy_abs_files)
         
     def preprocess(self):
         create_dir(self.workdir, self.backup)
@@ -62,6 +65,12 @@ class AbstructTask(AbstructStep):
         for f in self.copy_share_files:
             (fsrc, fdst) = (f, f) if isinstance(f, str) else f
             copy_file(self.share_folder / fsrc, self.workdir / fdst)
+        for f in self.link_abs_files:
+            (fsrc, fdst) = (f, os.path.basename(f)) if isinstance(f, str) else f
+            link_file(fsrc, self.workdir / fdst, use_abs=True)
+        for f in self.copy_abs_files:
+            (fsrc, fdst) = (f, os.path.basename(f)) if isinstance(f, str) else f
+            copy_file(fsrc, self.workdir / fdst)
     
     def execute(self):
         raise NotImplementedError

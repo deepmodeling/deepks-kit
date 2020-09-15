@@ -1,7 +1,9 @@
 import os
 import sys
 import numpy as np
-from deepqc.utils import load_sys_paths, check_list
+from glob import glob
+from deepqc.utils import check_list
+from deepqc.utils import flat_file_list, load_sys_paths
 from deepqc.task.task import PythonTask, ShellTask
 from deepqc.task.task import BatchTask, GroupBatchTask
 from deepqc.task.workflow import Sequence
@@ -59,29 +61,53 @@ def make_cleanup(pattern="slurm-*.out", workdir=".", **task_args):
 def make_scf_task(*, workdir=".",
                   arg_file="scf_input.yaml", source_arg=None,
                   model_file="model.pth", source_model=None,
-                  systems="systems.raw", dump_dir="results", 
-                  share_folder="share", outlog="log.scf", group_data=None,
+                  systems="systems.raw", link_systems=True, 
+                  dump_dir="results", share_folder="share", 
+                  outlog="log.scf", group_data=None,
                   dispatcher=None, resources=None, 
                   python="python", **task_args):
     # set up basic args
     command = SCF_CMD.format(python=python)
     link_share = task_args.pop("link_share_files", [])
     link_prev = task_args.pop("link_prev_files", [])
+    link_abs = task_args.pop("link_abs_files", [])
+    forward_files = task_args.pop("forward_files", [])
+    backward_files = task_args.pop("backward_files", [])
     #set up optional args
     if arg_file:
         command += f" {arg_file}"
         if source_arg is not None:
             link_share.append((source_arg, arg_file))
+        forward_files.append(arg_file)
     if model_file:
         command += f" -m {model_file}"
-        if source_model is not None:
-            link_prev.append((source_model, model_file))
+        if model_file.upper() != "NONE":
+            if source_model is not None:
+                link_prev.append((source_model, model_file))
+            forward_files.append(model_file)
     if systems:
-        if not isinstance(systems, str):
-            systems = " ".join(check_list(systems, nullable=False))
-        command += f" -s {systems}"
+        # check system paths and make forward files
+        sys_paths = [os.path.abspath(s) for s in load_sys_paths(systems)]
+        sys_base = [s.rstrip(os.path.sep).rstrip(".xyz") for s in sys_paths]
+        sys_name = [os.path.basename(s) for s in sys_base]
+        if link_systems:
+            target_dir = "systems"
+            src_files = sum((glob(f"{base}*") for base in sys_base), [])
+            for fl in src_files:
+                dst = os.path.join(target_dir, os.path.basename(fl))
+                link_abs.append((fl, dst))
+            forward_files.append(target_dir)
+            sys_str= os.path.join(target_dir, "*")
+        else: # cannot forward files here
+            sys_str = " ".join(sys_paths)
+        command += f" -s {sys_str}"
     if dump_dir:
         command += f" -d {dump_dir}"
+        if systems:
+            for nm in sys_name:
+                backward_files.append(os.path.join(dump_dir, nm))
+        else:  # backward whole folder, may cause problem
+            backward_files.append(dump_dir)
     if group_data is not None:
         command += " -G" if group_data else " -NG"
     # make task
@@ -94,6 +120,9 @@ def make_scf_task(*, workdir=".",
         share_folder=share_folder,
         link_share_files=link_share,
         link_prev_files=link_prev,
+        link_abs_files=link_abs,
+        forward_files=forward_files,
+        backward_files=backward_files,
         **task_args
     )
 
@@ -131,7 +160,7 @@ def make_run_scf(systems_train, systems_test=None, *,
                       arg_file="../scf_input.yaml", source_arg=None,
                       model_file=model_file, source_model=None,
                       dump_dir=f"../{train_dump}", group_data=group_data,
-                      resources=sub_res, python=python)
+                      link_systems=True, resources=sub_res, python=python)
         for i, sset in enumerate(train_sets)
     ]
     tst_tasks = [
@@ -139,7 +168,7 @@ def make_run_scf(systems_train, systems_test=None, *,
                       arg_file="../scf_input.yaml", source_arg=None,
                       model_file=model_file, source_model=None,
                       dump_dir=f"../{test_dump}", group_data=group_data, 
-                      resources=sub_res, python=python)
+                      link_systems=True, resources=sub_res, python=python)
         for i, sset in enumerate(test_sets)
     ]
     # set up optional args
@@ -245,25 +274,32 @@ def make_train_task(*, workdir=".",
     command = TRN_CMD.format(python=python)
     link_share = task_args.pop("link_share_files", [])
     link_prev = task_args.pop("link_prev_files", [])
+    forward_files = task_args.pop("forward_files", [])
+    backward_files = task_args.pop("backward_files", [])
     # set up optional args
     if arg_file:
         command += f" {arg_file}"
         if source_arg is not None:
             link_share.append((source_arg, arg_file))
+        forward_files.append(arg_file)
     if restart:
         command += f" -r {restart}"
         if source_model is not None:
             link_prev.append((source_model, restart))
+        forward_files.append(restart)
     if data_train:
         command += f" -d {data_train}" + ("" if group_data else "/*")
         if source_train is not None:
             link_prev.append((source_train, data_train))
+        forward_files.append(data_train)
     if data_test:
         command += f" -t {data_test}" + ("" if group_data else "/*")
         if source_test is not None:
             link_prev.append((source_test, data_test))
+        forward_files.append(data_test)
     if save_model:
         command += f" -o {save_model}"
+        backward_files.append(save_model)
     if resources is None:
         resources = {}
     resources = {**DEFAULT_TRN_RES, **resources}
@@ -278,6 +314,8 @@ def make_train_task(*, workdir=".",
         share_folder=share_folder,
         link_share_files=link_share,
         link_prev_files=link_prev,
+        forward_files=forward_files,
+        backward_files=backward_files,
         **task_args
     )
 
