@@ -47,6 +47,13 @@ DEFAULT_TRN_RES = {
 }
 
 
+def check_system_names(systems):
+    sys_names = [os.path.basename(s).rstrip(os.path.sep).rstrip(".xyz") 
+                    for s in systems]
+    if len(set(sys_names)) != len(systems):
+        raise ValueError("Systems have duplicated base names. Not supported yet.")
+
+
 def make_cleanup(pattern="slurm-*.out", workdir=".", **task_args):
     pattern = check_list(pattern)
     pattern = " ".join(pattern)
@@ -142,6 +149,8 @@ def make_run_scf(systems_train, systems_test=None, *,
         systems_test.append(systems_train[-1])
         # if len(systems_train) > 1:
         #     del systems_train[-1]
+    check_system_names(systems_train)
+    check_system_names(systems_test)
     # split systems into groups
     nsys_trn = len(systems_train)
     nsys_tst = len(systems_test)
