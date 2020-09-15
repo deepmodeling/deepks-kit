@@ -5,7 +5,8 @@ from glob import glob
 class LocalSession (object) :
     def __init__ (self, jdata) :
         self.work_path = os.path.abspath(jdata['work_path'])
-        assert(os.path.exists(self.work_path))
+        os.makedirs(self.work_path, exist_ok=True)
+        # assert(os.path.exists(self.work_path))
 
     def get_work_root(self) :
         return self.work_path
@@ -95,13 +96,9 @@ class LocalContext(object) :
             local_job = os.path.join(self.local_root, ii)
             remote_job = os.path.join(self.remote_root, ii)
             flist = remote_down_files
-            if any("*" in fn for fn in flist):
-                os.chdir(remote_job)
-                flist = sum(map(glob, flist), [])
-                os.chdir(cwd)
             if back_error :
                 os.chdir(remote_job)
-                flist += glob('error*')                        
+                flist += glob('err*')                        
                 os.chdir(cwd)
             for jj in flist :
                 rfile = os.path.join(remote_job, jj)
