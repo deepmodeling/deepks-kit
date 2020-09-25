@@ -121,7 +121,12 @@ class QCNet(nn.Module):
     
     @staticmethod
     def load_dict(checkpoint, strict=False):
-        model = QCNet(**checkpoint["init_args"])
+        init_args = checkpoint["init_args"]
+        if "layer_sizes" in init_args:
+            layers = init_args.pop("layer_sizes")
+            init_args["input_dim"] = layers[0]
+            init_args["hidden_sizes"] = layers[1:-1]
+        model = QCNet(**init_args)
         model.load_state_dict(checkpoint['state_dict'], strict=strict)
         return model
 
