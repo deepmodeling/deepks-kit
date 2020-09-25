@@ -141,14 +141,14 @@ def get_with_prefix(p, base=None, prefer=None, nullable=False):
 def link_file(src, dst, use_abs=False):
     src, dst = Path(src), Path(dst)
     assert src.exists(), f'{src} does not exist'
-    src = os.path.abspath(src) if use_abs else os.path.relpath(src, dst.parent)
+    src_path = os.path.abspath(src) if use_abs else os.path.relpath(src, dst.parent)
     if not dst.exists():
         if not dst.parent.exists():
             os.makedirs(dst.parent)
-        os.symlink(src, dst)
+        os.symlink(src_path, dst)
     elif not os.path.samefile(src, dst):
         os.remove(dst)
-        os.symlink(src, dst)
+        os.symlink(src_path, dst)
 
 
 def copy_file(src, dst):
