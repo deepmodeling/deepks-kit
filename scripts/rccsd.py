@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #SBATCH -N 1
-#SBATCH -c 10
+#SBATCH -c 4
 #SBATCH -t 24:00:00
 #SBATCH --mem=32G
 
@@ -24,6 +24,8 @@ def parse_xyz(filename, basis='ccpvdz', verbose=False):
 
 def calc_cc(mol):
     mf = scf.RHF(mol).run()
+    if not mf.converged:
+        return
     mycc = mf.CCSD().run()
     etot = mycc.e_tot
     ccdm = np.einsum('pi,ij,qj->pq', mf.mo_coeff, mycc.make_rdm1(), mf.mo_coeff.conj())
@@ -45,7 +47,11 @@ if __name__ == "__main__":
     for fn in args.files:
         tic = time.time()
         mol = parse_xyz(fn, args.basis, args.verbose)
-        etot, ccdm, force = calc_cc(mol)
+        res = calc_cc(mol)
+        if res is None:
+            print(fn, f"failed, SCF does not converge")
+            continue
+        etot, ccdm, force = res
         if args.dump_dir is None:
             dump_dir = os.path.dirname(fn)
         else:
