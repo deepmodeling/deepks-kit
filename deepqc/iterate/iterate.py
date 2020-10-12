@@ -208,7 +208,7 @@ def make_iterate(systems_train=None, systems_test=None,
         init_folder=os.path.join(share_folder, "init")
         check_share_folder(init_model, MODEL_FILE, init_folder)
         iterate.set_init_folder(init_folder)
-    else: # otherwise, make an init iteration to train the first model
+    elif init_scf or init_train: # otherwise, make an init iteration to train the first model
         init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
         scf_init = make_scf(
