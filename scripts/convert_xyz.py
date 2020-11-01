@@ -68,7 +68,7 @@ def load_system(xyz_file):
 
 
 def dump_systems(xyz_files, dump_dir, ext_type=False):
-    print(f"saving to {dump_dir} ... ", end="")
+    print(f"saving to {dump_dir} ... ", end="", flush=True)
     os.makedirs(dump_dir, exist_ok=True)
     if not xyz_files:
         print("empty list! did nothing")
@@ -92,7 +92,7 @@ def dump_systems(xyz_files, dump_dir, ext_type=False):
     if not all(dm is None for dm in a_dm):
         assert not any(dm is None for dm in a_dm)
         np.save(os.path.join(dump_dir, "dm.npy"), a_dm)
-    print(f"finished")
+    print(f"finished", flush=True)
     return
 
 
@@ -115,8 +115,8 @@ def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", ext_type=Fa
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description="convert .xyz files and corresponding properties"
-                    "into systems with .npy files grouped in folders",
+        description="convert .xyz files and corresponding properties "
+                    "into systems with .npy files grouped in folders.",
         argument_default=argparse.SUPPRESS)
     parser.add_argument("xyz_files", metavar='FILE', nargs="+", 
                         help="input xyz files")

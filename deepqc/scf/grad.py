@@ -56,7 +56,6 @@ class Gradients(grad_base.Gradients):
         assert self.de is not None and self.dec is not None
         return self.de - self.dec
         
-
     def t_get_pulay(self, atom_id, t_dm):
         """calculate pulay force in torch tensor"""
         # mask to select specifc atom contribution from ipovlp

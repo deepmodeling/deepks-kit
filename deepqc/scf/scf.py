@@ -176,8 +176,8 @@ class DeepSCF(dft.rks.RKS):
         return proj.reshape(nao, natm, pnao // natm)
 
     def nuc_grad_method(self):
-        if self.net is None:
-            return super().nuc_grad_method()
+        # if self.net is None:
+        #     return super().nuc_grad_method()
         from deepqc.scf.grad import Gradients
         return Gradients(self)
 
