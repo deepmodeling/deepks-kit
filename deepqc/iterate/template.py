@@ -3,7 +3,8 @@ import sys
 import numpy as np
 from glob import glob
 from deepqc.utils import check_list
-from deepqc.utils import flat_file_list, load_sys_paths
+from deepqc.utils import flat_file_list
+from deepqc.utils import get_sys_name, load_sys_paths
 from deepqc.task.task import PythonTask, ShellTask
 from deepqc.task.task import BatchTask, GroupBatchTask
 from deepqc.task.workflow import Sequence
@@ -48,8 +49,7 @@ DEFAULT_TRN_RES = {
 
 
 def check_system_names(systems):
-    sys_names = [os.path.basename(s).rstrip(os.path.sep).rstrip(".xyz") 
-                    for s in systems]
+    sys_names = [get_sys_name(os.path.basename(s)) for s in systems]
     if len(set(sys_names)) != len(systems):
         raise ValueError("Systems have duplicated base names. Not supported yet.")
 
@@ -95,7 +95,7 @@ def make_scf_task(*, workdir=".",
     if systems:
         # check system paths and make forward files
         sys_paths = [os.path.abspath(s) for s in load_sys_paths(systems)]
-        sys_base = [s.rstrip(os.path.sep).rstrip(".xyz") for s in sys_paths]
+        sys_base = [get_sys_name(s) for s in sys_paths]
         sys_name = [os.path.basename(s) for s in sys_base]
         if link_systems:
             target_dir = "systems"

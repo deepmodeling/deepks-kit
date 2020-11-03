@@ -8,7 +8,8 @@ try:
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.utils import check_list, check_array
-from deepqc.utils import load_array, load_yaml, get_with_prefix
+from deepqc.utils import load_array, load_yaml
+from deepqc.utils import get_sys_name, get_with_prefix
 
 
 def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
@@ -86,7 +87,7 @@ def load_stat(systems, dump_dir,
     e_err = []
     f_err = []
     for fl in systems:
-        lbase = fl.rstrip(os.path.sep).rstrip(".xyz")
+        lbase = get_sys_name(fl)
         rbase = os.path.join(dump_dir, os.path.basename(lbase))
         if with_conv:
             try:
@@ -116,7 +117,7 @@ def load_stat_grouped(systems, dump_dir=".",
                       with_conv=True, with_e=True, e_name="e_cf", 
                       with_f=True, f_name="f_cf"):
     systems = check_list(systems)
-    lbases = [fl.rstrip(os.path.sep).rstrip(".xyz") for fl in systems]
+    lbases = [get_sys_name(fl) for fl in systems]
     if with_conv:
         c_res = load_array(get_with_prefix("conv", dump_dir, ".npy"))
     if with_e:

@@ -15,7 +15,7 @@ from deepqc.train.model import QCNet
 from deepqc.utils import check_list, flat_file_list
 from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
-from deepqc.utils import get_with_prefix
+from deepqc.utils import get_sys_name, get_with_prefix
 
 DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
 
@@ -83,7 +83,7 @@ def system_iter(path, labels=None):
     """
     if labels is None:
         labels = set()
-    base = path.rstrip(os.path.sep).rstrip(".xyz")
+    base = get_sys_name(path)
     label_paths = {lb: get_with_prefix(lb, base, prefer=".npy") for lb in labels}
     # if xyz, will yield single frame. Assume all labels are single frame
     if is_xyz(path):
@@ -225,7 +225,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             res_list.append(result)
 
         if not group:
-            sub_dir = os.path.join(dump_dir, os.path.basename(fl).rstrip(".xyz"))
+            sub_dir = os.path.join(dump_dir, get_sys_name(os.path.basename(fl)))
             dump_meta(sub_dir, meta)
             dump_data(sub_dir, **collect_fields(fields, meta, res_list))
             res_list = []

@@ -112,6 +112,14 @@ def get_abs_path(p):
         return Path(p).absolute()
 
 
+def get_sys_name(p):
+    if p.endswith(os.path.sep):
+        return p.rstrip(os.path.sep)
+    if p.endswith(".xyz"):
+        return p[:-4]
+    return p
+
+
 def get_with_prefix(p, base=None, prefer=None, nullable=False):
     """
     Get file path by searching its prefix.
