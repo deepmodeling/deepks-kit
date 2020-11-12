@@ -4,4 +4,4 @@ log.*
 err.*
 RECORD
 PID
-test_res
+test_results
