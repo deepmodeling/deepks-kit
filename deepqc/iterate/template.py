@@ -80,6 +80,7 @@ def make_scf_task(*, workdir=".",
     link_abs = task_args.pop("link_abs_files", [])
     forward_files = task_args.pop("forward_files", [])
     backward_files = task_args.pop("backward_files", [])
+    sys_name = None
     #set up optional args
     if arg_file:
         command += f" {arg_file}"
@@ -110,7 +111,7 @@ def make_scf_task(*, workdir=".",
         command += f" -s {sys_str}"
     if dump_dir:
         command += f" -d {dump_dir}"
-        if systems:
+        if sys_name:
             for nm in sys_name:
                 backward_files.append(os.path.join(dump_dir, nm))
         else:  # backward whole folder, may cause problem
@@ -255,13 +256,12 @@ def make_scf(systems_train, systems_test=None, *,
         train_dump=train_dump, test_dump=test_dump, workdir=".", 
         outlog="log.data", group_data=False
     )
+    # concat
+    seq = [run_scf, post_scf]
     if cleanup:
         clean_scf = make_cleanup(
             ["slurm-*.out", "task.*/err", "fin.record"],
             workdir=".")
-    # concat
-    seq = [run_scf, post_scf]
-    if cleanup:
         seq.append(clean_scf)
     # make sequence
     return Sequence(
@@ -389,13 +389,12 @@ def make_train(source_train="data_train", source_test="data_test", *,
         model_file=save_model, output_prefix="test", group_results=True,
         workdir=".", outlog="log.test"
     )
+    # concat
+    seq = [run_train, post_train]
     if cleanup:
         clean_train = make_cleanup(
             ["slurm-*.out", "err", "fin.record", "tag_*finished"],
             workdir=".")
-    # concat
-    seq = [run_train, post_train]
-    if cleanup:
         seq.append(clean_train)
     # make sequence
     return Sequence(
