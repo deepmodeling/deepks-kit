@@ -39,7 +39,7 @@ def make_evaluator(force_factor=0, loss_fn=nn.MSELoss(), device=DEVICE):
 
 def preprocess(model, g_reader, 
                 preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
-                prefit=True, prefit_ridge=1, prefit_trainable=False):
+                prefit=True, prefit_ridge=10, prefit_trainable=False):
     shift = model.input_shift.cpu().detach().numpy()
     scale = model.input_scale.cpu().detach().numpy()
     if preshift or prescale:
