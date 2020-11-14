@@ -89,7 +89,11 @@ def load_array(file):
     elif "npz" in ext:
         raise NotImplementedError
     else:
-        return np.loadtxt(file)
+        try:
+            arr = np.loadtxt(file)
+        except ValueError:
+            arr = np.loadtxt(file, dtype=str)
+        return arr
 
 
 def parse_xyz(filename):

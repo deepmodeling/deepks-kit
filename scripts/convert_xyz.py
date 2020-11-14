@@ -25,20 +25,24 @@ def parse_xyz(filename):
         natom = int(fp.readline())
         comments = fp.readline().strip()
         atom_str = fp.readlines()
-    atom_list = [a.split() for a in atom_str]
+    atom_list = [a.split() for a in atom_str if a.strip()]
     elements = [a[0] for a in atom_list]
     coords = np.array([a[1:] for a in atom_list], dtype=float)
     return natom, comments, elements, coords
 
 
-def load_array(filename):
-    ext = os.path.splitext(filename)[-1]
+def load_array(file):
+    ext = os.path.splitext(file)[-1]
     if "npy" in ext:
-        return np.load(filename)
+        return np.load(file)
     elif "npz" in ext:
         raise NotImplementedError
     else:
-        return np.loadtxt(filename)
+        try:
+            arr = np.loadtxt(file)
+        except ValueError:
+            arr = np.loadtxt(file, dtype=str)
+        return arr
 
 
 def load_glob(pattern):

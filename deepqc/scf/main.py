@@ -17,7 +17,7 @@ from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
 from deepqc.utils import get_sys_name, get_with_prefix
 
-DEFAULT_FNAMES = ["e_cf", "e_hf", "dm_eig", "conv"]
+DEFAULT_FNAMES = {"e_cf", "e_hf", "dm_eig", "conv"}
 
 DEFAULT_HF_ARGS = {
     "conv_tol": 1e-9
@@ -29,13 +29,14 @@ DEFAULT_SCF_ARGS = {
     "diis_space": 20
 }
 
+MOL_ATTRIBUTE = {"charge"} # basis, symmetry, and more
 
 def solve_mol(mol, model, fields,
               proj_basis=None, penalties=None, device=None,
               chkfile=None, verbose=0,
               **scf_args):
-    if verbose:
-        tic = time.time()
+    
+    tic = time.time()
 
     cf = DeepSCF(mol, model, 
                  proj_basis=proj_basis, 
@@ -55,11 +56,11 @@ def solve_mol(mol, model, fields,
         res[fd.name] = fd.calc(cf)
     if fields["grad"]:
         gd = cf.nuc_grad_method().run()
-    for fd in fields["grad"]:
-        res[fd.name] = fd.calc(gd)
+        for fd in fields["grad"]:
+            res[fd.name] = fd.calc(gd)
     
+    tac = time.time()
     if verbose:
-        tac = time.time()
         print(f"time of scf: {tac - tic:6.2f}s, converged:   {cf.converged}")
 
     return meta, res
@@ -84,16 +85,21 @@ def system_iter(path, labels=None):
     if labels is None:
         labels = set()
     base = get_sys_name(path)
+    attr_paths = {at: get_with_prefix(at, base, ".npy", True) for at in MOL_ATTRIBUTE}
+    attr_paths = {k: v for k, v in attr_paths.items() if v is not None}
+    attrs = attr_paths.keys()
     label_paths = {lb: get_with_prefix(lb, base, prefer=".npy") for lb in labels}
     # if xyz, will yield single frame. Assume all labels are single frame
     if is_xyz(path):
         atom = path
+        attr_dict = {at: load_array(attr_paths[at]) for at in attrs}
         label_dict = {lb: load_array(label_paths[lb]) for lb in labels}
-        yield atom, label_dict
+        yield atom, attr_dict, label_dict
         return
     # a folder contains multiple frames data, yield one by one
     else:
         assert os.path.isdir(path), f"system {path} is neither .xyz or dir"
+        all_attrs = {at: load_array(attr_paths[at]) for at in attrs}
         all_labels = {lb: load_array(label_paths[lb]) for lb in labels}
         try:
             atom_array = load_array(get_with_prefix("atom", path, prefer=".npy"))
@@ -109,8 +115,13 @@ def system_iter(path, labels=None):
                          .reshape(1,-1).repeat(nframes, axis=0)
         for i in range(nframes):
             atom = [[e,c] for e,c in zip(elements[i], coords[i])]
+            attr_dict = {at: (all_attrs[at][i] 
+                                if all_attrs[at].ndim > 0
+                                and all_attrs[at].shape[0] == nframes
+                                else all_attrs[at]) 
+                         for at in attrs}
             label_dict = {lb: all_labels[lb][i] for lb in labels}
-            yield atom, label_dict
+            yield atom, attr_dict, label_dict
         return
 
 
@@ -120,10 +131,10 @@ def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     mol = gto.Mole()
     # change minimum max memory to 16G
     # mol.max_memory = max(16000, mol.max_memory) 
-    mol.set(**kwargs)
     mol.verbose = verbose
     mol.atom = atom
     mol.basis = basis
+    mol.set(**kwargs)
     mol.build(0,0,unit="Ang")
     return mol
 
@@ -202,14 +213,16 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print(f"basis: {basis}")
             print(f"specified scf args:\n  {scf_args}")
 
-    old_meta = None
+    meta = old_meta = None
     res_list = []
     systems = load_sys_paths(systems)
 
     for fl in systems:
         fl = fl.rstrip(os.path.sep)
-        for atom, labels in system_iter(fl, label_names):
-            mol = build_mol(atom, basis=basis, verbose=verbose, **mol_args)
+        for atom, attrs, labels in system_iter(fl, label_names):
+            mol_input = {**mol_args, "verbose":verbose, 
+                        "atom": atom, "basis": basis,  **attrs}
+            mol = build_mol(**mol_input)
             penalties = [build_penalty(pd, labels) for pd in penalty_terms]
             try:
                 meta, result = solve_mol(mol, model, fields,

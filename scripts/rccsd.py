@@ -10,7 +10,7 @@ from pyscf import gto, scf, cc
 
 BOHR = 0.52917721092
 
-def parse_xyz(filename, basis='ccpvdz', verbose=False):
+def parse_xyz(filename, basis='ccpvdz', verbose=False, **kwargs):
     with open(filename) as fp:
         natoms = int(fp.readline())
         comments = fp.readline()
@@ -18,7 +18,8 @@ def parse_xyz(filename, basis='ccpvdz', verbose=False):
     mol = gto.Mole()
     mol.verbose = 4 if verbose else 0
     mol.atom = xyz_str
-    mol.basis  = basis
+    mol.basis = basis
+    mol.set(**kwargs)
     mol.build(0,0,unit="Ang")
     return mol  
 
@@ -40,13 +41,14 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dump-dir", help="dir of dumped files, default is same dir as xyz file")
     parser.add_argument("-v", "--verbose", action='store_true', help="output calculation information")
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
+    parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
     args = parser.parse_args()
     
     if args.dump_dir is not None:
         os.makedirs(args.dump_dir, exist_ok = True)
     for fn in args.files:
         tic = time.time()
-        mol = parse_xyz(fn, args.basis, args.verbose)
+        mol = parse_xyz(fn, args.basis, args.verbose, charge=args.charge)
         res = calc_cc(mol)
         if res is None:
             print(fn, f"failed, SCF does not converge")
