@@ -17,7 +17,7 @@ DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolis
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class DeepSCF(dft.rks.RKS):
+class DSCF(dft.rks.RKS):
     # all variables and functions start with "t_" are torch related.
     # all variables and functions ends with "0" are original Hartree-Fock results
     # convention in einsum:
@@ -182,6 +182,10 @@ class DeepSCF(dft.rks.RKS):
         return Gradients(self)
 
 
+DeepSCF = DSCF
+RDSCF = DSCF
+
+
 def gen_proj_mol(mol, basis) :
     natm = mol.natm
     nao = mol.nao
@@ -223,6 +227,6 @@ def load_basis(basis):
 #         return 1e-3 * torch.sum(eigs, axis=(1,2))
     
 #     # SCF Procedure
-#     dscf = DeepSCF(mol, test_model)
+#     dscf = DSCF(mol, test_model)
 #     energy = dscf.kernel()
 #     print(energy)

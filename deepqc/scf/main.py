@@ -8,7 +8,7 @@ try:
     import deepqc
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.scf.scf import DeepSCF
+from deepqc.scf.scf import DSCF
 from deepqc.scf.fields import select_fields
 from deepqc.scf.penalty import select_penalty
 from deepqc.train.model import QCNet
@@ -38,7 +38,7 @@ def solve_mol(mol, model, fields,
     
     tic = time.time()
 
-    cf = DeepSCF(mol, model, 
+    cf = DSCF(mol, model, 
                  proj_basis=proj_basis, 
                  penalties=penalties, 
                  device=device)

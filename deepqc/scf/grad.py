@@ -175,6 +175,6 @@ def finite_difference(f, x, delta=1e-6):
 
 Grad = Gradients
 
-from deepqc.scf.scf import DeepSCF
+from deepqc.scf.scf import DSCF
 # Inject to SCF class
-DeepSCF.Gradients = lib.class_as_method(Gradients)
+DSCF.Gradients = lib.class_as_method(Gradients)
