@@ -17,17 +17,22 @@ class Gradients(grad_base.Gradients):
     
     def __init__(self, mf):
         super().__init__(mf)
+        # prepare integrals for projection and derivative
+        self.prepare_integrals()
+        # add a field to memorize the pulay term in ec
+        self.dec = None
+        self._keys.update(self.__dict__.keys())
+
+    def prepare_integrals(self):
+        mf = self.base
         self._pmol = mf._pmol
         # < mol_ao | alpha^I_rlm > by shells
         self._t_ovlp_shells = mf._t_ovlp_shells
         # \partial E / \partial (D^I_rl)_mm' by shells
-        self._t_gedm_shells = t_get_grad_dms(mf)
+        self._t_gedm_shells = _t_get_grad_dms(mf) if mf.mo_coeff is not None else None
         # < \nabla mol_ao | alpha^I_rlm >
         self._t_proj_ipovlp = torch.from_numpy(
             mf.proj_intor("int1e_ipovlp")).double().to(mf.device)
-        # add a field to memorize the pulay term in ec
-        self.dec = None
-        self._keys.update(self.__dict__.keys())
 
     def extra_force(self, atom_id, envs):
         """We calculate the pulay force caused by our atomic projection here"""
@@ -58,6 +63,8 @@ class Gradients(grad_base.Gradients):
         
     def _t_get_pulay(self, atom_id, t_dm):
         """calculate pulay force in torch tensor"""
+        if self._t_gedm_shells is None:
+            self._t_gedm_shells = _t_get_grad_dms(self.base)
         # mask to select specifc atom contribution from ipovlp
         mask = self._t_make_mask(atom_id)
         # \partial < mol_ao | aplha^I_rlm' > / \partial X^J
@@ -131,7 +138,7 @@ def make_mask(mol1, mol2, atom_id):
     return mask
 
 
-def t_get_grad_dms(mf, dm=None):
+def _t_get_grad_dms(mf, dm=None):
     # calculate \partial E / \partial (D^I_rl)_mm' by shells
     if dm is None:
         dm = mf.make_rdm1()

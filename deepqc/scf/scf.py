@@ -42,22 +42,26 @@ class DSCF(dft.rks.RKS):
         self._shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self._pbas), [])
         # total number of projected basis per atom
         self.nproj = sum(self._shell_sec)
-        # a virtual molecule to be projected on
-        self._pmol = gen_proj_mol(mol, self._pbas)
-        # < mol_ao | alpha^I_rlm >, shape=[nao x natom x nproj]
-        t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double()
-        # split the projected coeffs by shell (different r and l)
-        self._t_ovlp_shells = torch.split(t_proj_ovlp, self._shell_sec, -1)
+        # prepare overlap integrals used in projection
+        self.prepare_integrals()
 
-        # some alias to call origin methods
-        self.get_veff0 = super().get_veff
-        self.nuc_grad_method0 = super().nuc_grad_method
         # initialize penalty terms
         self.penalties = check_list(penalties)
         for pnt in self.penalties:
             pnt.init_hook(self)
         # update keys to avoid pyscf warning
         self._keys.update(self.__dict__.keys())
+
+    def prepare_integrals(self):
+        # a virtual molecule to be projected on
+        self._pmol = gen_proj_mol(self.mol, self._pbas)
+        # < mol_ao | alpha^I_rlm >, shape=[nao x natom x nproj]
+        t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double()
+        # split the projected coeffs by shell (different r and l)
+        self._t_ovlp_shells = torch.split(t_proj_ovlp, self._shell_sec, -1)
+
+    def get_veff0(self, *args, **kwargs):
+        return super().get_veff(*args, **kwargs)
 
     def energy_elec0(self, dm=None, h1e=None, vhf=None):
         if vhf is None: vhf = self.get_veff0(dm=dm)
@@ -177,11 +181,19 @@ class DSCF(dft.rks.RKS):
         # return shape [nao x natom x nproj]
         return proj.reshape(nao, natm, pnao // natm)
 
+    def reset(self, mol=None):
+        super().reset(mol)
+        self.prepare_integrals()
+        return self
+
     def nuc_grad_method(self):
         # if self.net is None:
         #     return super().nuc_grad_method()
         from deepqc.scf.grad import Gradients
         return Gradients(self)
+
+    def nuc_grad_method0(self):
+        return super().nuc_grad_method()
 
 
 DeepSCF = DSCF
