@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from pyscf import lib
+from pyscf import gto, lib
 from pyscf.grad import rks as grad_base
 
 
@@ -127,6 +127,31 @@ class Gradients(grad_base.Gradients):
         shell_gvx = [torch.einsum("bxapq,avpq->bxav", gdmx, gvdm) 
                         for gdmx, gvdm in zip(shell_gdmx, shell_gvdm)]
         return torch.cat(shell_gvx, dim=-1)
+
+    def as_scanner(self):
+        scanner = super().as_scanner()
+        # make a new version of call method
+        class NewScanner(type(scanner)):
+            def __call__(self, mol_or_geom, **kwargs):
+                if isinstance(mol_or_geom, gto.Mole):
+                    mol = mol_or_geom
+                else:
+                    mol = self.mol.set_geom_(mol_or_geom, inplace=False)
+
+                mf_scanner = self.base
+                e_tot = mf_scanner(mol)
+                self.mol = mol
+
+                if getattr(self, 'grids', None):
+                    self.grids.reset(mol)
+                # adding the following line to refresh integrals
+                self.prepare_integrals()
+                de = self.kernel(**kwargs)
+                return e_tot, de
+
+        # hecking the old scanner's method, bind the new one
+        scanner.__class__ = NewScanner
+        return scanner
 
 
 def make_mask(mol1, mol2, atom_id):
