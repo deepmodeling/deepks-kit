@@ -37,15 +37,17 @@ class DSCF(dft.rks.RKS):
         self.net = model
 
         # should be a list here, follow pyscf convention
-        self.pbas = load_basis(proj_basis)
-        # a virtual molecule to be projected on
-        self.pmol = gen_proj_mol(mol, self.pbas)
+        self._pbas = load_basis(proj_basis)
         # [1,1,1,...,3,3,3,...,5,5,5,...]
-        self.shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self.pbas), [])
+        self._shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self._pbas), [])
+        # total number of projected basis per atom
+        self.nproj = sum(self._shell_sec)
+        # a virtual molecule to be projected on
+        self._pmol = gen_proj_mol(mol, self._pbas)
         # < mol_ao | alpha^I_rlm >, shape=[nao x natom x nproj]
         t_proj_ovlp = torch.from_numpy(self.proj_ovlp()).double()
         # split the projected coeffs by shell (different r and l)
-        self.t_ovlp_shells = torch.split(t_proj_ovlp, self.shell_sec, -1)
+        self._t_ovlp_shells = torch.split(t_proj_ovlp, self._shell_sec, -1)
 
         # some alias to call origin methods
         self.get_veff0 = super().get_veff
@@ -122,21 +124,21 @@ class DSCF(dft.rks.RKS):
         if self.net is None:
             return 0., np.zeros_like(dm)
         t_dm = torch.from_numpy(dm).double()
-        t_ec, t_vc = self.t_get_ec(t_dm)
+        t_ec, t_vc = self._t_get_ec(t_dm)
         return t_ec.item(), t_vc.detach().cpu().numpy()
 
-    def t_get_ec(self, t_dm):
+    def _t_get_ec(self, t_dm):
         """return ec and vc, all inputs and outputs are pytorch tensor"""
         # (D^I_rl)_mm' = \sum_i < alpha^I_rlm | phi_i >< phi_i | aplha^I_rlm' >
         proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
-                        for po in self.t_ovlp_shells]
+                        for po in self._t_ovlp_shells]
         proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
                         for dm in proj_dms]
         ceig = torch.cat(proj_eigs, dim=-1).to(self.device) # natoms x nproj
         ec = self.net(ceig) # no batch dim here, unsqueeze(0) if needed
         grad_dms = torch.autograd.grad(ec, proj_dms)
         shell_vcs = [torch.einsum('rap,apq,saq->rs', po, gdm, po)
-                        for po, gdm in zip(self.t_ovlp_shells, grad_dms)]
+                        for po, gdm in zip(self._t_ovlp_shells, grad_dms)]
         vc = torch.stack(shell_vcs, 0).sum(0)
         return ec, vc
 
@@ -145,7 +147,7 @@ class DSCF(dft.rks.RKS):
         if dm is None:
             dm = self.make_rdm1()
         ovlp_shell = [po.detach().cpu().numpy() 
-                        for po in self.t_ovlp_shells]
+                        for po in self._t_ovlp_shells]
         # [natoms x nsph x nsph] list
         proj_dms = [np.einsum('rap,rs,saq->apq', po, dm, po)
                         for po in ovlp_shell]
@@ -163,14 +165,14 @@ class DSCF(dft.rks.RKS):
 
     def proj_intor(self, intor):
         """1-electron integrals between origin and projected basis"""
-        proj = gto.intor_cross(intor, self.mol, self.pmol) 
+        proj = gto.intor_cross(intor, self.mol, self._pmol) 
         return proj
         
     def proj_ovlp(self):
         """overlap between origin and projected basis, reshaped"""
         nao = self.mol.nao
         natm = self.mol.natm
-        pnao = self.pmol.nao
+        pnao = self._pmol.nao
         proj = self.proj_intor("int1e_ovlp")
         # return shape [nao x natom x nproj]
         return proj.reshape(nao, natm, pnao // natm)

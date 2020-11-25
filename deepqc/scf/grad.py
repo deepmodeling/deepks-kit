@@ -17,13 +17,13 @@ class Gradients(grad_base.Gradients):
     
     def __init__(self, mf):
         super().__init__(mf)
-        self.pmol = mf.pmol
+        self._pmol = mf._pmol
         # < mol_ao | alpha^I_rlm > by shells
-        self.t_ovlp_shells = mf.t_ovlp_shells
+        self._t_ovlp_shells = mf._t_ovlp_shells
         # \partial E / \partial (D^I_rl)_mm' by shells
-        self.t_gedm_shells = t_get_grad_dms(mf)
+        self._t_gedm_shells = t_get_grad_dms(mf)
         # < \nabla mol_ao | alpha^I_rlm >
-        self.t_proj_ipovlp = torch.from_numpy(
+        self._t_proj_ipovlp = torch.from_numpy(
             mf.proj_intor("int1e_ipovlp")).double().to(mf.device)
         # add a field to memorize the pulay term in ec
         self.dec = None
@@ -34,7 +34,7 @@ class Gradients(grad_base.Gradients):
         de0 = super().extra_force(atom_id, envs)
         dm = envs["dm0"]
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
-        t_dec = self.t_get_pulay(atom_id, t_dm)
+        t_dec = self._t_get_pulay(atom_id, t_dm)
         dec = t_dec.detach().cpu().numpy()
         # memorize dec results for calculate hf grad
         if self.dec is None:
@@ -56,26 +56,26 @@ class Gradients(grad_base.Gradients):
         assert self.de is not None and self.dec is not None
         return self.de - self.dec
         
-    def t_get_pulay(self, atom_id, t_dm):
+    def _t_get_pulay(self, atom_id, t_dm):
         """calculate pulay force in torch tensor"""
         # mask to select specifc atom contribution from ipovlp
-        mask = self.t_make_mask(atom_id)
+        mask = self._t_make_mask(atom_id)
         # \partial < mol_ao | aplha^I_rlm' > / \partial X^J
-        atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
+        atom_ipovlp = (self._t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
         # grad X^I w.r.t atomic overlap coeff by shells
-        govx_shells = torch.split(atom_ipovlp, self.base.shell_sec, -1)
+        govx_shells = torch.split(atom_ipovlp, self.base._shell_sec, -1)
         # \partial (D^I_rl)_mm' / \partial X^J by shells, lack of symmetrize
         gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
-                            for govx, po in zip(govx_shells, self.t_ovlp_shells)]
+                            for govx, po in zip(govx_shells, self._t_ovlp_shells)]
         # \partial E / \partial X^J by shells
         gex_shells = [torch.einsum("xapq,apq->x", gdmx + gdmx.transpose(-1,-2), gedm)
-                            for gdmx, gedm in zip(gdmx_shells, self.t_gedm_shells)]
+                            for gdmx, gedm in zip(gdmx_shells, self._t_gedm_shells)]
         # total pulay term in gradient
         return torch.stack(gex_shells, 0).sum(0)
 
-    def t_make_mask(self, atom_id):
+    def _t_make_mask(self, atom_id):
         mask = torch.from_numpy(
-                   make_mask(self.mol, self.pmol, atom_id)
+                   make_mask(self.mol, self._pmol, atom_id)
                ).double().to(self.base.device)
         return mask
 
@@ -83,21 +83,21 @@ class Gradients(grad_base.Gradients):
         if dm is None:
             dm = self.base.make_rdm1()
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
-        all_gdmx_shells = self.t_make_grad_pdm_x(t_dm)
+        all_gdmx_shells = self._t_make_grad_pdm_x(t_dm)
         if not flatten:
             return [s.detach().cpu().numpy() for s in all_gdmx_shells]
         else:
             return torch.cat([s.flatten(-2) for s in all_gdmx_shells], 
                              dim=-1).detach().cpu().numpy()
 
-    def t_make_grad_pdm_x(self, t_dm):
+    def _t_make_grad_pdm_x(self, t_dm):
         atom_gdmx_shells = []
         for atom_id in range(self.mol.natm):
-            mask = self.t_make_mask(atom_id)
-            atom_ipovlp = (self.t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
-            govx_shells = torch.split(atom_ipovlp, self.base.shell_sec, -1)
+            mask = self._t_make_mask(atom_id)
+            atom_ipovlp = (self._t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
+            govx_shells = torch.split(atom_ipovlp, self.base._shell_sec, -1)
             gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
-                                for govx, po in zip(govx_shells, self.t_ovlp_shells)]
+                                for govx, po in zip(govx_shells, self._t_ovlp_shells)]
             atom_gdmx_shells.append([gdmx + gdmx.transpose(-1,-2) for gdmx in gdmx_shells])
         # [natom (deriv atom) x 3 (xyz) x natom (proj atom) x nsph (1|3|5) x nsph] list
         all_gdmx_shells = [torch.stack(s, dim=0) for s in zip(*atom_gdmx_shells)]
@@ -107,16 +107,16 @@ class Gradients(grad_base.Gradients):
         if dm is None:
             dm = self.base.make_rdm1()
         t_dm = torch.from_numpy(dm).double().to(self.base.device)
-        return self.t_make_grad_eig_x(t_dm).detach().cpu().numpy()
+        return self._t_make_grad_eig_x(t_dm).detach().cpu().numpy()
 
-    def t_make_grad_eig_x(self, t_dm):
+    def _t_make_grad_eig_x(self, t_dm):
         # v stands for eigen values
         shell_pdm = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
-                        for po in self.t_ovlp_shells]
+                        for po in self._t_ovlp_shells]
         calc_eig = lambda dm: torch.symeig(dm, True)[0]
         shell_gvdm = [get_batch_jacobian(calc_eig, dm, dm.shape[-1]) 
                         for dm in shell_pdm]
-        shell_gdmx = self.t_make_grad_pdm_x(t_dm)
+        shell_gdmx = self._t_make_grad_pdm_x(t_dm)
         shell_gvx = [torch.einsum("bxapq,avpq->bxav", gdmx, gvdm) 
                         for gdmx, gvdm in zip(shell_gdmx, shell_gvdm)]
         return torch.cat(shell_gvx, dim=-1)
@@ -137,7 +137,7 @@ def t_get_grad_dms(mf, dm=None):
         dm = mf.make_rdm1()
     t_dm = torch.from_numpy(dm).double().to(mf.device)
     proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
-                    for po in mf.t_ovlp_shells]
+                    for po in mf._t_ovlp_shells]
     if mf.net is None:
         return [torch.zeros_like(pdm) for pdm in proj_dms]
     proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]

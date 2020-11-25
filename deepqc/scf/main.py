@@ -48,7 +48,7 @@ def solve_mol(mol, model, fields,
 
     natom = mol.natm
     nao = mol.nao
-    nproj = sum(cf.shell_sec)
+    nproj = cf.nproj
     meta = np.array([natom, nao, nproj])
 
     res = {}
