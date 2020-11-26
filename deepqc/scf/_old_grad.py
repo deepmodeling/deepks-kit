@@ -1,8 +1,6 @@
-import time
 import torch
 import numpy as np
 from pyscf import gto, lib
-from pyscf.lib import logger
 from pyscf.grad import rks as grad_base
 
 
@@ -15,7 +13,6 @@ class Gradients(grad_base.Gradients):
     #   r,s: mol basis in pyscf
     #   x  : space component of gradient
     #   v  : eigen values of projected dm
-    # see ./_old_grad.py for a more clear (but slower) implementation
     """Analytical nuclear gradient for our SCF model"""
     
     def __init__(self, mf):
@@ -28,61 +25,71 @@ class Gradients(grad_base.Gradients):
 
     def prepare_integrals(self):
         mf = self.base
+        self._pmol = mf._pmol
         # < mol_ao | alpha^I_rlm > by shells
         self._t_ovlp_shells = mf._t_ovlp_shells
+        # \partial E / \partial (D^I_rl)_mm' by shells
+        self._t_gedm_shells = _t_get_grad_dms(mf) if mf.mo_coeff is not None else None
         # < \nabla mol_ao | alpha^I_rlm >
-        t_proj_ipovlp = torch.from_numpy(mf.proj_intor("int1e_ipovlp")).double()
-        # < \nabla mol_ao | alpha^I_rlm > by shells
-        self._t_ipov_shells = torch.split(
-            t_proj_ipovlp.reshape(3, self.mol.nao, self.mol.natm, -1), 
-            self.base._shell_sec, -1)
+        self._t_proj_ipovlp = torch.from_numpy(
+            mf.proj_intor("int1e_ipovlp")).double().to(mf.device)
+
+    def extra_force(self, atom_id, envs):
+        """We calculate the pulay force caused by our atomic projection here"""
+        de0 = super().extra_force(atom_id, envs)
+        dm = envs["dm0"]
+        t_dm = torch.from_numpy(dm).double().to(self.base.device)
+        t_dec = self._t_get_pulay(atom_id, t_dm)
+        dec = t_dec.detach().cpu().numpy()
+        # memorize dec results for calculate hf grad
+        if self.dec is None:
+            self.dec = np.zeros((len(envs["atmlst"]), 3))
+        self.dec[envs["k"]] = dec
+        # return summed grads
+        return de0 + dec
     
-    def grad_elec(self, mo_energy=None, mo_coeff=None, mo_occ=None, atmlst=None):
-        de = super().grad_elec(mo_energy, mo_coeff, mo_occ, atmlst)
-        cput0 = (time.clock(), time.time())
-        dec = self.grad_pulay(self.base.make_rdm1(mo_coeff, mo_occ), atmlst)
-        logger.timer(self, 'gradients of NN pulay part', *cput0)
-        # memeorize the result to save time in get_hf
-        self.dec = self.symmetrize(dec, atmlst) if self.mol.symmetry else dec
-        return de + dec
+    def kernel(self, *args, **kwargs):
+        # do nothing additional to the original one but symmetrizing dec
+        # return exact the same thing
+        de = super().kernel(*args, **kwargs)
+        if self.mol.symmetry:
+            self.dec = self.symmetrize(self.dec, self.atmlst)
+        return de
 
     def get_hf(self):
         """return the grad given by raw Hartree Fock Hamiltonian under current dm"""
         assert self.de is not None and self.dec is not None
         return self.de - self.dec
         
-    def grad_pulay(self, dm=None, atmlst=None):
-        """additional pulay contribution of NN model resulted from projection"""
-        if dm is None:
-            dm = self.base.make_rdm1()
-        if atmlst is None:
-            atmlst = range(self.mol.natm)
-        t_dm = torch.from_numpy(dm).double()
-        t_dec = self._t_grad_pulay(t_dm, atmlst)
-        return t_dec.detach().cpu().numpy()
+    def _t_get_pulay(self, atom_id, t_dm):
+        """calculate pulay force in torch tensor"""
+        if self._t_gedm_shells is None:
+            self._t_gedm_shells = _t_get_grad_dms(self.base)
+        # mask to select specifc atom contribution from ipovlp
+        mask = self._t_make_mask(atom_id)
+        # \partial < mol_ao | aplha^I_rlm' > / \partial X^J
+        atom_ipovlp = (self._t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
+        # grad X^I w.r.t atomic overlap coeff by shells
+        govx_shells = torch.split(atom_ipovlp, self.base._shell_sec, -1)
+        # \partial (D^I_rl)_mm' / \partial X^J by shells, lack of symmetrize
+        gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
+                            for govx, po in zip(govx_shells, self._t_ovlp_shells)]
+        # \partial E / \partial X^J by shells
+        gex_shells = [torch.einsum("xapq,apq->x", gdmx + gdmx.transpose(-1,-2), gedm)
+                            for gdmx, gedm in zip(gdmx_shells, self._t_gedm_shells)]
+        # total pulay term in gradient
+        return torch.stack(gex_shells, 0).sum(0)
 
-    def _t_grad_pulay(self, t_dm, atmlst):
-        """calculate pulay part in torch tensor"""
-        t_dec = torch.zeros([self.mol.natm, 3], dtype=float)
-        # \partial E / \partial (D^I_rl)_mm' by shells
-        gedm_shells = _t_get_grad_dms(self.base)
-        for gedm, govx, pov in zip(gedm_shells, self._t_ipov_shells, self._t_ovlp_shells):
-            # contribution of projection orbitals for all atom
-            ginner = torch.einsum('xrap,rs,saq->xapq', govx, t_dm, pov) * 2
-            # contribution of atomic orbitals for all atom
-            gouter = -torch.einsum('xrap,apq,saq->xrs', govx, gedm, pov) * 2
-            for ia in atmlst:
-                bg, ed = self.mol.aoslice_by_atom()[ia, 2:]
-                # contribution of | \nabla alpha^I_rlm > and < \nabla alpha^I_rlm |
-                t_dec[ia] += torch.einsum('xpq,pq->x', ginner[:,ia], gedm[ia])
-                # contribution of < \nabla mol_ao | and | \nabla mol_ao >
-                t_dec[ia] += torch.einsum('xrs,rs->x', gouter[:,bg:ed], t_dm[bg:ed])
-        return t_dec
+    def _t_make_mask(self, atom_id):
+        mask = torch.from_numpy(
+                   make_mask(self.mol, self._pmol, atom_id)
+               ).double().to(self.base.device)
+        return mask
 
     def make_grad_pdm_x(self, dm=None, flatten=False):
         if dm is None:
             dm = self.base.make_rdm1()
-        t_dm = torch.from_numpy(dm).double()
+        t_dm = torch.from_numpy(dm).double().to(self.base.device)
         all_gdmx_shells = self._t_make_grad_pdm_x(t_dm)
         if not flatten:
             return [s.detach().cpu().numpy() for s in all_gdmx_shells]
@@ -91,27 +98,22 @@ class Gradients(grad_base.Gradients):
                              dim=-1).detach().cpu().numpy()
 
     def _t_make_grad_pdm_x(self, t_dm):
-        natm = self.mol.natm
-        # [natm (deriv atom) x 3 (xyz) x natm (proj atom) x nsph (1|3|5) x nsph] list
-        gdmx_shells = [torch.zeros([natm, 3, natm, ss, ss], dtype=float) 
-                            for ss in self.base._shell_sec]
-        for gdmx, govx, pov in zip(gdmx_shells, self._t_ipov_shells, self._t_ovlp_shells):
-            # contribution of projection for all I
-            gproj = torch.einsum('xrap,rs,saq->xapq', govx, t_dm, pov)
-            for ia in range(self.mol.natm):
-                bg, ed = self.mol.aoslice_by_atom()[ia, 2:]
-                # contribution of < \nabla mol_ao |
-                gdmx[ia] -= torch.einsum('xrap,rs,saq->xapq', govx[:,bg:ed], t_dm[bg:ed], pov)
-                # contribution of | \nabla alpha^I_rlm >
-                gdmx[ia,:,ia] += gproj[:, ia]
-            # symmetrize p and q
-            gdmx += gdmx.clone().transpose(-1,-2)
-        return gdmx_shells
+        atom_gdmx_shells = []
+        for atom_id in range(self.mol.natm):
+            mask = self._t_make_mask(atom_id)
+            atom_ipovlp = (self._t_proj_ipovlp * mask).reshape(3, self.mol.nao, self.mol.natm, -1)
+            govx_shells = torch.split(atom_ipovlp, self.base._shell_sec, -1)
+            gdmx_shells = [torch.einsum('xrap,rs,saq->xapq', govx, t_dm, po)
+                                for govx, po in zip(govx_shells, self._t_ovlp_shells)]
+            atom_gdmx_shells.append([gdmx + gdmx.transpose(-1,-2) for gdmx in gdmx_shells])
+        # [natom (deriv atom) x 3 (xyz) x natom (proj atom) x nsph (1|3|5) x nsph] list
+        all_gdmx_shells = [torch.stack(s, dim=0) for s in zip(*atom_gdmx_shells)]
+        return all_gdmx_shells
 
     def make_grad_eig_x(self, dm=None):
         if dm is None:
             dm = self.base.make_rdm1()
-        t_dm = torch.from_numpy(dm).double()
+        t_dm = torch.from_numpy(dm).double().to(self.base.device)
         return self._t_make_grad_eig_x(t_dm).detach().cpu().numpy()
 
     def _t_make_grad_eig_x(self, t_dm):
@@ -165,7 +167,7 @@ def _t_get_grad_dms(mf, dm=None):
     # calculate \partial E / \partial (D^I_rl)_mm' by shells
     if dm is None:
         dm = mf.make_rdm1()
-    t_dm = torch.from_numpy(dm).double()
+    t_dm = torch.from_numpy(dm).double().to(mf.device)
     proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
                     for po in mf._t_ovlp_shells]
     if mf.net is None:
@@ -173,7 +175,7 @@ def _t_get_grad_dms(mf, dm=None):
     proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
                     for dm in proj_dms]
     ceig = torch.cat(proj_eigs, dim=-1).unsqueeze(0) # 1 x natoms x nproj
-    ec = mf.net(ceig.to(mf.device))
+    ec = mf.net(ceig)
     grad_dms = torch.autograd.grad(ec, proj_dms)
     return grad_dms
 
@@ -205,6 +207,6 @@ def finite_difference(f, x, delta=1e-6):
 
 Grad = Gradients
 
-from deepqc.scf.scf import DSCF
-# Inject to SCF class
-DSCF.Gradients = lib.class_as_method(Gradients)
+# from deepqc.scf.scf import DSCF
+# # Inject to SCF class
+# DSCF.Gradients = lib.class_as_method(Gradients)
