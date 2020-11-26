@@ -25,7 +25,7 @@ def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
         shutil.copy(f'{systems[0]}/system.raw', dump_dir)
 
 
-def print_stat(systems=None, test_sys=None, 
+def print_stats(systems=None, test_sys=None, 
                dump_dir=None, test_dump=None, group=False,
                with_conv=True, with_e=True, e_name="e_cf", 
                with_f=True, f_name="f_cf"):
@@ -40,32 +40,32 @@ def print_stat(systems=None, test_sys=None,
                                      with_e, e_name, with_f, f_name)
         print("Training:")
         if tr_c is not None:
-            print_stat_conv(tr_c, indent=2)
+            print_stats_conv(tr_c, indent=2)
         if tr_e is not None:
             shift = tr_e.mean()
-            print_stat_e(tr_e, shift=shift, indent=2)
+            print_stats_e(tr_e, shift=shift, indent=2)
         if tr_f is not None:
-            print_stat_f(tr_f, indent=2)
+            print_stats_f(tr_f, indent=2)
     if test_sys is not None:
         ts_c, ts_e, ts_f = load_func(test_sys, test_dump, with_conv, 
                                      with_e, e_name, with_f, f_name)
         print("Testing:")
         if ts_c is not None:
-            print_stat_conv(ts_c, indent=2)
+            print_stats_conv(ts_c, indent=2)
         if ts_e is not None:
-            print_stat_e(ts_e, shift=shift, indent=2)
+            print_stats_e(ts_e, shift=shift, indent=2)
         if ts_f is not None:
-            print_stat_f(ts_f, indent=2)
+            print_stats_f(ts_f, indent=2)
     
 
-def print_stat_conv(conv, indent=0):
+def print_stats_conv(conv, indent=0):
     nsys = conv.shape[0]
     ind = " "*indent
     print(ind+f'Convergence:')
     print(ind+f'  {np.sum(conv)} / {nsys} = \t {np.mean(conv):.5f}')
 
 
-def print_stat_e(e_err, shift=None, indent=0):
+def print_stats_e(e_err, shift=None, indent=0):
     ind = " "*indent
     print(ind+"Energy:")
     print(ind+f'  ME: \t {e_err.mean()}')
@@ -74,7 +74,7 @@ def print_stat_e(e_err, shift=None, indent=0):
         print(ind+f'  MARE: \t {np.abs(e_err-shift).mean()}')
 
 
-def print_stat_f(f_err, indent=0):
+def print_stats_f(f_err, indent=0):
     ind = " "*indent
     print(ind+"Force:")
     print(ind+f'  MAE: \t {np.abs(f_err).mean()}')
@@ -139,7 +139,7 @@ def load_stat_grouped(systems, dump_dir=".",
 
 # Below are legacy tools, kept for old examples
 
-def print_stat_per_sys(err, conv=None, train_idx=None, test_idx=None):
+def print_stats_per_sys(err, conv=None, train_idx=None, test_idx=None):
     err = np.array(err).reshape(-1)
     nsys = err.shape[0]
     if conv is not None:
@@ -199,7 +199,7 @@ def collect_data(train_idx, test_idx=None,
         test_idx = np.setdiff1d(np.arange(nsys), train_idx, assume_unique=True)
     if verbose:
         print(sys_dir)
-        print_stat_per_sys(err, convs, train_idx, test_idx)
+        print_stats_per_sys(err, convs, train_idx, test_idx)
     
     np.savetxt(f'{dump_dir}/train_paths.raw', np.array(systems)[train_idx], fmt='%s')
     np.savetxt(f'{dump_dir}/test_paths.raw', np.array(systems)[test_idx], fmt='%s')
@@ -226,7 +226,7 @@ def collect_data_grouped(train_idx, test_idx=None,
         test_idx = np.setdiff1d(np.arange(nmol), train_idx, assume_unique=True)
     if verbose:
         print(sys_dir)
-        print_stat_per_sys(err.reshape(-1), conv.reshape(-1), train_idx, test_idx)
+        print_stats_per_sys(err.reshape(-1), conv.reshape(-1), train_idx, test_idx)
     
     dd = [name for name in os.listdir(sys_dir) if ".npy" in name]
     os.makedirs(f'{sys_dir}/train', exist_ok=True)
@@ -249,5 +249,5 @@ def collect_data_grouped(train_idx, test_idx=None,
 
 
 if __name__ == "__main__":
-    from deepqc.main import stat_cli as cli
+    from deepqc.main import stats_cli as cli
     cli()

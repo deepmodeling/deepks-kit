@@ -215,8 +215,8 @@ def make_stat_scf(systems_train, systems_test=None, *,
         systems_test.append(systems_train[-1])
         # if len(systems_train) > 1:
         #     del systems_train[-1]
-    # load stat function
-    from deepqc.scf.tools import print_stat
+    # load stats function
+    from deepqc.scf.stats import print_stats
     stat_args.update(
         systems=systems_train,
         test_sys=systems_test,
@@ -225,7 +225,7 @@ def make_stat_scf(systems_train, systems_test=None, *,
         group=group_data)
     # make task
     return PythonTask(
-        print_stat,
+        print_stats,
         call_kwargs=stat_args,
         outlog=outlog,
         errlog="err",

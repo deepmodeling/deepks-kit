@@ -55,7 +55,7 @@ To train a self consistent model we follow the iterative approach described in [
 For each iteration, there will be four steps using four corresponding tools provided by `deepqc`. Each step would correspond to a row in `RECORD` file, used to indicate which steps have finished. It would have three numbers. The first one correspond to the iteration number. The second one correspond to the sub-folder in the iteration and the third correspond to step in that folder.
 
 - `deepqc scf` (`X 0 0`): do the SCF calculation with given model and save the results
-- `deepqc stat` (`X 0 1`): check the SCF result and print convergence and accuracy
+- `deepqc stats` (`X 0 1`): check the SCF result and print convergence and accuracy
 - `deepqc train` (`X 1 0`): train a new model using the old one as starting point
 - `deepqc test` (`X 1 1`): test the model on all data to see the pure fitting error
 

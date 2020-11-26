@@ -10,7 +10,7 @@ import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.train.test import main as train_test
 from deepqc.scf.main import main as scf_main
-from deepqc.scf.tools import collect_data_grouped
+from deepqc.scf.stats import collect_data_grouped
 from deepqc.utils import load_yaml
 from deepqc.task.task import PythonTask
 from deepqc.task.workflow import Sequence, Iteration

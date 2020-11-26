@@ -14,7 +14,7 @@ from deepqc.task.task import BatchTask
 from deepqc.task.task import GroupBatchTask
 from deepqc.task.workflow import Sequence
 from deepqc.task.workflow import Iteration
-from deepqc.scf.tools import collect_data
+from deepqc.scf.stats import collect_data
 
 
 niter = 5

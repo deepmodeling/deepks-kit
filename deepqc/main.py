@@ -14,7 +14,7 @@ def main_cli(args=None):
                 description="A program to generate accurate energy functionals.")
     parser.add_argument("command", 
                         help="specify the sub-command to run, possible choices: "
-                             "train, test, scf, stat, iterate")
+                             "train, test, scf, stats, iterate")
     parser.add_argument("args", nargs=argparse.REMAINDER,
                         help="arguments to be passed to the sub-command")
 
@@ -27,8 +27,8 @@ def main_cli(args=None):
         sub_cli = test_cli
     elif args.command.upper() == "SCF":
         sub_cli = scf_cli
-    elif args.command.upper() == "STAT":
-        sub_cli = stat_cli
+    elif args.command.upper() == "STATS":
+        sub_cli = stats_cli
     elif args.command.upper().startswith("ITER"):
         sub_cli = iter_cli
     else:
@@ -172,10 +172,10 @@ def scf_cli(args=None):
     main(**argdict)
 
 
-def stat_cli(args=None):
+def stats_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc stat",
-                description="Print the stat of SCF results.",
+                prog="deepqc stats",
+                description="Print the stats of SCF results.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
                         help='the input yaml file used for SCF calculation')
@@ -211,8 +211,8 @@ def stat_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.scf.tools import print_stat
-    print_stat(**argdict)
+    from deepqc.scf.stats import print_stats
+    print_stats(**argdict)
 
 
 def iter_cli(args=None):
