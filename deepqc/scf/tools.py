@@ -14,7 +14,8 @@ from deepqc.utils import get_sys_name, get_with_prefix
 
 def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
     if systems is None:
-        systems = sorted(filter(os.path.isdir, map(os.path.abspath, glob.glob(f"{sys_dir}/*"))))
+        systems = sorted(filter(os.path.isdir, 
+            map(os.path.abspath, glob.glob(f"{sys_dir}/{pattern}"))))
     npy_names = list(map(os.path.basename, glob.glob(f"{systems[0]}/*.npy")))
     os.makedirs(dump_dir, exist_ok=True)
     for nm in npy_names:
@@ -118,6 +119,7 @@ def load_stat_grouped(systems, dump_dir=".",
                       with_f=True, f_name="f_cf"):
     systems = check_list(systems)
     lbases = [get_sys_name(fl) for fl in systems]
+    c_res = e_err = f_err = None
     if with_conv:
         c_res = load_array(get_with_prefix("conv", dump_dir, ".npy"))
     if with_e:
@@ -132,9 +134,7 @@ def load_stat_grouped(systems, dump_dir=".",
             load_array(get_with_prefix("force", lb, ".npy")) for lb in lbases
         ], 0).reshape(f_res.shape)
         f_err = f_lbl - f_res
-    return c_res if with_conv else None, \
-           e_err if with_e else None, \
-           f_err if with_f else None
+    return c_res, e_err, f_err
 
 
 # Below are legacy tools, kept for old examples

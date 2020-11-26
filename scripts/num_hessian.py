@@ -30,27 +30,24 @@ def calc_deriv(mol, model=None, **scfargs):
     if not cf.converged:
         raise RuntimeError("SCF not converged!")
     ff = cf.nuc_grad_method().run()
-    if mol.verbose:
+    if mol.verbose > 1:
         print(f"step time = {time.time()-tic}")
     return ff.de
 
 def make_closure(mol, model=None, **scfargs):
     refmol = mol
-    unit = refmol.unit
     def cc2de(coords):
-        mol = refmol.set_geom_(coords, inplace=False)
+        mol = refmol.set_geom_(coords, inplace=False, unit="Bohr")
         de = calc_deriv(mol, model, **scfargs)
-        if not unit.upper().startswith(("B", "AU")):
-            de /= BOHR
         return de
     return cc2de
     # scanner is not very stable. We construct new scf objects every time
-    # scanner = DSCF(mol, model).set(**scfargs).nuc_grad_method().as_scanner()
+    # scanner = DSCF(mol.set(unit="Bohr"), model).set(**scfargs).nuc_grad_method().as_scanner()
     # return lambda m: scanner(m)[-1]
 
 def calc_hessian(mol, model=None, delta=1e-6, **scfargs):
     cc2de = make_closure(mol, model, **scfargs)
-    cc0 = mol.atom_coords(unit=mol.unit)
+    cc0 = mol.atom_coords(unit="Bohr")
     hess = finite_difference(cc2de, cc0, delta).transpose((0,2,1,3))
     return hess
 
@@ -63,10 +60,10 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model-file", help="file of the trained model")
     parser.add_argument("-d", "--dump-dir", help="dir of dumped files, default is same dir as xyz file")
     parser.add_argument("-D", "--delta", default=1e-6, type=float, help="numerical difference step size")
-    parser.add_argument("-v", "--verbose", default=0, type=int, help="output calculation information")
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
     parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
-    parser.add_argument("--bohr", action="store_true", help="use Bohr as length unit")
+    parser.add_argument("-U", "--unit", default="Angstrom", help="choose length unit (Bohr or Angstrom)")
+    parser.add_argument("-v", "--verbose", default=1, type=int, help="output calculation information")
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
     args = parser.parse_args()
     
@@ -79,8 +76,6 @@ if __name__ == "__main__":
     for fn in args.files:
         tic = time.time()
         mol = gto.M(atom=fn, basis=args.basis, verbose=args.verbose, charge=args.charge, parse_arg=False)
-        if args.bohr:
-            mol.set(unit="Bohr")
         model = args.model_file
         scfargs = {}
         if args.scf_input is not None:
@@ -92,10 +87,13 @@ if __name__ == "__main__":
             else:
                 scfargs = argdict
         hess = calc_hessian(mol, model, args.delta, **scfargs)
+        if not args.unit.upper().startswith(("B", "AU")):
+            hess /= BOHR**2
         if args.dump_dir is None:
             dump_dir = os.path.dirname(fn)
         else:
             dump_dir = args.dump_dir
         dump = os.path.join(dump_dir, os.path.splitext(os.path.basename(fn))[0])
         np.save(dump+".hessian.npy", hess)
-        print(fn, f"done, time = {time.time()-tic}")
+        if args.verbose:
+            print(fn, f"done, time = {time.time()-tic}")
