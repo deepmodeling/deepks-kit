@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 #SBATCH -N 1
-#SBATCH -c 4
+#SBATCH -c 20
 #SBATCH -t 24:00:00
 #SBATCH --mem=32G
 
 import time
 import numpy as np
-from pyscf import gto
 from deepqc.utils import load_yaml
 from deepqc.scf.scf import DSCF
+from pyscf import gto, lib
 
 BOHR = 0.52917721092
 
@@ -25,10 +25,13 @@ def finite_difference(f, x, delta=1e-6):
     return res
 
 def calc_deriv(mol, model=None, **scfargs):
+    tic = time.time()
     cf = DSCF(mol, model).run(**scfargs)
     if not cf.converged:
         raise RuntimeError("SCF not converged!")
     ff = cf.nuc_grad_method().run()
+    if mol.verbose:
+        print(f"step time = {time.time()-tic}")
     return ff.de
 
 def make_closure(mol, model=None, **scfargs):
@@ -67,6 +70,10 @@ if __name__ == "__main__":
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
     args = parser.parse_args()
     
+    if args.verbose:
+        print(f"starting calculation with OMP threads: {lib.num_threads()}",
+              f"and max memory: {lib.param.MAX_MEMORY}")
+
     if args.dump_dir is not None:
         os.makedirs(args.dump_dir, exist_ok = True)
     for fn in args.files:
