@@ -9,47 +9,24 @@ import numpy as np
 from deepqc.utils import load_yaml
 from deepqc.scf.scf import DSCF
 from pyscf import gto, lib
+try:
+    from pyscf.geomopt.berny_solver import optimize
+except ImportError:
+    from pyscf.geomopt.geometric_solver import optimize
 
-BOHR = 0.52917721092
 
-def finite_difference(f, x, delta=1e-6):
-    in_shape = x.shape
-    y0 = f(x)
-    out_shape = y0.shape
-    res = np.empty(in_shape + out_shape)
-    for idx in np.ndindex(*in_shape):
-        diff = np.zeros(in_shape)
-        diff[idx] += delta
-        y1 = f(x+diff)
-        res[idx] = (y1-y0) / delta
-    return res
+def run_optim(mol, model=None, proj_basis=None, scf_args={}, conv_args={}):
+    cf = DSCF(mol, model, proj_basis=proj_basis).set(**scf_args)
+    mol_eq = optimize(cf, **conv_args)
+    return mol_eq
 
-def calc_deriv(mol, model=None, proj_basis=None, **scfargs):
-    cf = DSCF(mol, model, proj_basis=proj_basis).run(**scfargs)
-    if not cf.converged:
-        raise RuntimeError("SCF not converged!")
-    ff = cf.nuc_grad_method().run()
-    return ff.de
-
-def make_closure(mol, model=None, proj_basis=None, **scfargs):
-    refmol = mol
-    def cc2de(coords):
-        tic = time.time()
-        mol = refmol.set_geom_(coords, inplace=False, unit="Bohr")
-        de = calc_deriv(mol, model, proj_basis, **scfargs)
-        if mol.verbose > 1:
-            print(f"step time = {time.time()-tic}")
-        return de
-    return cc2de
-    # scanner is not very stable. We construct new scf objects every time
-    # scanner = DSCF(mol.set(unit="Bohr"), model).set(**scfargs).nuc_grad_method().as_scanner()
-    # return lambda m: scanner(m)[-1]
-
-def calc_hessian(mol, model=None, delta=1e-6, proj_basis=None, **scfargs):
-    cc2de = make_closure(mol, model, proj_basis, **scfargs)
-    cc0 = mol.atom_coords(unit="Bohr")
-    hess = finite_difference(cc2de, cc0, delta).transpose((0,2,1,3))
-    return hess
+def dump_xyz(filename, mol):
+    coords = mol.atom_coords(unit="Angstrom").reshape(-1,3)
+    elems = mol.elements
+    with open(filename, 'w') as fp:
+        fp.write(f"{mol.natm}\n\n")
+        for x, e in zip(coords, elems):
+            fp.write("%s %.18g %.18g %.18g\n" % (e, x[0], x[1], x[2]))
 
 
 if __name__ == "__main__":
@@ -59,13 +36,12 @@ if __name__ == "__main__":
     parser.add_argument("files", nargs="+", help="input xyz files")
     parser.add_argument("-m", "--model-file", help="file of the trained model")
     parser.add_argument("-d", "--dump-dir", help="dir of dumped files, default is same dir as xyz file")
-    parser.add_argument("-D", "--delta", default=1e-6, type=float, help="numerical difference step size")
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
     parser.add_argument("-P", "--proj_basis", help="basis set used to project dm, must match with model") 
     parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
-    parser.add_argument("-U", "--unit", default="Angstrom", help="choose length unit (Bohr or Angstrom)")
     parser.add_argument("-v", "--verbose", default=1, type=int, help="output calculation information")
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
+    parser.add_argument("--conv-input", help="yaml file to specify convergence arguments")
     args = parser.parse_args()
     
     if args.verbose:
@@ -78,23 +54,22 @@ if __name__ == "__main__":
         tic = time.time()
         mol = gto.M(atom=fn, basis=args.basis, verbose=args.verbose, charge=args.charge, parse_arg=False)
         model = args.model_file
-        scfargs = {}
+        scf_args = {}
         if args.scf_input is not None:
             argdict = load_yaml(args.scf_input)
             if "scf_args" in argdict:
-                scfargs = argdict["scf_args"]
+                scf_args = argdict["scf_args"]
                 if model is None and "model" in argdict:
                     model = argdict["model"]
             else:
-                scfargs = argdict
-        hess = calc_hessian(mol, model, args.delta, args.proj_basis, **scfargs)
-        if not args.unit.upper().startswith(("B", "AU")):
-            hess /= BOHR**2
+                scf_args = argdict
+        conv_args = load_yaml(args.conv_input) if args.conv_input is not None else {}
+        mol_eq = run_optim(mol, model, args.proj_basis, scf_args, conv_args)
         if args.dump_dir is None:
             dump_dir = os.path.dirname(fn)
         else:
             dump_dir = args.dump_dir
         dump = os.path.join(dump_dir, os.path.splitext(os.path.basename(fn))[0])
-        np.save(dump+".hessian.npy", hess)
+        dump_xyz(dump+".eq.xyz", mol_eq)
         if args.verbose:
             print(fn, f"done, time = {time.time()-tic}")
