@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser.add_argument("-P", "--proj_basis", help="basis set used to project dm, must match with model") 
     parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
     parser.add_argument("-v", "--verbose", default=1, type=int, help="output calculation information")
+    parser.add_argument("-S", "--suffix", help="suffix added to the saved xyz")
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
     parser.add_argument("--conv-input", help="yaml file to specify convergence arguments")
     args = parser.parse_args()
@@ -65,11 +66,16 @@ if __name__ == "__main__":
                 scf_args = argdict
         conv_args = load_yaml(args.conv_input) if args.conv_input is not None else {}
         mol_eq = run_optim(mol, model, args.proj_basis, scf_args, conv_args)
+        suffix = args.suffix
         if args.dump_dir is None:
             dump_dir = os.path.dirname(fn)
+            if not suffix:
+                suffix = "eq"
         else:
             dump_dir = args.dump_dir
         dump = os.path.join(dump_dir, os.path.splitext(os.path.basename(fn))[0])
-        dump_xyz(dump+".eq.xyz", mol_eq)
+        if suffix:
+            dump += f".{suffix}"
+        dump_xyz(dump+".xyz", mol_eq)
         if args.verbose:
             print(fn, f"done, time = {time.time()-tic}")
