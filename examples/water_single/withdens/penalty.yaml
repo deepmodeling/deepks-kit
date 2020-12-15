@@ -1,0 +1,22 @@
+# overwriting the base config
+n_iter: 5
+
+# adding penalty
+scf_input: # can also be specified by a separete file
+  basis: ccpvdz
+  # this is for force training
+  dump_fields: [e_hf, e_cf, dm_eig, conv, f_hf, f_cf, grad_vx, l_f_delta, l_e_delta]
+  verbose: 1
+  mol_args:
+    incore_anyway: True
+  scf_args:
+    conv_tol: 1e-6
+    conv_tol_grad: 1e-2
+    level_shift: 0.1
+    diis_space: 20
+    conv_check: false # pyscf conv_check has a bug
+  penalty_terms:
+    - type: coulomb
+      required_labels: dm
+      strength: 1 # can be larger, like 5 
+      random: true

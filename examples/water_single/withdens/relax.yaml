@@ -1,0 +1,2 @@
+# overwriting the base config to run longer
+n_iter: 10
