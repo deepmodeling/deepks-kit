@@ -24,6 +24,28 @@ def parse_xyz(filename, basis='ccpvdz', **kwargs):
     return mol  
 
 
+def get_method(name: str):
+    lname = name.lower()
+    if lname == "mp2":
+        return calc_mp2
+    if lname == "ccsd":
+        return calc_ccsd
+    if lname == "ccsd_t" or lname == "ccsd(t)":
+        return calc_ccsd_t
+    raise ValueError(f"Unknown calculation method: {name}")
+
+
+def calc_mp2(mol, **scfargs):
+    import pyscf.mp
+    mf = scf.RHF(mol).run(**scfargs)
+    if not mf.converged:
+        return
+    postmf = pyscf.mp.MP2(mf).run()
+    etot = postmf.e_tot
+    grad = postmf.nuc_grad_method().kernel()
+    return etot, -grad/BOHR, None
+
+
 def calc_ccsd(mol, **scfargs):
     import pyscf.cc
     mf = scf.RHF(mol).run(**scfargs)
@@ -36,6 +58,19 @@ def calc_ccsd(mol, **scfargs):
     return etot, -grad/BOHR, ccdm
 
 
+def calc_ccsd_t(mol, **scfargs):
+    import pyscf.cc
+    import pyscf.grad.ccsd_t as ccsd_t_grad
+    mf = scf.RHF(mol).run(**scfargs)
+    if not mf.converged:
+        return
+    mycc = mf.CCSD().run()
+    et_correction = mycc.ccsd_t()
+    etot = mycc.e_tot + et_correction
+    grad = ccsd_t_grad.Gradients(mycc).kernel()
+    return etot, -grad/BOHR, None
+
+
 if __name__ == "__main__":
     import argparse
     import os
@@ -45,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", default=1, type=int, help="output calculation information")
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
     parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
+    parser.add_argument("-M", "--method", default="ccsd", help="method used to do the calculation. support MP2, CCSD and CCSD(T)")
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
     args = parser.parse_args()
     
@@ -55,11 +91,12 @@ if __name__ == "__main__":
             scfargs = yaml.safe_load(fp)        
     if args.dump_dir is not None:
         os.makedirs(args.dump_dir, exist_ok = True)
+    calculator = get_method(args.method)
 
     for fn in args.files:
         tic = time.time()
         mol = parse_xyz(fn, args.basis, verbose=args.verbose, charge=args.charge)
-        res = calc_ccsd(mol, **scfargs)
+        res = calculator(mol, **scfargs)
         if res is None:
             print(fn, f"failed, SCF does not converge")
             continue
