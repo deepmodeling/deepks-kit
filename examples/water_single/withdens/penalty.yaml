@@ -16,7 +16,8 @@ scf_input: # can also be specified by a separete file
     diis_space: 20
     conv_check: false # pyscf conv_check has a bug
   penalty_terms:
+    # Coulomb loss as penalty, random strength 
     - type: coulomb
-      required_labels: dm
+      required_labels: dm # where the label is stored (sysfolder/dm.npy)
       strength: 1 # can be larger, like 5 
-      random: true
+      random: true # actual strength vary between [0, strength]

@@ -4,7 +4,8 @@ This is an example on how to use `deepqc` library to train a energy functional f
 
 - `systems` contains all data that has been prepared in `deepqc` format.
 - `init` contains input files used to train a (perturbative) energy model (DeePHF).
-- `iter` contains input files used to train a self consistent model iteratively (DeePKS)
+- `iter` contains input files used to train a self consistent model iteratively (DeePKS).
+- `withdens` contains input files used to train a SCF model with density labels.
 
 
 ## Prepare data
@@ -48,7 +49,7 @@ deepqc iterate machines.yaml params.yaml systems.yaml
 where `deepqc` is a shortcut for `python -m deepqc`. Or one can directly use `./run.sh` to run it in background. Make sure you are in `init` folder before you run the command.
 
 
-# Train a self consistent model
+## Train a self consistent model
 
 To train a self consistent model we follow the iterative approach described in [DeePKS paper](https://arxiv.org/pdf/2008.00167.pdf). We provide `deepqc iterate` as a tool to do the iteration automatically. Same as above, the example input file and execution scripts can be found in `iter` folder. Note here instead of splitting the input file into three, we combined all input settings in one `args.yaml` file, to show that `deepqc iterate` can take variable number of input files. The file provided at last will have highest priority.
 
@@ -66,3 +67,18 @@ deepqc iterate args.yaml
 Make sure you are in `iter` folder before you run the command.
 
 One can check `iter.*/00.scf/log.data` for stats of SCF results, `iter*/01.train/log.train` for training curve and `iter*/01.train/log.test` for model prediction of $E_\delta$ (e_delta).
+
+
+## Train a self consistent model with density labels
+
+We provide in `withdens` folder a set of inputs of using density labels during the iterative training (as additional penalty terms in the Hamiltonian). We again follow the [DeePKS paper](https://arxiv.org/pdf/2008.00167.pdf) to add first a randomized penalty using Coulomb loss for 5 iterations and then remove it and relax for another 5 iterations.
+
+Most of the inputs are same as the normal iterative training case described in the last section, which we put in the `base.yaml` Only that we are overwritten `scf_input` in `penalty.yaml` to add the penalties. Also we change the number of iteration `n_iter` in both `penalty.yaml` and `relax.yaml`.
+
+`pipe.sh` shows how we combine the different inputs together. A simplified version is as follows:
+```
+deepqc iterate base.yaml penalty.yaml && deepqc iterate base.yaml relax.yaml
+```
+The `iterate` command can take multiple input files and the latter ones would overwrite the former ones.
+
+Again, running `./run.sh` in the `withdens` folder would run the commands in the background. You can check the results in `iter.*` folders like above.
