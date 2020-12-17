@@ -23,9 +23,13 @@ def parse_xyz(filename, basis='ccpvdz', **kwargs):
     mol.build(0,0,unit="Ang")
     return mol  
 
-
 def get_method(name: str):
     lname = name.lower()
+    if lname == "hf":
+        return calc_hf
+    if lname[:3] == "dft":
+        xc = lname.split("@")[1]
+        return lambda mol, **scfargs: calc_dft(mol, xc, **scfargs)
     if lname == "mp2":
         return calc_mp2
     if lname == "ccsd":
@@ -34,10 +38,28 @@ def get_method(name: str):
         return calc_ccsd_t
     raise ValueError(f"Unknown calculation method: {name}")
 
+def calc_hf(mol, **scfargs):
+    mf = scf.HF(mol).run(**scfargs)
+    if not mf.converged:
+        return
+    etot = mf.e_tot
+    grad = mf.nuc_grad_method().kernel()
+    rdm = mf.make_rdm1()
+    return etot, -grad/BOHR, rdm
+
+def calc_dft(mol, xc="pbe", **scfargs):
+    from pyscf import dft
+    mf = dft.KS(mol, xc).run(**scfargs)
+    if not mf.converged:
+        return
+    etot = mf.e_tot
+    grad = mf.nuc_grad_method().kernel()
+    rdm = mf.make_rdm1()
+    return etot, -grad/BOHR, rdm
 
 def calc_mp2(mol, **scfargs):
     import pyscf.mp
-    mf = scf.RHF(mol).run(**scfargs)
+    mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
         return
     postmf = pyscf.mp.MP2(mf).run()
@@ -45,10 +67,9 @@ def calc_mp2(mol, **scfargs):
     grad = postmf.nuc_grad_method().kernel()
     return etot, -grad/BOHR, None
 
-
 def calc_ccsd(mol, **scfargs):
     import pyscf.cc
-    mf = scf.RHF(mol).run(**scfargs)
+    mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
         return
     mycc = mf.CCSD().run()
@@ -57,11 +78,10 @@ def calc_ccsd(mol, **scfargs):
     ccdm = np.einsum('pi,ij,qj->pq', mf.mo_coeff, mycc.make_rdm1(), mf.mo_coeff.conj())
     return etot, -grad/BOHR, ccdm
 
-
 def calc_ccsd_t(mol, **scfargs):
     import pyscf.cc
     import pyscf.grad.ccsd_t as ccsd_t_grad
-    mf = scf.RHF(mol).run(**scfargs)
+    mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
         return
     mycc = mf.CCSD().run()
