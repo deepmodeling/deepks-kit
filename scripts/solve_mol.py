@@ -41,7 +41,7 @@ def get_method(name: str):
 def calc_hf(mol, **scfargs):
     mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
-        return
+        raise RuntimeError("SCF not converged!")
     etot = mf.e_tot
     grad = mf.nuc_grad_method().kernel()
     rdm = mf.make_rdm1()
@@ -51,7 +51,7 @@ def calc_dft(mol, xc="pbe", **scfargs):
     from pyscf import dft
     mf = dft.KS(mol, xc).run(**scfargs)
     if not mf.converged:
-        return
+        raise RuntimeError("SCF not converged!")
     etot = mf.e_tot
     grad = mf.nuc_grad_method().kernel()
     rdm = mf.make_rdm1()
@@ -61,7 +61,7 @@ def calc_mp2(mol, **scfargs):
     import pyscf.mp
     mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
-        return
+        raise RuntimeError("SCF not converged!")
     postmf = pyscf.mp.MP2(mf).run()
     etot = postmf.e_tot
     grad = postmf.nuc_grad_method().kernel()
@@ -71,7 +71,7 @@ def calc_ccsd(mol, **scfargs):
     import pyscf.cc
     mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
-        return
+        raise RuntimeError("SCF not converged!")
     mycc = mf.CCSD().run()
     etot = mycc.e_tot
     grad = mycc.nuc_grad_method().kernel()
@@ -83,7 +83,7 @@ def calc_ccsd_t(mol, **scfargs):
     import pyscf.grad.ccsd_t as ccsd_t_grad
     mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
-        return
+        raise RuntimeError("SCF not converged!")
     mycc = mf.CCSD().run()
     et_correction = mycc.ccsd_t()
     etot = mycc.e_tot + et_correction
@@ -116,9 +116,10 @@ if __name__ == "__main__":
     for fn in args.files:
         tic = time.time()
         mol = parse_xyz(fn, args.basis, verbose=args.verbose, charge=args.charge)
-        res = calculator(mol, **scfargs)
-        if res is None:
-            print(fn, f"failed, SCF does not converge")
+        try:
+            res = calculator(mol, **scfargs)
+        except RuntimeError as err:
+            print(fn, f"failed, {err}")
             continue
         etot, force, rdm = res
         if args.dump_dir is None:
