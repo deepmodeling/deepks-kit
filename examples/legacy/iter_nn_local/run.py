@@ -17,7 +17,7 @@ from pathlib import Path
 import shutil
 
 def collect_data(nmol, ntrain):
-    ecf = np.load('results/e_cf.npy')
+    ecf = np.load('results/e_tot.npy')
     assert ecf.size == nmol
     eref = np.load('e_ref.npy')
 
@@ -30,7 +30,7 @@ def collect_data(nmol, ntrain):
     print(f'  training: {np.abs(err[:ntrain] - err[:ntrain].mean()).mean()}')
     print(f'  testing: {np.abs(err[ntrain:] - err[:ntrain].mean()).mean()}')
 
-    ehf = np.load('results/e_hf.npy')
+    ehf = np.load('results/e_base.npy')
     np.save('results/l_e_delta.npy', eref - ehf)
 
     dd = ['dm_eig.npy', 'l_e_delta.npy']

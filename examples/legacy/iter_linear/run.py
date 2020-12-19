@@ -37,9 +37,9 @@ nmol = 1000
 ntrain = 900
 niter = 10
 
-mol_list = [build_mol(f'../../../data/tom_miller/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
-ehfs = np.load('../../../data/tom_miller/water/rproj_mb2/e_hf.npy').reshape(-1)[:nmol]
-wene = np.loadtxt('../../../data/tom_miller/water/energy.dat', usecols=(1,2,3,4))[:nmol]
+mol_list = [build_mol(f'../path/to/data/water/geometry/{i:0>5}.xyz') for i in range(nmol)]
+ehfs = np.load('../path/to/data/water/rproj_mb2/e_hf.npy').reshape(-1)[:nmol]
+wene = np.loadtxt('../path/to/data/water/energy.dat', usecols=(1,2,3,4))[:nmol]
 erefs = wene[:,3]
 ecfs = ehfs
 ecs = erefs - ehfs

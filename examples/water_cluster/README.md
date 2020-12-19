@@ -25,9 +25,9 @@ As a first step, we need to train an energy model as the starting point of the i
 
 The energy model generated in this step is also a ready-to-use DeePHF model, saved at `iter.init/01.train/model.pth`. If self-consistency is not needed, the rest iteration steps can be ignored. We do not use forces as labels when training the energy model in this example.
 
-The parameters of the init SCF calculation is specified under the `init_scf` key. The same set of parameters is also accepted as a standalone file by the `deepqc scf` command when running SCF calculations directly.  We use cc-pVDZ as the calculation basis. The required fields to be dumped are `dm_eig` for descriptors and `l_e_delta` for reference correction energies as labels. In addition, we also include `e_cf` for total energy, `conv` for a record of convergence.
+The parameters of the init SCF calculation is specified under the `init_scf` key. The same set of parameters is also accepted as a standalone file by the `deepqc scf` command when running SCF calculations directly.  We use cc-pVDZ as the calculation basis. The required fields to be dumped are `dm_eig` for descriptors and `l_e_delta` for reference correction energies as labels. In addition, we also include `e_tot` for total energy, `conv` for a record of convergence.
 ```yaml
-dump_fields: [dm_eig, l_e_delta, conv, e_cf]
+dump_fields: [dm_eig, l_e_delta, conv, e_tot]
 ```
 Additional parameters for molecule and SCF calculation can also be provided to `mol_args` and `scf_args` keys, and will be directly passed to corresponding interfaces in PySCF.
 
@@ -37,9 +37,9 @@ The parameters of the init training is specified under the `init_train` key. Sim
 
 For self-consistency, we take the model acquired in last step and perform several additional iterations of SCF calculation and NN training. The number of iterations is set in the `n_iter` key to be 10. If it is set to 0, no iteration will be performed, which gives the DeePHF model. In the iterative learning procedure, we also include forces as labels to improve accuracy.
 
-The SCF parameters are provided in the `scf_input` key, following the same rules as the `init_scf` key. In order to use forces as labels, we added additional `grad_vx` for the gradients of descriptors and `l_f_delta` for reference correction forces. `f_cf` is also included for the total force results.
+The SCF parameters are provided in the `scf_input` key, following the same rules as the `init_scf` key. In order to use forces as labels, we added additional `grad_vx` for the gradients of descriptors and `l_f_delta` for reference correction forces. `f_tot` is also included for the total force results.
 ```yaml
-dump_fields: [conv, e_cf, dm_eig, l_e_delta, f_cf, grad_vx, l_f_delta]
+dump_fields: [conv, e_tot, dm_eig, l_e_delta, f_tot, grad_vx, l_f_delta]
 ```
 Due to the complexity of the neural network functional, we use looser (but still accurate enough) convergence criteria in `scf_args`, with `conv_tol` to be 1e-6.
 

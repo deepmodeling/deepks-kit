@@ -27,8 +27,8 @@ def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
 
 def print_stats(systems=None, test_sys=None, 
                dump_dir=None, test_dump=None, group=False,
-               with_conv=True, with_e=True, e_name="e_cf", 
-               with_f=True, f_name="f_cf"):
+               with_conv=True, with_e=True, e_name="e_tot", 
+               with_f=True, f_name="f_tot"):
     load_func = load_stat if not group else load_stat_grouped
     if dump_dir is None:
         dump_dir = "."
@@ -81,8 +81,8 @@ def print_stats_f(f_err, indent=0):
 
 
 def load_stat(systems, dump_dir,
-              with_conv=True, with_e=True, e_name="e_cf", 
-              with_f=True, f_name="f_cf"):
+              with_conv=True, with_e=True, e_name="e_tot", 
+              with_f=True, f_name="f_tot"):
     systems = check_list(systems)
     c_res = []
     e_err = []
@@ -115,8 +115,8 @@ def load_stat(systems, dump_dir,
 
 
 def load_stat_grouped(systems, dump_dir=".",
-                      with_conv=True, with_e=True, e_name="e_cf", 
-                      with_f=True, f_name="f_cf"):
+                      with_conv=True, with_e=True, e_name="e_tot", 
+                      with_f=True, f_name="f_tot"):
     systems = check_list(systems)
     lbases = [get_sys_name(fl) for fl in systems]
     c_res = e_err = f_err = None
@@ -160,13 +160,13 @@ def print_stats_per_sys(err, conv=None, train_idx=None, test_idx=None):
 def make_label(sys_dir, eref, fref=None):
     eref = eref.reshape(-1,1)
     nmol = eref.shape[0]
-    ehf = np.load(f'{sys_dir}/e_hf.npy')
+    ehf = np.load(f'{sys_dir}/e_base.npy')
     assert ehf.shape[0] == nmol
     ecc = eref - ehf
     np.save(f'{sys_dir}/l_e_delta.npy', ecc)
     if fref is not None:
         fref = fref.reshape(nmol, -1, 3)
-        fhf = np.load(f'{sys_dir}/f_hf.npy')
+        fhf = np.load(f'{sys_dir}/f_base.npy')
         assert fhf.shape == fref.shape
         fcc = fref - fhf
         np.save(f'{sys_dir}/l_f_delta.npy', fcc)
@@ -177,7 +177,7 @@ def collect_data(train_idx, test_idx=None,
                  dump_dir=".", verbose=True):
     erefs = check_array(ene_ref).reshape(-1)
     nsys = erefs.shape[0]
-    if nsys == 1 and "e_cf.npy" in os.listdir(sys_dir):
+    if nsys == 1 and "e_tot.npy" in os.listdir(sys_dir):
         systems = [os.path.abspath(sys_dir)]
     else:
         systems = sorted(map(os.path.abspath, glob.glob(f"{sys_dir}/*")))
@@ -186,11 +186,11 @@ def collect_data(train_idx, test_idx=None,
     convs = []
     ecfs = []
     for sys_i, ec_i in zip(systems, erefs):
-        e0_i = np.load(os.path.join(sys_i, "e_hf.npy"))
+        e0_i = np.load(os.path.join(sys_i, "e_base.npy"))
         ecc_i = ec_i - e0_i
         np.save(os.path.join(sys_i, "l_e_delta.npy"), ecc_i)
         convs.append(np.load(os.path.join(sys_i, "conv.npy")))
-        ecfs.append(np.load(os.path.join(sys_i, "e_cf.npy")))
+        ecfs.append(np.load(os.path.join(sys_i, "e_tot.npy")))
     convs = np.array(convs).reshape(-1)
     ecfs = np.array(ecfs).reshape(-1)
     err = erefs - ecfs
@@ -212,12 +212,12 @@ def collect_data_grouped(train_idx, test_idx=None,
     eref = check_array(ene_ref).reshape(-1, 1)
     fref = check_array(force_ref)
     nmol = eref.shape[0]
-    if not os.path.exists(f'{sys_dir}/e_cf.npy'):
+    if not os.path.exists(f'{sys_dir}/e_tot.npy'):
         concat_data(sys_dir, dump_dir=sys_dir)    
-    ecf = np.load(f'{sys_dir}/e_cf.npy').reshape(-1, 1)
+    ecf = np.load(f'{sys_dir}/e_tot.npy').reshape(-1, 1)
     assert ecf.shape[0] == nmol, f"{ene_ref} ref size: {nmol}, {sys_dir} data size: {ecf.shape[0]}"
     make_label(sys_dir, eref, fref)
-    # ehf = np.load(f'{sys_dir}/e_hf.npy')
+    # ehf = np.load(f'{sys_dir}/e_base.npy')
     # np.save(f'{sys_dir}/l_e_delta.npy', eref - ehf)
 
     err = eref - ecf

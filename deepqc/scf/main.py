@@ -17,7 +17,7 @@ from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
 from deepqc.utils import get_sys_name, get_with_prefix
 
-DEFAULT_FNAMES = {"e_cf", "e_hf", "dm_eig", "conv"}
+DEFAULT_FNAMES = {"e_tot", "e_base", "dm_eig", "conv"}
 
 DEFAULT_HF_ARGS = {
     "conv_tol": 1e-9

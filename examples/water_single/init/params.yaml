@@ -21,10 +21,10 @@ init_scf: # parameters for SCF calculation
   basis: ccpvdz
   # this is for pure energy training
   dump_fields: 
-    - e_hf # Hartree Fock energy
+    - e_base # Hartree Fock energy
     - dm_eig # Descriptors
     - conv # whether converged or not
-    - l_e_delta # delta energy betweem e_hf and reference, label
+    - l_e_delta # delta energy betweem e_base and reference, label
   verbose: 1
   mol_args: # args to be passed to pyscf.gto.Mole.build
     incore_anyway: True

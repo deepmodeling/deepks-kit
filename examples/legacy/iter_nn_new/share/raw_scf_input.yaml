@@ -2,7 +2,7 @@ basis: ccpvdz
 systems: [mol_files.raw]
 model_file: model.pth
 dump_dir: results
-dump_fields: [e_hf, e_cf, dm_eig, conv, f_hf, f_cf, grad_vx]
+dump_fields: [e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx]
 group: true 
 verbose: 1
 scf_args:
