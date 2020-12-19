@@ -63,7 +63,9 @@ class Gradients(grad_base.Gradients):
 
     def _t_grad_pulay(self, t_dm, atmlst):
         """calculate pulay part in torch tensor"""
-        t_dec = torch.zeros([self.mol.natm, 3], dtype=float)
+        t_dec = torch.zeros([len(atmlst), 3], dtype=float)
+        if self.base.net is None:
+            return t_dec
         # \partial E / \partial (D^I_rl)_mm' by shells
         gedm_shells = _t_get_grad_dms(self.base)
         for gedm, govx, pov in zip(gedm_shells, self._t_ipov_shells, self._t_ovlp_shells):
@@ -71,12 +73,12 @@ class Gradients(grad_base.Gradients):
             ginner = torch.einsum('xrap,rs,saq->xapq', govx, t_dm, pov) * 2
             # contribution of atomic orbitals for all atom
             gouter = -torch.einsum('xrap,apq,saq->xrs', govx, gedm, pov) * 2
-            for ia in atmlst:
+            for k, ia in enumerate(atmlst):
                 bg, ed = self.mol.aoslice_by_atom()[ia, 2:]
                 # contribution of | \nabla alpha^I_rlm > and < \nabla alpha^I_rlm |
-                t_dec[ia] += torch.einsum('xpq,pq->x', ginner[:,ia], gedm[ia])
+                t_dec[k] += torch.einsum('xpq,pq->x', ginner[:,ia], gedm[ia])
                 # contribution of < \nabla mol_ao | and | \nabla mol_ao >
-                t_dec[ia] += torch.einsum('xrs,rs->x', gouter[:,bg:ed], t_dm[bg:ed])
+                t_dec[k] += torch.einsum('xrs,rs->x', gouter[:,bg:ed], t_dm[bg:ed])
         return t_dec
 
     def make_grad_pdm_x(self, dm=None, flatten=False):
