@@ -4,6 +4,8 @@ from glob import glob
 from pathlib import Path
 import ruamel.yaml as yaml
 import numpy as np
+from collections.abc import Mapping
+from itertools import chain
 
 
 QCDIR = os.path.dirname(os.path.realpath(__file__))
@@ -64,6 +66,23 @@ def load_sys_paths(sys_list):
 
 def is_xyz(p):
     return os.path.splitext(p)[1] == '.xyz'
+
+
+def deep_update(o, u=(), **f):
+    """Recursively update a dict.
+
+    Subdict's won't be overwritten but also updated.
+    """
+    if not isinstance(o, Mapping):
+        return u
+    kvlst = chain(u.items() if isinstance(u, Mapping) else u, 
+                  f.items())
+    for k, v in kvlst:
+        if isinstance(v, Mapping):
+            o[k] = deep_update(o.get(k, {}), v)
+        else:
+            o[k] = v
+    return o
 
 
 # below are file loading utils

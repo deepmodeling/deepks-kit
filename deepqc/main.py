@@ -5,7 +5,7 @@ try:
     import deepqc
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../")
-from deepqc.utils import load_yaml
+from deepqc.utils import load_yaml, deep_update
 
 
 def main_cli(args=None):
@@ -249,7 +249,7 @@ def iter_cli(args=None):
     args = parser.parse_args(args)
     argdict = {}
     for fl in args.argfile:
-        argdict.update(load_yaml(fl))
+        argdict = deep_update(argdict, load_yaml(fl))
     del args.argfile
     argdict.update(vars(args))
 
