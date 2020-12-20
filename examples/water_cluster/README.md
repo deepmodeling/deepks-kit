@@ -64,7 +64,7 @@ where we assign four CPU cores and one GPU to the training task, and set its tim
 
 ## Testing the model
 
-During each iteration of the learning procedure, a brief summary on the accuracy of the SCF calculation can be found in `iter.xx/00.scf/log.data`. Average energy and force (if applicable) errors are shown for both training and validation dataset. 
+During each iteration of the learning procedure, a brief summary on the accuracy of the SCF calculation can be found in `iter.xx/00.scf/log.data`. Average energy and force (if applicable) errors are shown for both training and validation dataset. The results of the SCF calculations is also stored in `iter.xx/00.scf/data_train` and `iter.xx/00.scf/data_test` grouped by training and testing systems.
 
 After we finished our 10 iterations, the resulted DeePKS model can be found at `iter.09/01.train/model.pth`. The model can be used in either a python script creating the extended PySCF class, or directly the `deepqc scf` command. As a testing example, we run the SCF calculation using the learned DeePKS model on the simultaneous six proton transfer path of a water hexamer ring. 
 The command can be found in [test.sh](./test.sh).
