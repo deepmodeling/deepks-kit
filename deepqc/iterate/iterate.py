@@ -1,7 +1,9 @@
 import os
 import sys
 import numpy as np
-from deepqc.utils import copy_file, load_yaml, save_yaml
+from deepqc.utils import copy_file, link_file
+from deepqc.utils import load_yaml, save_yaml
+from deepqc.utils import load_sys_paths
 from deepqc.task.workflow import Sequence, Iteration
 from deepqc.iterate.template import make_scf, make_train
 
@@ -38,8 +40,10 @@ TRN_STEP_DIR = "01.train"
 
 RECORD = "RECORD"
 
-DEFAUFT_SYS_TRN = "systems_train.raw"
-DEFAUFT_SYS_TST = "systems_test.raw"
+SYS_TRAIN = "systems_train"
+SYS_TEST = "systems_test"
+DEFAULT_TRAIN = "systems_train.raw"
+DEFAULT_TEST = "systems_test.raw"
 
 
 def assert_exist(path):
@@ -85,6 +89,39 @@ def check_arg_dict(data, default, strict=True):
         return {**default, **allowed}
     else:
         return {**default, **data}
+
+
+def collect_systems(systems, folder=None):
+    # check all systems have different basename
+    # if there's duplicate, concat its dirname into the basename sep by a "."
+    # then collect all systems into `folder` by symlink
+    sys_list = [os.path.abspath(s) for s in load_sys_paths(systems)]
+    parents, bases = map(list, zip(*[os.path.split(s.rstrip(os.path.sep)) 
+                                        for s in sys_list]))
+    dups = range(len(systems))
+    while True:
+        count_dict = {bases[i]:[] for i in dups}
+        for i in dups:
+            count_dict[bases[i]].append(i)
+        dup_dict = {k:v for k,v in count_dict.items() if len(v)>1}
+        if not dup_dict:
+            break
+        dups = sum(dup_dict.values(), [])
+        if all(parents[i] in ("/", "") for i in dups):
+            print("System list have duplicated terms, index:", dups, file=sys.stderr)
+            break
+        for di in dups:
+            if parents[di] in ("/", ""):
+                continue
+            newp, newb = os.path.split(parents[di])
+            parents[di] = newp
+            bases[di] = f"{newb}.{bases[di]}"
+    if folder is None:
+        return bases
+    targets = [os.path.join(folder, b) for b in bases]
+    for s, t in zip(sys_list, targets):
+        link_file(s, t, use_abs=True)
+    return targets
 
 
 def make_iterate(systems_train=None, systems_test=None,
@@ -171,14 +208,20 @@ def make_iterate(systems_train=None, systems_test=None,
         not found in the share folder.
     """
     # check share folder contains required data
+    # and collect the systems into share folder
     if systems_train is None: # load default training systems
-        default_train = os.path.join(share_folder, DEFAUFT_SYS_TRN)
+        default_train = os.path.join(share_folder, DEFAULT_TRAIN)
         assert_exist(default_train) # must have training systems.
         systems_train = default_train
+    systems_train = collect_systems(systems_train, os.path.join(share_folder, SYS_TRAIN))
+    # check test systems 
     if systems_test is None: # try to load default testing systems
-        default_test = os.path.join(share_folder, DEFAUFT_SYS_TST)
+        default_test = os.path.join(share_folder, DEFAULT_TEST)
         if os.path.exists(default_test): # if exists then use it
             systems_test = default_test
+        else: # if empty use last one of training system
+            systems_test = systems_train[-1]
+    systems_test = collect_systems(systems_test, os.path.join(share_folder, SYS_TEST))
     # check share folder contains required yaml file
     scf_args_name = check_share_folder(scf_input, SCF_ARGS_NAME, share_folder)
     train_args_name = check_share_folder(train_input, TRN_ARGS_NAME, share_folder)
