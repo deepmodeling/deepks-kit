@@ -1,6 +1,6 @@
-# DeePQC
+# DeepQC
 
-DeePQC is a program to generate accurate energy functionals for quantum chemistry systems,
+DeepQC is a program to generate accurate energy functionals for quantum chemistry systems,
 for both perturbative scheme (DeePHF) and self-consistent scheme (DeePKS).
 
 The program contains five sub-commands, 
