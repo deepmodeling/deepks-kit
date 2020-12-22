@@ -146,7 +146,7 @@ class DSCF(dft.rks.RKS):
         vc = torch.stack(shell_vcs, 0).sum(0)
         return ec, vc
 
-    def make_proj_rdms(self, dm=None, flatten=False):
+    def make_pdm(self, dm=None, flatten=False):
         """return projected density matrix by shell"""
         if dm is None:
             dm = self.make_rdm1()
@@ -162,7 +162,7 @@ class DSCF(dft.rks.RKS):
 
     def make_eig(self, dm=None):
         """return eigenvalues of projected density matrix"""
-        proj_dms = self.make_proj_rdms(dm, flatten=False)
+        proj_dms = self.make_pdm(dm, flatten=False)
         proj_eigs = [np.linalg.eigvalsh(dm) for dm in proj_dms]
         eig = np.concatenate(proj_eigs, -1) # natoms x nproj
         return eig

@@ -36,7 +36,7 @@ SCF_FIELDS = [
           "(nframe, nao, nao)"),
     Field("proj_dm",
           ["pdm"],
-          lambda mf: mf.make_proj_rdms(flatten=True),
+          lambda mf: mf.make_pdm(flatten=True),
           "(nframe, natom, -1)"),
     Field("dm_eig",
           ["eig"],
