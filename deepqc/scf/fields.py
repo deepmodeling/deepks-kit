@@ -61,7 +61,7 @@ GRAD_FIELDS = [
           ["fbase", "force_base", "f0",
            "f_hf", "fhf", "force_hf", 
            "f_ks", "fks", "force_ks"], 
-          lambda grad: - grad.get_hf() / BOHR,
+          lambda grad: - grad.get_base() / BOHR,
           "(nframe, natom, 3)"),
     Field("f_tot", 
           ["f_cf", "fcf", "force_cf", "ftot", "force", "f"], 

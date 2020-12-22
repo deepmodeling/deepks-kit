@@ -56,7 +56,7 @@ class Gradients(grad_base.Gradients):
             self.dec = self.symmetrize(self.dec, self.atmlst)
         return de
 
-    def get_hf(self):
+    def get_base(self):
         """return the grad given by raw Hartree Fock Hamiltonian under current dm"""
         assert self.de is not None and self.dec is not None
         return self.de - self.dec

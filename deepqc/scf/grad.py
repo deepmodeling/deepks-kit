@@ -42,11 +42,11 @@ class Gradients(grad_base.Gradients):
         cput0 = (time.clock(), time.time())
         dec = self.grad_pulay(self.base.make_rdm1(mo_coeff, mo_occ), atmlst)
         logger.timer(self, 'gradients of NN pulay part', *cput0)
-        # memeorize the result to save time in get_hf
+        # memeorize the result to save time in get_base
         self.dec = self.symmetrize(dec, atmlst) if self.mol.symmetry else dec
         return de + dec
 
-    def get_hf(self):
+    def get_base(self):
         """return the grad given by raw Hartree Fock Hamiltonian under current dm"""
         assert self.de is not None and self.dec is not None
         return self.de - self.dec
