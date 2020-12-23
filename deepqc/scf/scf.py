@@ -8,23 +8,51 @@ from pyscf import dft
 from deepqc.utils import check_list
 from deepqc.train.model import QCNet
 
-
-_zeta = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])
-_coef = np.diag(np.ones(_zeta.size)) - np.diag(np.ones(_zeta.size-1), k=1)
-_table = np.concatenate([_zeta.reshape(-1,1), _coef], axis=1)
-DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolist()]]
-
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+# all variables and functions start with "t_" are torch based.
+# all variables and functions ends with "0" are original base method results
+# convention in einsum:
+#   i,j: orbital
+#   a,b: atom
+#   p,q: projected basis on atom
+#   r,s: mol basis in pyscf
+# parameter shapes:
+#   ovlp_shells: [nao x natom x nsph] list
+#   pdm_shells: [natom x nsph x nsph] list
+#   eig_shells: [natom x nsph] list
+
+
+def t_make_pdm(dm, ovlp_shells):
+    """return projected density matrix by shell"""
+    # (D^I_rl)_mm' = \sum_i < alpha^I_rlm | phi_i >< phi_i | aplha^I_rlm' >
+    pdm_shells = [torch.einsum('rap,rs,saq->apq', po, dm, po)
+                    for po in ovlp_shells]
+    return pdm_shells
+
+
+def t_make_eig(dm, ovlp_shells):
+    """return eigenvalues of projected density matrix"""
+    pdm_shells = t_make_pdm(dm, ovlp_shells)
+    eig_shells = [torch.symeig(dm, eigenvectors=True)[0]
+                    for dm in pdm_shells]
+    ceig = torch.cat(eig_shells, dim=-1)
+    return ceig
+
+
+def t_get_corr(model, dm, ovlp_shells, with_vc=True):
+    """return the "correction" energy (and potential) given by a NN model"""
+    dm.requires_grad_(True)
+    ceig = t_make_eig(dm, ovlp_shells) # natoms x nproj
+    _dref = next(model.parameters())
+    ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
+    if not with_vc:
+        return ec
+    [vc] = torch.autograd.grad(ec, dm)
+    return ec.to(ceig), vc
 
 
 class DSCF(dft.rks.RKS):
-    # all variables and functions start with "t_" are torch related.
-    # all variables and functions ends with "0" are original Hartree-Fock results
-    # convention in einsum:
-    #   i,j: orbital
-    #   a,b: atom
-    #   p,q: projected basis on atom
-    #   r,s: mol basis in pyscf
     """Self Consistant Field solver for given QC model"""
     
     def __init__(self, mol, model, xc="HF", proj_basis=None, penalties=None, device=DEVICE):
@@ -71,7 +99,7 @@ class DSCF(dft.rks.RKS):
         return self.energy_elec0(dm, h1e, vhf)[0] + self.energy_nuc()
 
     def get_veff(self, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
-        """Hartree Fock potential + effective correlation potential"""
+        """original mean field potential + correction potential"""
         if mol is None: 
             mol = self.mol
         if dm is None: 
@@ -79,12 +107,12 @@ class DSCF(dft.rks.RKS):
         tic = (time.clock(), time.time())
         assert isinstance(dm, np.ndarray) and dm.ndim == 2
         
-        # Hartree fock part
+        # base method part
         v0_last = getattr(vhf_last, 'v0', 0)
         v0 = self.get_veff0(mol, dm, dm_last, v0_last, hermi)
         tic = logger.timer(self, 'v0', *tic)
-        # Correlation part
-        ec,vc = self.get_ec(dm)
+        # Correlation (or correction) part
+        ec, vc = self.get_corr(dm)
         tic = logger.timer(self, 'vc', *tic)
 
         vtot = v0 + vc
@@ -121,51 +149,35 @@ class DSCF(dft.rks.RKS):
                         diis=diis, diis_start_cycle=diis_start_cycle, 
                         level_shift_factor=level_shift_factor, damp_factor=damp_factor)
 
-    def get_ec(self, dm=None):
-        """return ec and vc corresponding to ec"""
+    def get_corr(self, dm=None):
+        """return "correction" energy and corresponding potential"""
         if dm is None:
             dm = self.make_rdm1()
         if self.net is None:
             return 0., np.zeros_like(dm)
         t_dm = torch.from_numpy(dm).double()
-        t_ec, t_vc = self._t_get_ec(t_dm)
+        t_ec, t_vc = t_get_corr(self.net, t_dm, self._t_ovlp_shells, with_vc=True)
         return t_ec.item(), t_vc.detach().cpu().numpy()
-
-    def _t_get_ec(self, t_dm):
-        """return ec and vc, all inputs and outputs are pytorch tensor"""
-        # (D^I_rl)_mm' = \sum_i < alpha^I_rlm | phi_i >< phi_i | aplha^I_rlm' >
-        proj_dms = [torch.einsum('rap,rs,saq->apq', po, t_dm, po).requires_grad_(True)
-                        for po in self._t_ovlp_shells]
-        proj_eigs = [torch.symeig(dm, eigenvectors=True)[0]
-                        for dm in proj_dms]
-        ceig = torch.cat(proj_eigs, dim=-1).to(self.device) # natoms x nproj
-        ec = self.net(ceig) # no batch dim here, unsqueeze(0) if needed
-        grad_dms = torch.autograd.grad(ec, proj_dms)
-        shell_vcs = [torch.einsum('rap,apq,saq->rs', po, gdm, po)
-                        for po, gdm in zip(self._t_ovlp_shells, grad_dms)]
-        vc = torch.stack(shell_vcs, 0).sum(0)
-        return ec, vc
 
     def make_pdm(self, dm=None, flatten=False):
         """return projected density matrix by shell"""
         if dm is None:
             dm = self.make_rdm1()
-        ovlp_shell = [po.detach().cpu().numpy() 
-                        for po in self._t_ovlp_shells]
-        # [natoms x nsph x nsph] list
-        proj_dms = [np.einsum('rap,rs,saq->apq', po, dm, po)
-                        for po in ovlp_shell]
+        t_dm = torch.from_numpy(dm).double()
+        t_pdm_shells = t_make_pdm(t_dm, self._t_ovlp_shells)
         if not flatten:
-            return proj_dms
+            return [s.detach().cpu().numpy() for s in t_pdm_shells]
         else:
-            return np.concatenate([s.reshape(*s.shape[:-2], -1) for s in proj_dms], axis=-1) 
+            return torch.cat([s.flatten(-2) for s in t_pdm_shells], 
+                             dim=-1).detach().cpu().numpy()
 
     def make_eig(self, dm=None):
         """return eigenvalues of projected density matrix"""
-        proj_dms = self.make_pdm(dm, flatten=False)
-        proj_eigs = [np.linalg.eigvalsh(dm) for dm in proj_dms]
-        eig = np.concatenate(proj_eigs, -1) # natoms x nproj
-        return eig
+        if dm is None:
+            dm = self.make_rdm1()
+        t_dm = torch.from_numpy(dm).double()
+        t_eig = t_make_eig(t_dm, self._t_ovlp_shells)
+        return t_eig.detach().cpu().numpy()
 
     def proj_intor(self, intor):
         """1-electron integrals between origin and projected basis"""
@@ -210,6 +222,11 @@ def gen_proj_mol(mol, basis) :
     test_mol.build(0,0,unit="Ang")
     return test_mol
 
+
+_zeta = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])
+_coef = np.diag(np.ones(_zeta.size)) - np.diag(np.ones(_zeta.size-1), k=1)
+_table = np.concatenate([_zeta.reshape(-1,1), _coef], axis=1)
+DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolist()]]
 
 def load_basis(basis):
     if basis is None:
