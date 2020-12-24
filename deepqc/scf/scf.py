@@ -57,6 +57,7 @@ class DSCF(dft.rks.RKS):
     
     def __init__(self, mol, model, xc="HF", proj_basis=None, penalties=None, device=DEVICE):
         super().__init__(mol, xc=xc)
+        rawmodel = model
         self.device = device
         if isinstance(model, str):
             model = CorrNet.load(model).double()
@@ -64,6 +65,10 @@ class DSCF(dft.rks.RKS):
             model = model.to(self.device)
         self.net = model
 
+        # try load basis from model file
+        if proj_basis is None and isinstance(rawmodel, str):
+            mdict = torch.load(rawmodel, map_location="cpu")
+            proj_basis = mdict.get("extra_info", {}).get("proj_basis", None)
         # should be a list here, follow pyscf convention
         self._pbas = load_basis(proj_basis)
         # [1,1,1,...,3,3,3,...,5,5,5,...]
@@ -199,13 +204,17 @@ class DSCF(dft.rks.RKS):
         return self
 
     def nuc_grad_method(self):
-        # if self.net is None:
-        #     return super().nuc_grad_method()
         from deepqc.scf.grad import Gradients
         return Gradients(self)
 
     def nuc_grad_method0(self):
         return super().nuc_grad_method()
+
+    def save_model(self, filename, with_basis=True):
+        extra_info = {}
+        if with_basis:
+            extra_info["proj_basis"] = self._pbas
+        self.net.save(filename, **extra_info)
 
 
 DeepSCF = DSCF

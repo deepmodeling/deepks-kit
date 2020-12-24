@@ -109,15 +109,16 @@ class CorrNet(nn.Module):
         dtype = self.energy_const.dtype
         self.energy_const.data = torch.tensor(const, dtype=dtype).reshape([])
 
-    def save_dict(self):
+    def save_dict(self, **extra_info):
         dump_dict = {
             "state_dict": self.state_dict(),
-            "init_args": self._init_args
+            "init_args": self._init_args,
+            "extra_info": extra_info
         }
         return dump_dict
 
-    def save(self, filename):
-        torch.save(self.save_dict(), filename)
+    def save(self, filename, **extra_info):
+        torch.save(self.save_dict(**extra_info), filename)
     
     @staticmethod
     def load_dict(checkpoint, strict=False):
