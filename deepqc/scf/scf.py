@@ -6,7 +6,7 @@ from pyscf.lib import logger
 from pyscf import gto
 from pyscf import dft
 from deepqc.utils import check_list
-from deepqc.train.model import QCNet
+from deepqc.train.model import CorrNet
 
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -59,7 +59,7 @@ class DSCF(dft.rks.RKS):
         super().__init__(mol, xc=xc)
         self.device = device
         if isinstance(model, str):
-            model = QCNet.load(model).double()
+            model = CorrNet.load(model).double()
         if isinstance(model, torch.nn.Module):
             model = model.to(self.device)
         self.net = model

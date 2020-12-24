@@ -67,7 +67,7 @@ class DenseNet(nn.Module):
         return x
     
 
-class QCNet(nn.Module):
+class CorrNet(nn.Module):
 
     @log_args('_init_args')
     def __init__(self, input_dim, hidden_sizes=(100,100,100), 
@@ -126,11 +126,11 @@ class QCNet(nn.Module):
             layers = init_args.pop("layer_sizes")
             init_args["input_dim"] = layers[0]
             init_args["hidden_sizes"] = layers[1:-1]
-        model = QCNet(**init_args)
+        model = CorrNet(**init_args)
         model.load_state_dict(checkpoint['state_dict'], strict=strict)
         return model
 
     @staticmethod
     def load(filename, strict=False):
         checkpoint = torch.load(filename, map_location="cpu")
-        return QCNet.load_dict(checkpoint, strict=strict)
+        return CorrNet.load_dict(checkpoint, strict=strict)

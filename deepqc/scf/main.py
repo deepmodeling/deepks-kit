@@ -11,7 +11,7 @@ except ImportError as e:
 from deepqc.scf.scf import DSCF
 from deepqc.scf.fields import select_fields
 from deepqc.scf.penalty import select_penalty
-from deepqc.train.model import QCNet
+from deepqc.train.model import CorrNet
 from deepqc.utils import check_list, flat_file_list
 from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
@@ -194,7 +194,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
         model = None
         default_scf_args = DEFAULT_HF_ARGS
     else:
-        model = QCNet.load(model_file).double()
+        model = CorrNet.load(model_file).double()
         default_scf_args = DEFAULT_SCF_ARGS
 
     # check arguments

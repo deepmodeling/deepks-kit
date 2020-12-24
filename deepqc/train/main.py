@@ -5,7 +5,7 @@ try:
     import deepqc
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.train.model import QCNet
+from deepqc.train.model import CorrNet
 from deepqc.train.reader import GroupReader
 from deepqc.train.train import train, preprocess
 from deepqc.utils import load_yaml, load_dirs
@@ -44,14 +44,14 @@ def main(train_paths, test_paths=None,
         test_reader = None
 
     if restart is not None:
-        model = QCNet.load(restart)
+        model = CorrNet.load(restart)
     else:
         input_dim = g_reader.ndesc
         if model_args.get("input_dim", input_dim) != input_dim:
             print(f"# `input_dim` in `model_args` does not match data",
                   "({input_dim}).", "Use the one in data.", file=sys.stderr)
         model_args["input_dim"] = input_dim
-        model = QCNet(**model_args).double()
+        model = CorrNet(**model_args).double()
         
     preprocess(model, g_reader, **preprocess_args)
     train(model, g_reader, test_reader=test_reader, **train_args)
