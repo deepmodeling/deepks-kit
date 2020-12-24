@@ -147,6 +147,8 @@ class Gradients(grad_base.Gradients):
             return np.zeros([len(atmlst), 3])
         if dm is None:
             dm = self.base.make_rdm1()
+        if dm.ndim > 2: # for uhf case
+            dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).double()
         t_dec = t_grad_corr(self.mol, self.base.net, t_dm, 
                             self._t_ovlp_shells, self._t_ipov_shells, atmlst)

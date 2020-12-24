@@ -2,6 +2,7 @@ import time
 import numpy as np
 from pyscf.dft import numint, gen_grid
 from pyscf.lib import logger
+from deepqc.utils import check_list
 
 
 def select_penalty(name):
@@ -11,6 +12,32 @@ def select_penalty(name):
     if name == "coulomb":
         return CoulombPenalty
     raise ValueError(f"unknown penalty type: {name}")
+
+
+class PenaltyMixin(object):
+    """Mixin class to add penalty potential in Fock matrix"""
+
+    def __init__(self, penalties=None):
+        self.penalties = check_list(penalties)
+        for pnt in self.penalties:
+            pnt.init_hook(self)
+
+    def get_fock(self, h1e=None, s1e=None, vhf=None, dm=None, cycle=-1, 
+                 diis=None, diis_start_cycle=None, 
+                 level_shift_factor=None, damp_factor=None):
+        """modified get_fock method to apply penalty terms onto vhf"""
+        if dm is None:
+            dm = self.make_rdm1()
+        if h1e is None: 
+            h1e = self.get_hcore()
+        if vhf is None: 
+            vhf = self.get_veff(dm=dm)
+        vp = sum(pnt.fock_hook(self, dm=dm, h1e=h1e, vhf=vhf, cycle=cycle) 
+                    for pnt in self.penalties)
+        vhf = vhf + vp
+        return super().get_fock(h1e=h1e, s1e=s1e, vhf=vhf, dm=dm, cycle=cycle, 
+                        diis=diis, diis_start_cycle=diis_start_cycle, 
+                        level_shift_factor=level_shift_factor, damp_factor=damp_factor)
 
 
 class AbstructPenalty(object):
@@ -100,22 +127,17 @@ class CoulombPenalty(AbstructPenalty):
         self.init_strength = strength
         self.strength = strength * np.random.rand() if random else strength
         self.start_cycle = start_cycle
-        # below are values to be initialized later in init_hook
-        self.vj_t = None
-
-    def init_hook(self, mf, **envs):
-        self.vj_t = mf.get_j(dm=self.dm_t)
 
     def fock_hook(self, mf, dm=None, h1e=None, vhf=None, cycle=-1, **envs):
         # cycle > 0 means it is doing scf iteration
         if 0 <= cycle < self.start_cycle:
             return 0
         tic = (time.clock(), time.time())
-        vj = mf.get_j(dm=dm)
-        v_p = vj - self.vj_t
+        ddm = dm - self.dm_t
+        v_p = mf.get_j(dm=ddm)
         # cycle < 0 means it is just checking, we only print here
         if cycle < 0 and mf.verbose >=4:
-            diff_norm = np.einsum("ij,ij", dm, v_p)
+            diff_norm = np.sum(ddm * v_p)
             logger.info(mf, f"  Coulomb Penalty: |diff| = {diff_norm}")
             logger.timer(mf, "coul_pnt", *tic)
         return self.strength * v_p
