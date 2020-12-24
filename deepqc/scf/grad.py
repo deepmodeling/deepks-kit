@@ -1,9 +1,10 @@
+import abc
 import time
 import torch
 import numpy as np
 from pyscf import gto, lib
 from pyscf.lib import logger
-from pyscf.grad import rks as grad_base
+from pyscf.grad import rks as rks_grad
 
 # see ./_old_grad.py for a more clear (but maybe slower) implementation
 # all variables and functions start with "t_" are torch related.
@@ -103,28 +104,12 @@ def t_batch_jacobian(f, x, noutputs):
     return torch.autograd.grad(y, x, input_val)[0]
 
 
-class Gradients(grad_base.Gradients):
-    """Analytical nuclear gradient for the DeePKS model"""
-    
-    def __init__(self, mf):
-        super().__init__(mf)
-        # prepare integrals for projection and derivative
-        self.prepare_integrals()
+class CorrGradMixin(abc.ABC):
+
+    def __init__(self, *args, **kwargs):
         # add a field to memorize the pulay term in ec
         self.dec = None
-        self._keys.update(self.__dict__.keys())
 
-    def prepare_integrals(self):
-        mf = self.base
-        # < mol_ao | alpha^I_rlm > by shells
-        self._t_ovlp_shells = mf._t_ovlp_shells
-        # < \nabla mol_ao | alpha^I_rlm >
-        t_proj_ipovlp = torch.from_numpy(mf.proj_intor("int1e_ipovlp")).double()
-        # < \nabla mol_ao | alpha^I_rlm > by shells
-        self._t_ipov_shells = torch.split(
-            t_proj_ipovlp.reshape(3, self.mol.nao, self.mol.natm, -1), 
-            self.base._shell_sec, -1)
-    
     def grad_elec(self, mo_energy=None, mo_coeff=None, mo_occ=None, atmlst=None):
         de = super().grad_elec(mo_energy, mo_coeff, mo_occ, atmlst)
         cput0 = (time.clock(), time.time())
@@ -138,7 +123,34 @@ class Gradients(grad_base.Gradients):
         """return the grad given by raw base method Hamiltonian under current dm"""
         assert self.de is not None and self.dec is not None
         return self.de - self.dec
-        
+    de0 = property(get_base)
+
+    @abc.abstractmethod
+    def grad_corr(self, dm=None, atmlst=None):
+        """additional contribution of NN "correction" term resulted from projection"""
+        if atmlst is None:
+            atmlst = range(self.mol.natm)
+        return np.zeros([len(atmlst), 3])
+
+
+class NetGradMixin(CorrGradMixin):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # prepare integrals for projection and derivative
+        self.prepare_integrals()
+
+    def prepare_integrals(self):
+        mf = self.base
+        # < mol_ao | alpha^I_rlm > by shells
+        self._t_ovlp_shells = mf._t_ovlp_shells
+        # < \nabla mol_ao | alpha^I_rlm >
+        t_proj_ipovlp = torch.from_numpy(mf.proj_intor("int1e_ipovlp")).double()
+        # < \nabla mol_ao | alpha^I_rlm > by shells
+        self._t_ipov_shells = torch.split(
+            t_proj_ipovlp.reshape(3, self.mol.nao, self.mol.natm, -1), 
+            self.base._shell_sec, -1)
+
     def grad_corr(self, dm=None, atmlst=None):
         """additional contribution of NN "correction" term resulted from projection"""
         if atmlst is None:
@@ -202,28 +214,14 @@ class Gradients(grad_base.Gradients):
         return scanner
 
 
-# legacy method, kept for reference
-def make_mask(mol1, mol2, atom_id):
-    mask = np.zeros((mol1.nao, mol2.nao))
-    bg1, ed1 = mol1.aoslice_by_atom()[atom_id, 2:]
-    bg2, ed2 = mol2.aoslice_by_atom()[atom_id, 2:]
-    mask[bg1:ed1, :] -= 1
-    mask[:, bg2:ed2] += 1
-    return mask
-
-
-# only for testing purpose, not used in code
-def finite_difference(f, x, delta=1e-6):
-    in_shape = x.shape
-    y0 = f(x)
-    out_shape = y0.shape
-    res = np.empty(in_shape + out_shape)
-    for idx in np.ndindex(*in_shape):
-        diff = np.zeros(in_shape)
-        diff[idx] += delta
-        y1 = f(x+diff)
-        res[idx] = (y1-y0) / delta
-    return res
+class Gradients(NetGradMixin, rks_grad.Gradients):
+    """Analytical nuclear gradient for the DeePKS model"""
+    
+    def __init__(self, mf):
+        # makesure the base method is initialized first
+        rks_grad.Gradients.__init__(self, mf)
+        NetGradMixin.__init__(self)
+        self._keys.update(self.__dict__.keys())
 
 
 Grad = Gradients
@@ -231,3 +229,27 @@ Grad = Gradients
 from deepqc.scf.scf import DSCF
 # Inject to SCF class
 DSCF.Gradients = lib.class_as_method(Gradients)
+
+
+# # legacy method, kept for reference
+# def make_mask(mol1, mol2, atom_id):
+#     mask = np.zeros((mol1.nao, mol2.nao))
+#     bg1, ed1 = mol1.aoslice_by_atom()[atom_id, 2:]
+#     bg2, ed2 = mol2.aoslice_by_atom()[atom_id, 2:]
+#     mask[bg1:ed1, :] -= 1
+#     mask[:, bg2:ed2] += 1
+#     return mask
+
+
+# # only for testing purpose, not used in code
+# def finite_difference(f, x, delta=1e-6):
+#     in_shape = x.shape
+#     y0 = f(x)
+#     out_shape = y0.shape
+#     res = np.empty(in_shape + out_shape)
+#     for idx in np.ndindex(*in_shape):
+#         diff = np.zeros(in_shape)
+#         diff[idx] += delta
+#         y1 = f(x+diff)
+#         res[idx] = (y1-y0) / delta
+#     return res
