@@ -4,7 +4,7 @@ We provide here a detailed example on generating a DeePHF or DeePKS functional f
 
 Here we take `args.yaml` as the configuration file. The iteration can be run directly by execute the [`./run.sh`](./run.sh) file, which contains the following lines:
 ```bash
-nohup python -u -m deepqc iterate args.yaml >> log.iter 2> err.iter &
+nohup python -u -m deepks iterate args.yaml >> log.iter 2> err.iter &
 echo $! > PID
 ```
 that runs the iterative learning procedure in background and record its PID in the designated file.
@@ -25,13 +25,13 @@ As a first step, we need to train an energy model as the starting point of the i
 
 The energy model generated in this step is also a ready-to-use DeePHF model, saved at `iter.init/01.train/model.pth`. If self-consistency is not needed, the rest iteration steps can be ignored. We do not use forces as labels when training the energy model in this example.
 
-The parameters of the init SCF calculation is specified under the `init_scf` key. The same set of parameters is also accepted as a standalone file by the `deepqc scf` command when running SCF calculations directly.  We use cc-pVDZ as the calculation basis. The required fields to be dumped are `dm_eig` for descriptors and `l_e_delta` for reference correction energies as labels. In addition, we also include `e_tot` for total energy, `conv` for a record of convergence.
+The parameters of the init SCF calculation is specified under the `init_scf` key. The same set of parameters is also accepted as a standalone file by the `deepks scf` command when running SCF calculations directly.  We use cc-pVDZ as the calculation basis. The required fields to be dumped are `dm_eig` for descriptors and `l_e_delta` for reference correction energies as labels. In addition, we also include `e_tot` for total energy, `conv` for a record of convergence.
 ```yaml
 dump_fields: [dm_eig, l_e_delta, conv, e_tot]
 ```
 Additional parameters for molecule and SCF calculation can also be provided to `mol_args` and `scf_args` keys, and will be directly passed to corresponding interfaces in PySCF.
 
-The parameters of the init training is specified under the `init_train` key. Similarly, the parameters can also be passed to `deepqc train` command as a standalone file. In `model_args`, we set the construction of the neural network model with three hidden layers and 100 neurons per layer, using GELU activation function and skip connections. We also scale the output correction energies by a factor of 100 so that it is of order one and easier to learn. In `preprocess_args`, the descriptors are set to be preprocessed to have zero mean on the training set. A prefitted ridge regression with penalty strength 10 is also added to the model to speed up training. We set in `data_args` the batch size to be 16 and in `train_args` the total number of training epochs to be 50000. The learning rate starts at 3e-4 and decays by a factor of 0.96 for every 500 steps.
+The parameters of the init training is specified under the `init_train` key. Similarly, the parameters can also be passed to `deepks train` command as a standalone file. In `model_args`, we set the construction of the neural network model with three hidden layers and 100 neurons per layer, using GELU activation function and skip connections. We also scale the output correction energies by a factor of 100 so that it is of order one and easier to learn. In `preprocess_args`, the descriptors are set to be preprocessed to have zero mean on the training set. A prefitted ridge regression with penalty strength 10 is also added to the model to speed up training. We set in `data_args` the batch size to be 16 and in `train_args` the total number of training epochs to be 50000. The learning rate starts at 3e-4 and decays by a factor of 0.96 for every 500 steps.
 
 ## Iterative learning (DeePKS model)
 
@@ -66,7 +66,7 @@ where we assign four CPU cores and one GPU to the training task, and set its tim
 
 During each iteration of the learning procedure, a brief summary on the accuracy of the SCF calculation can be found in `iter.xx/00.scf/log.data`. Average energy and force (if applicable) errors are shown for both training and validation dataset. The results of the SCF calculations is also stored in `iter.xx/00.scf/data_train` and `iter.xx/00.scf/data_test` grouped by training and testing systems.
 
-After we finished our 10 iterations, the resulted DeePKS model can be found at `iter.09/01.train/model.pth`. The model can be used in either a python script creating the extended PySCF class, or directly the `deepqc scf` command. As a testing example, we run the SCF calculation using the learned DeePKS model on the simultaneous six proton transfer path of a water hexamer ring. 
+After we finished our 10 iterations, the resulted DeePKS model can be found at `iter.09/01.train/model.pth`. The model can be used in either a python script creating the extended PySCF class, or directly the `deepks scf` command. As a testing example, we run the SCF calculation using the learned DeePKS model on the simultaneous six proton transfer path of a water hexamer ring. 
 The command can be found in [test.sh](./test.sh).
 The results of each configuration during the proton transfer are grouped in the `test_result` folder. 
 

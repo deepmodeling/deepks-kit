@@ -1,9 +1,9 @@
-# DeepQC
+# DeePKS-kit
 
-DeepQC is a program to generate accurate energy functionals for quantum chemistry systems,
+DeePKS-kit is a program to generate accurate energy functionals for quantum chemistry systems,
 for both perturbative scheme (DeePHF) and self-consistent scheme (DeePKS).
 
-The program contains five sub-commands, 
+The program provides a command line interface `deepks` that contains five sub-commands, 
 - `train`: train an neural network based post-HF energy functional model
 - `test`: test the post-HF model with given data and show statistics
 - `scf`: run self-consistent field calculation with given energy model
@@ -21,4 +21,4 @@ The program contains five sub-commands,
 
 ## Usage
 
-Please see [`examples`](./examples) folder for the usage of `deepqc` library. A detailed example with executable data for water molecules can be found [here](./examples/water).
+Please see [`examples`](./examples) folder for the usage of `deepks` library. A detailed example with executable data for water molecules can be found [here](./examples/water).

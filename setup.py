@@ -10,24 +10,24 @@ install_requires=['numpy', 'paramiko', 'ruamel.yaml']
 
 
 setuptools.setup(
-    name="deepqc",
+    name="deepks",
     use_scm_version={'write_to': 'deepqc/_version.py'},
     setup_requires=['setuptools_scm'],
     author="Yixiao Chen",
     author_email="yixiaoc@princeton.edu",
-    description="DeePQC: generate correlation energy functionals for chemical systems",
+    description="DeePKS-kit: generate accurate (self-consistent) energy functionals",
     long_description=readme,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(include=['deepqc', 'deepqc.*']),
     classifiers=[
         "Programming Language :: Python :: 3.7",
     ],
-    keywords='deepqc quantum chemistry',
+    keywords='deepks DeePKS-kit',
     install_requires=install_requires,
-    python_requires="~=3.7",
+    python_requires=">=3.6",
     entry_points={
         'console_scripts': [
-            'deepqc=deepqc.main:main_cli',
+            'deepks=deepqc.main:main_cli',
         ],
     },
 )
