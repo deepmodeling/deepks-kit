@@ -226,7 +226,7 @@ class Gradients(NetGradMixin, rks_grad.Gradients):
 
 Grad = Gradients
 
-from deepqc.scf.scf import DSCF
+from deepks.scf.scf import DSCF
 # Inject to SCF class
 DSCF.Gradients = lib.class_as_method(Gradients)
 

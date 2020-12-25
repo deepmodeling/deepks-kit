@@ -11,14 +11,14 @@ install_requires=['numpy', 'paramiko', 'ruamel.yaml']
 
 setuptools.setup(
     name="deepks",
-    use_scm_version={'write_to': 'deepqc/_version.py'},
+    use_scm_version={'write_to': 'deepks/_version.py'},
     setup_requires=['setuptools_scm'],
     author="Yixiao Chen",
     author_email="yixiaoc@princeton.edu",
     description="DeePKS-kit: generate accurate (self-consistent) energy functionals",
     long_description=readme,
     long_description_content_type="text/markdown",
-    packages=setuptools.find_packages(include=['deepqc', 'deepqc.*']),
+    packages=setuptools.find_packages(include=['deepks', 'deepks.*']),
     classifiers=[
         "Programming Language :: Python :: 3.7",
     ],
@@ -27,7 +27,7 @@ setuptools.setup(
     python_requires=">=3.6",
     entry_points={
         'console_scripts': [
-            'deepks=deepqc.main:main_cli',
+            'deepks=deepks.main:main_cli',
         ],
     },
 )

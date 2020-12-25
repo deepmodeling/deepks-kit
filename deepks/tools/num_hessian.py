@@ -6,8 +6,8 @@
 
 import time
 import numpy as np
-from deepqc.utils import load_yaml
-from deepqc.scf.scf import DSCF
+from deepks.utils import load_yaml
+from deepks.scf.scf import DSCF
 from pyscf import gto, lib
 
 BOHR = 0.52917721092

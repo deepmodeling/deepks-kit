@@ -7,14 +7,14 @@ import glob
 import numpy as np
 
 # sys.path.append('/path/to/source')
-import deepqc
-from deepqc.task.task import PythonTask
-from deepqc.task.task import ShellTask
-from deepqc.task.task import BatchTask
-from deepqc.task.task import GroupBatchTask
-from deepqc.task.workflow import Sequence
-from deepqc.task.workflow import Iteration
-from deepqc.scf.stats import collect_data
+import deepks
+from deepks.task.task import PythonTask
+from deepks.task.task import ShellTask
+from deepks.task.task import BatchTask
+from deepks.task.task import GroupBatchTask
+from deepks.task.workflow import Sequence
+from deepks.task.workflow import Iteration
+from deepks.scf.stats import collect_data
 
 
 niter = 20
@@ -26,7 +26,7 @@ train_res = {"time_limit": "24:00:00",
              "mem_limit": 32,
              "numb_gpu": 1}
 
-train_cmd = "python -u /path/to/source/deepqc/train/main.py input.yaml"
+train_cmd = "python -u /path/to/source/deepks/train/main.py input.yaml"
 
 batch_train = [BatchTask(cmds=train_cmd, 
                          workdir=f'task.{i:02}',
@@ -67,7 +67,7 @@ disp = {"context_type": 'ssh',
         "remote_profile": remote}
 
 cmd_templ = " ".join([
-    "python -u /path/to/source/deepqc/scf/main.py",
+    "python -u /path/to/source/deepks/scf/main.py",
     "{mol_files}",
     "-m ../model.pth",
     "-d ../results", 

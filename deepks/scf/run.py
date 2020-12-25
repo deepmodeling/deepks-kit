@@ -5,17 +5,17 @@ import numpy as np
 import torch
 from pyscf import gto, lib
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.scf.scf import DSCF
-from deepqc.scf.fields import select_fields
-from deepqc.scf.penalty import select_penalty
-from deepqc.model.model import CorrNet
-from deepqc.utils import check_list, flat_file_list
-from deepqc.utils import is_xyz, load_sys_paths
-from deepqc.utils import load_yaml, load_array
-from deepqc.utils import get_sys_name, get_with_prefix
+from deepks.scf.scf import DSCF
+from deepks.scf.fields import select_fields
+from deepks.scf.penalty import select_penalty
+from deepks.model.model import CorrNet
+from deepks.utils import check_list, flat_file_list
+from deepks.utils import is_xyz, load_sys_paths
+from deepks.utils import load_yaml, load_array
+from deepks.utils import get_sys_name, get_with_prefix
 
 DEFAULT_FNAMES = {"e_tot", "e_base", "dm_eig", "conv"}
 
@@ -257,5 +257,5 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
 
 
 if __name__ == "__main__":
-    from deepqc.main import scf_cli as cli
+    from deepks.main import scf_cli as cli
     cli()

@@ -2,15 +2,15 @@ import os
 import sys
 import argparse
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../")
-from deepqc.utils import load_yaml, deep_update
+from deepks.utils import load_yaml, deep_update
 
 
 def main_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc",
+                prog="deepks",
                 description="A program to generate accurate energy functionals.")
     parser.add_argument("command", 
                         help="specify the sub-command to run, possible choices: "
@@ -39,7 +39,7 @@ def main_cli(args=None):
 
 def train_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc train",
+                prog="deepks train",
                 description="Train a model according to given input.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument('input', type=str, nargs="?",
@@ -65,13 +65,13 @@ def train_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.model.train import main
+    from deepks.model.train import main
     main(**argdict)
 
 
 def test_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc test",
+                prog="deepks test",
                 description="Test a model with given data (Not SCF).",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
@@ -106,13 +106,13 @@ def test_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.model.test import main
+    from deepks.model.test import main
     main(**argdict)
 
 
 def scf_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc scf",
+                prog="deepks scf",
                 description="Calculate and save SCF results using given model.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
@@ -168,13 +168,13 @@ def scf_cli(args=None):
         argdict = vars(args)
         argdict["scf_args"] = scf_args
 
-    from deepqc.scf.run import main
+    from deepks.scf.run import main
     main(**argdict)
 
 
 def stats_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc stats",
+                prog="deepks stats",
                 description="Print the stats of SCF results.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("input", nargs="?",
@@ -211,13 +211,13 @@ def stats_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.scf.stats import print_stats
+    from deepks.scf.stats import print_stats
     print_stats(**argdict)
 
 
 def iter_cli(args=None):
     parser = argparse.ArgumentParser(
-                prog="deepqc iterate",
+                prog="deepks iterate",
                 description="Run the iteration procedure to train a SCF model.",
                 argument_default=argparse.SUPPRESS)
     parser.add_argument("argfile", nargs="*", default=[],
@@ -253,7 +253,7 @@ def iter_cli(args=None):
     del args.argfile
     argdict.update(vars(args))
 
-    from deepqc.iterate.iterate import main
+    from deepks.iterate.iterate import main
     main(**argdict)
 
 

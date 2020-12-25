@@ -6,10 +6,10 @@ import sys
 import numpy as np
 
 # sys.path.append('/path/to/source')
-import deepqc
-from deepqc.scf.stats import collect_data_grouped
-from deepqc.task.task import PythonTask, BatchTask, GroupBatchTask
-from deepqc.task.workflow import Sequence, Iteration
+import deepks
+from deepks.scf.stats import collect_data_grouped
+from deepks.task.task import PythonTask, BatchTask, GroupBatchTask
+from deepks.task.workflow import Sequence, Iteration
 
 nsys = 1
 niter = 10
@@ -19,7 +19,7 @@ train_idx = np.arange(ntrain)
 # SCF
 
 scf_cmd_tmpl = " ".join([
-    "python -u /path/to/source/deepqc/scf/main.py",
+    "python -u /path/to/source/deepks/scf/main.py",
     "scf_input.yaml",
     "-m model.pth",
     "-s mol_files.raw",
@@ -61,7 +61,7 @@ task_data = PythonTask(
 # training
 
 train_cmd = " ".join([
-    "python -u /path/to/source/deepqc/train/main.py",
+    "python -u /path/to/source/deepks/train/main.py",
     "train_input.yaml",
     "--restart old_model.pth"])
 

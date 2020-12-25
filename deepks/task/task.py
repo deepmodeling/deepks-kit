@@ -1,14 +1,14 @@
 import os
 from pathlib import Path
-from deepqc.utils import link_file, copy_file, create_dir
-from deepqc.utils import check_list
-from deepqc.utils import get_abs_path
+from deepks.utils import link_file, copy_file, create_dir
+from deepks.utils import check_list
+from deepks.utils import get_abs_path
 
 import sys
 import subprocess as sp
 from copy import deepcopy
 from contextlib import nullcontext, redirect_stdout, redirect_stderr
-from deepqc.task.job.dispatcher import Dispatcher
+from deepks.task.job.dispatcher import Dispatcher
 
 
 __all__ = ["BlankTask", "PythonTask", "ShellTask", "BatchTask", "GroupBatchTask"]

@@ -6,12 +6,12 @@ import torch.nn as nn
 import torch.optim as optim
 from time import time
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.model.model import CorrNet
-from deepqc.model.reader import GroupReader
-from deepqc.utils import load_dirs
+from deepks.model.model import CorrNet
+from deepks.model.reader import GroupReader
+from deepks.utils import load_dirs
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -165,5 +165,5 @@ def main(train_paths, test_paths=None,
 
 
 if __name__ == "__main__":
-    from deepqc.main import train_cli as cli
+    from deepks.main import train_cli as cli
     cli()

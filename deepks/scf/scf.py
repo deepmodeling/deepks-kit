@@ -6,8 +6,8 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import scf, dft
-from deepqc.model.model import CorrNet
-from deepqc.scf.penalty import PenaltyMixin
+from deepks.model.model import CorrNet
+from deepks.scf.penalty import PenaltyMixin
 
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -193,7 +193,7 @@ class NetMixin(CorrMixin):
                 t_vc.detach().cpu().numpy())
 
     def nuc_grad_method(self):
-        from deepqc.scf.grad import Gradients
+        from deepks.scf.grad import Gradients
         return Gradients(self)
 
     def reset(self, mol=None):

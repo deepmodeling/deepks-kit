@@ -4,12 +4,12 @@ import glob
 import numpy as np
 import shutil
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.utils import check_list, check_array
-from deepqc.utils import load_array, load_yaml
-from deepqc.utils import get_sys_name, get_with_prefix
+from deepks.utils import check_list, check_array
+from deepks.utils import load_array, load_yaml
+from deepks.utils import get_sys_name, get_with_prefix
 
 
 def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
@@ -249,5 +249,5 @@ def collect_data_grouped(train_idx, test_idx=None,
 
 
 if __name__ == "__main__":
-    from deepqc.main import stats_cli as cli
+    from deepks.main import stats_cli as cli
     cli()

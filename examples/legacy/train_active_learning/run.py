@@ -7,13 +7,13 @@ from glob import glob
 import numpy as np
 
 # sys.path.append('/path/to/source')
-import deepqc
-from deepqc.task.task import PythonTask
-from deepqc.task.task import ShellTask
-from deepqc.task.task import BatchTask
-from deepqc.task.task import GroupBatchTask
-from deepqc.task.workflow import Sequence
-from deepqc.task.workflow import Iteration
+import deepks
+from deepks.task.task import PythonTask
+from deepks.task.task import ShellTask
+from deepks.task.task import BatchTask
+from deepks.task.task import GroupBatchTask
+from deepks.task.workflow import Sequence
+from deepks.task.workflow import Iteration
 
 
 # define key parameters
@@ -29,7 +29,7 @@ train_res = {"time_limit": "24:00:00",
 disp = {"context_type": 'local',
         "batch_type": 'slurm'}
 
-train_cmd = "python -u /path/to/source/deepqc/train/main.py input.yaml"
+train_cmd = "python -u /path/to/source/deepks/train/main.py input.yaml"
 
 batch_train = [BatchTask(cmds=train_cmd, 
                          workdir=f'model.{i:02}',

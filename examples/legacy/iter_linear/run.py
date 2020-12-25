@@ -7,8 +7,8 @@ from pyscf import gto
 from sklearn import linear_model
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
-from deepqc.scf.scf import DSCF
-from deepqc.scf.run import build_mol, solve_mol
+from deepks.scf.scf import DSCF
+from deepks.scf.run import build_mol, solve_mol
 
 def get_linear_model(weig, wec):
 #     too_small = weig.reshape(-1,108).std(0) < 1e-3

@@ -2,24 +2,24 @@ import os
 import sys
 import numpy as np
 from glob import glob
-from deepqc.utils import check_list
-from deepqc.utils import flat_file_list
-from deepqc.utils import get_sys_name, load_sys_paths
-from deepqc.task.task import PythonTask, ShellTask
-from deepqc.task.task import BatchTask, GroupBatchTask
-from deepqc.task.workflow import Sequence
-from deepqc.utils import QCDIR
+from deepks.utils import check_list
+from deepks.utils import flat_file_list
+from deepks.utils import get_sys_name, load_sys_paths
+from deepks.task.task import PythonTask, ShellTask
+from deepks.task.task import BatchTask, GroupBatchTask
+from deepks.task.workflow import Sequence
+from deepks.utils import QCDIR
 
 
 SCF_CMD = " ".join([
     "{python} -u",
-    "-m deepqc.scf.run"
+    "-m deepks.scf.run"
     # os.path.join(QCDIR, "scf/run.py") # this is the backup choice
 ])
 
 TRN_CMD = " ".join([
     "{python} -u",
-    "-m deepqc.model.train"
+    "-m deepks.model.train"
     # os.path.join(QCDIR, "train/train.py") # this is the backup choice
 ])
 
@@ -216,7 +216,7 @@ def make_stat_scf(systems_train, systems_test=None, *,
         # if len(systems_train) > 1:
         #     del systems_train[-1]
     # load stats function
-    from deepqc.scf.stats import print_stats
+    from deepks.scf.stats import print_stats
     stat_args.update(
         systems=systems_train,
         test_sys=systems_test,
@@ -355,7 +355,7 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
 def make_test_train(data_paths, model_file="model.pth", *,
                     output_prefix="test", group_results=True, 
                     workdir='.', outlog="log.test", **test_args):
-    from deepqc.model.test import main as test_func
+    from deepks.model.test import main as test_func
     test_args.update(
         data_paths=data_paths,
         model_file=model_file,

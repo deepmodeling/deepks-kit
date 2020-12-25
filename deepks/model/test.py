@@ -3,13 +3,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     import sys
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.model.model import CorrNet
-from deepqc.model.reader import GroupReader
-from deepqc.utils import load_yaml, load_dirs, check_list
+from deepks.model.model import CorrNet
+from deepks.model.reader import GroupReader
+from deepks.utils import load_yaml, load_dirs, check_list
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -72,5 +72,5 @@ def main(data_paths, model_file="model.pth",
 
 
 if __name__ == "__main__":
-    from deepqc.main import test_cli as cli
+    from deepks.main import test_cli as cli
     cli()

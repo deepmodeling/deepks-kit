@@ -2,7 +2,7 @@ import time
 import numpy as np
 from pyscf.dft import numint, gen_grid
 from pyscf.lib import logger
-from deepqc.utils import check_list
+from deepks.utils import check_list
 
 
 def select_penalty(name):

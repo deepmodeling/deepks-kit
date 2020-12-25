@@ -1,11 +1,11 @@
 import os
 import sys
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../")
 
-from deepqc.main import iter_cli
+from deepks.main import train_cli
 
 if __name__ == "__main__":
-    iter_cli()
+    train_cli()

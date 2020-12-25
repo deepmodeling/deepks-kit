@@ -2,14 +2,14 @@ import os
 import sys
 import numpy as np
 try:
-    import deepqc
+    import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.utils import copy_file, link_file
-from deepqc.utils import load_yaml, save_yaml
-from deepqc.utils import load_sys_paths
-from deepqc.task.workflow import Sequence, Iteration
-from deepqc.iterate.template import make_scf, make_train
+from deepks.utils import copy_file, link_file
+from deepks.utils import load_yaml, save_yaml
+from deepks.utils import load_sys_paths
+from deepks.task.workflow import Sequence, Iteration
+from deepks.iterate.template import make_scf, make_train
 
 
 # args not specified here may cause error
@@ -364,5 +364,5 @@ def main(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    from deepqc.main import iter_cli as cli
+    from deepks.main import iter_cli as cli
     cli()
