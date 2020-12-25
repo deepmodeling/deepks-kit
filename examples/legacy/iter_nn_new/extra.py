@@ -5,7 +5,7 @@ import os
 import sys
 import numpy as np
 
-sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
+# sys.path.append('/path/to/source')
 import deepqc
 from deepqc.scf.stats import collect_data_grouped
 from deepqc.task.task import PythonTask, BatchTask, GroupBatchTask

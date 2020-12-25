@@ -5,7 +5,7 @@ import os
 import sys
 import numpy as np
 
-sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
+# sys.path.append('/path/to/source')
 import deepqc
 from deepqc.train.main import main as train_main
 from deepqc.train.test import main as train_test

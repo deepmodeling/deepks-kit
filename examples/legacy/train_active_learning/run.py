@@ -6,7 +6,7 @@ import sys
 from glob import glob
 import numpy as np
 
-sys.path.append('/home/yixiaoc/SCR/yixiaoc/deep.qc/source_scf')
+# sys.path.append('/path/to/source')
 import deepqc
 from deepqc.task.task import PythonTask
 from deepqc.task.task import ShellTask
