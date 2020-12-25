@@ -19,7 +19,7 @@ train_idx = np.arange(ntrain)
 # SCF
 
 scf_cmd_tmpl = " ".join([
-    "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/scf/main.py",
+    "python -u /path/to/source/deepqc/scf/main.py",
     "scf_input.yaml",
     "-m model.pth",
     "-s mol_files.raw",
@@ -61,7 +61,7 @@ task_data = PythonTask(
 # training
 
 train_cmd = " ".join([
-    "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/train/main.py",
+    "python -u /path/to/source/deepqc/train/main.py",
     "train_input.yaml",
     "--restart old_model.pth"])
 

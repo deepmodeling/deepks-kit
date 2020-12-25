@@ -26,7 +26,7 @@ train_res = {"time_limit": "24:00:00",
              "mem_limit": 32,
              "numb_gpu": 1}
 
-train_cmd = "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/train/main.py input.yaml"
+train_cmd = "python -u /path/to/source/deepqc/train/main.py input.yaml"
 
 batch_train = [BatchTask(cmds=train_cmd, 
                          workdir=f'task.{i:02}',
@@ -67,7 +67,7 @@ disp = {"context_type": 'ssh',
         "remote_profile": remote}
 
 cmd_templ = " ".join([
-    "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/scf/main.py",
+    "python -u /path/to/source/deepqc/scf/main.py",
     "{mol_files}",
     "-m ../model.pth",
     "-d ../results", 

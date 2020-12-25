@@ -29,7 +29,7 @@ train_res = {"time_limit": "24:00:00",
 disp = {"context_type": 'local',
         "batch_type": 'slurm'}
 
-train_cmd = "python -u ~/SCR/yixiaoc/deep.qc/source_scf/deepqc/train/main.py input.yaml"
+train_cmd = "python -u /path/to/source/deepqc/train/main.py input.yaml"
 
 batch_train = [BatchTask(cmds=train_cmd, 
                          workdir=f'model.{i:02}',
