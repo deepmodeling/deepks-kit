@@ -4,6 +4,9 @@ from deepqc.utils import get_abs_path
 from deepqc.task.task import AbstructStep
 
 
+__all__ = ["Workflow", "Sequence", "Iteration"]
+
+
 class Workflow(AbstructStep):
     def __init__(self, child_tasks, workdir='.', record_file=None):
         super().__init__(workdir)

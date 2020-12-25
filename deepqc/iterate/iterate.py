@@ -1,6 +1,10 @@
 import os
 import sys
 import numpy as np
+try:
+    import deepqc
+except ImportError as e:
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepqc.utils import copy_file, link_file
 from deepqc.utils import load_yaml, save_yaml
 from deepqc.utils import load_sys_paths
