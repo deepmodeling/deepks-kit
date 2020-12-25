@@ -6,7 +6,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import scf, dft
-from deepqc.train.model import CorrNet
+from deepqc.model.model import CorrNet
 from deepqc.scf.penalty import PenaltyMixin
 
 DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

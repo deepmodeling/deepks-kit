@@ -65,7 +65,7 @@ def train_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.train.main import main
+    from deepqc.model.train import main
     main(**argdict)
 
 
@@ -106,7 +106,7 @@ def test_cli(args=None):
     else:
         argdict = vars(args)
 
-    from deepqc.train.test import main
+    from deepqc.model.test import main
     main(**argdict)
 
 
@@ -168,7 +168,7 @@ def scf_cli(args=None):
         argdict = vars(args)
         argdict["scf_args"] = scf_args
 
-    from deepqc.scf.main import main
+    from deepqc.scf.run import main
     main(**argdict)
 
 
@@ -253,7 +253,7 @@ def iter_cli(args=None):
     del args.argfile
     argdict.update(vars(args))
 
-    from deepqc.iterate.main import main
+    from deepqc.iterate.iterate import main
     main(**argdict)
 
 

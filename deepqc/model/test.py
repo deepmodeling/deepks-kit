@@ -7,8 +7,8 @@ try:
 except ImportError as e:
     import sys
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepqc.train.model import CorrNet
-from deepqc.train.reader import GroupReader
+from deepqc.model.model import CorrNet
+from deepqc.model.reader import GroupReader
 from deepqc.utils import load_yaml, load_dirs, check_list
 
 

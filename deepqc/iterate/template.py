@@ -13,14 +13,14 @@ from deepqc.utils import QCDIR
 
 SCF_CMD = " ".join([
     "{python} -u",
-    "-m deepqc.scf.main"
-    # os.path.join(QCDIR, "scf/main.py") # this is the backup choice
+    "-m deepqc.scf.run"
+    # os.path.join(QCDIR, "scf/run.py") # this is the backup choice
 ])
 
 TRN_CMD = " ".join([
     "{python} -u",
-    "-m deepqc.train.main"
-    # os.path.join(QCDIR, "train/main.py") # this is the backup choice
+    "-m deepqc.model.train"
+    # os.path.join(QCDIR, "train/train.py") # this is the backup choice
 ])
 
 
@@ -355,7 +355,7 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
 def make_test_train(data_paths, model_file="model.pth", *,
                     output_prefix="test", group_results=True, 
                     workdir='.', outlog="log.test", **test_args):
-    from deepqc.train.test import main as test_func
+    from deepqc.model.test import main as test_func
     test_args.update(
         data_paths=data_paths,
         model_file=model_file,

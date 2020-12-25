@@ -7,9 +7,9 @@ import numpy as np
 
 # sys.path.append('/path/to/source')
 import deepqc
-from deepqc.train.main import main as train_main
-from deepqc.train.test import main as train_test
-from deepqc.scf.main import main as scf_main
+from deepqc.model.train import main as train_main
+from deepqc.model.test import main as train_test
+from deepqc.scf.run import main as scf_main
 from deepqc.scf.stats import collect_data_grouped
 from deepqc.utils import load_yaml
 from deepqc.task.task import PythonTask

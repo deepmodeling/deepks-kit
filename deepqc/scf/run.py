@@ -11,7 +11,7 @@ except ImportError as e:
 from deepqc.scf.scf import DSCF
 from deepqc.scf.fields import select_fields
 from deepqc.scf.penalty import select_penalty
-from deepqc.train.model import CorrNet
+from deepqc.model.model import CorrNet
 from deepqc.utils import check_list, flat_file_list
 from deepqc.utils import is_xyz, load_sys_paths
 from deepqc.utils import load_yaml, load_array
