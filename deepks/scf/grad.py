@@ -2,9 +2,10 @@ import abc
 import time
 import torch
 import numpy as np
-from pyscf import gto, lib
+from pyscf import gto, scf, lib
 from pyscf.lib import logger
 from pyscf.grad import rks as rks_grad
+from pyscf.grad import uks as uks_grad
 
 # see ./_old_grad.py for a more clear (but maybe slower) implementation
 # all variables and functions start with "t_" are torch related.
@@ -214,8 +215,15 @@ class NetGradMixin(CorrGradMixin):
         return scanner
 
 
+def build_grad(mf):
+    if isinstance(mf, scf.uhf.UHF):
+        return UGradients(mf)
+    else:
+        return Gradients(mf)
+
+
 class Gradients(NetGradMixin, rks_grad.Gradients):
-    """Analytical nuclear gradient for the DeePKS model"""
+    """Analytical nuclear gradient for restricted DeePKS model"""
     
     def __init__(self, mf):
         # makesure the base method is initialized first
@@ -223,12 +231,28 @@ class Gradients(NetGradMixin, rks_grad.Gradients):
         NetGradMixin.__init__(self)
         self._keys.update(self.__dict__.keys())
 
-
 Grad = Gradients
+RGrad = RGradients = Gradients
 
 from deepks.scf.scf import DSCF
 # Inject to SCF class
 DSCF.Gradients = lib.class_as_method(Gradients)
+
+
+class UGradients(NetGradMixin, uks_grad.Gradients):
+    """Analytical nuclear gradient for unrestricted DeePKS model"""
+    
+    def __init__(self, mf):
+        # makesure the base method is initialized first
+        uks_grad.Gradients.__init__(self, mf)
+        NetGradMixin.__init__(self)
+        self._keys.update(self.__dict__.keys())
+
+UGrad = UGradients
+
+from deepks.scf.scf import UDSCF
+# Inject to SCF class
+UDSCF.Gradients = lib.class_as_method(UGradients)
 
 
 # # legacy method, kept for reference

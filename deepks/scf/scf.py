@@ -193,8 +193,8 @@ class NetMixin(CorrMixin):
                 t_vc.detach().cpu().numpy())
 
     def nuc_grad_method(self):
-        from deepks.scf.grad import Gradients
-        return Gradients(self)
+        from deepks.scf.grad import build_grad
+        return build_grad(self)
 
     def reset(self, mol=None):
         super().reset(mol)
@@ -243,7 +243,7 @@ class NetMixin(CorrMixin):
 
 
 class DSCF(NetMixin, PenaltyMixin, dft.rks.RKS):
-    """Self Consistant Field solver for given NN energy model"""
+    """Restricted SCF solver for given NN energy model"""
     
     def __init__(self, mol, model, xc="HF", proj_basis=None, penalties=None, device=DEVICE):
         # base method must be initialized first
@@ -255,10 +255,21 @@ class DSCF(NetMixin, PenaltyMixin, dft.rks.RKS):
         # update keys to avoid pyscf warning
         self._keys.update(self.__dict__.keys())
 
+DeepSCF = RDSCF = DSCF
 
-DeepSCF = DSCF
-RDSCF = DSCF
 
+class UDSCF(NetMixin, PenaltyMixin, dft.uks.UKS):
+    """Unrestricted SCF solver for given NN energy model"""
+    
+    def __init__(self, mol, model, xc="HF", proj_basis=None, penalties=None, device=DEVICE):
+        # base method must be initialized first
+        dft.uks.UKS.__init__(self, mol, xc=xc)
+        # correction mixin initialization
+        NetMixin.__init__(self, model, proj_basis=proj_basis, device=device)
+        # penalty term initialization
+        PenaltyMixin.__init__(self, penalties=penalties)
+        # update keys to avoid pyscf warning
+        self._keys.update(self.__dict__.keys())
 
 # if __name__ == '__main__':
 #     mol = gto.Mole()
