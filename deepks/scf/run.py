@@ -8,7 +8,7 @@ try:
     import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepks.scf.scf import DSCF
+from deepks.scf.scf import DSCF, UDSCF
 from deepks.scf.fields import select_fields
 from deepks.scf.penalty import select_penalty
 from deepks.model.model import CorrNet
@@ -38,10 +38,11 @@ def solve_mol(mol, model, fields,
     
     tic = time.time()
 
-    cf = DSCF(mol, model, 
-                 proj_basis=proj_basis, 
-                 penalties=penalties, 
-                 device=device)
+    SCFcls = DSCF if mol.spin == 0 else UDSCF
+    cf = SCFcls(mol, model, 
+                proj_basis=proj_basis, 
+                penalties=penalties, 
+                device=device)
     cf.set(chkfile=chkfile)
     cf.set(**scf_args)
     cf.kernel()
@@ -131,11 +132,13 @@ def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     mol = gto.Mole()
     # change minimum max memory to 16G
     # mol.max_memory = max(16000, mol.max_memory) 
-    mol.verbose = verbose
+    mol.unit = "Ang"
     mol.atom = atom
     mol.basis = basis
-    mol.set(**kwargs)
-    mol.build(0,0,unit="Ang")
+    mol.verbose = verbose
+    mol.__dict__.update(kwargs)
+    mol.spin = mol.nelectron % 2
+    mol.build(0,0)
     return mol
 
 

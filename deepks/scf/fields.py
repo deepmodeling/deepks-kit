@@ -46,11 +46,11 @@ SCF_FIELDS = [
           ["converged", "convergence"], 
           lambda mf: mf.converged,
           "(nframe, 1)"),
-    Field("mo_coef_occ", 
+    Field("mo_coef_occ", # do not support UHF
           ["mo_coeff_occ, orbital_coeff_occ"],
           lambda mf: mf.mo_coeff[:,mf.mo_occ>0].T,
-          "(nframe, nao, -1)"),
-    Field("mo_ene_occ", 
+          "(nframe, -1, nao)"),
+    Field("mo_ene_occ", # do not support UHF
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
           "(nframe, -1)")

@@ -168,6 +168,8 @@ class NetGradMixin(CorrGradMixin):
         """return jacobian of projected density matrix w.r.t atomic coordinates"""
         if dm is None:
             dm = self.base.make_rdm1()
+        if dm.ndim > 2: # for uhf case
+            dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).double()
         t_gdmx_shells = t_make_grad_pdm_x(self.mol, t_dm, 
                             self._t_ovlp_shells, self._t_ipov_shells)
@@ -181,6 +183,8 @@ class NetGradMixin(CorrGradMixin):
         """return jacobian of decriptor eigenvalues w.r.t atomic coordinates"""
         if dm is None:
             dm = self.base.make_rdm1()
+        if dm.ndim > 2: # for uhf case
+            dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).double()
         t_gvx = t_make_grad_eig_x(self.mol, t_dm, 
                     self._t_ovlp_shells, self._t_ipov_shells)
