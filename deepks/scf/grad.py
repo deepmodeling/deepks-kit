@@ -6,6 +6,7 @@ from pyscf import gto, scf, lib
 from pyscf.lib import logger
 from pyscf.grad import rks as rks_grad
 from pyscf.grad import uks as uks_grad
+from deepks.scf.scf import t_make_pdm, t_shell_eig
 
 # see ./_old_grad.py for a more clear (but maybe slower) implementation
 # all variables and functions start with "t_" are torch related.
@@ -28,10 +29,8 @@ from pyscf.grad import uks as uks_grad
 def t_make_grad_e_pdm(model, dm, ovlp_shells):
     """return gradient of energy w.r.t projected density matrix"""
     # calculate \partial E / \partial (D^I_rl)_mm' by shells
-    pdm_shells = [torch.einsum('rap,rs,saq->apq', po, dm, po).requires_grad_(True)
-                        for po in ovlp_shells]
-    eig_shells = [torch.symeig(dm, eigenvectors=True)[0]
-                        for dm in pdm_shells]
+    pdm_shells = [dm.requires_grad_(True) for dm in t_make_pdm(dm, ovlp_shells)]
+    eig_shells = [t_shell_eig(dm) for dm in pdm_shells]
     ceig = torch.cat(eig_shells, dim=-1).unsqueeze(0) # 1 x natoms x nproj
     _dref = next(model.parameters())
     ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
@@ -63,10 +62,8 @@ def t_make_grad_pdm_x(mol, dm, ovlp_shells, ipov_shells):
 def t_make_grad_eig_x(mol, dm, ovlp_shells, ipov_shells):
     """return jacobian of decriptor eigenvalues w.r.t atomic coordinates"""
     # v stands for eigen values
-    pdm_shells = [torch.einsum('rap,rs,saq->apq', po, dm, po).requires_grad_(True)
-                        for po in ovlp_shells]
-    calc_eig = lambda dm: torch.symeig(dm, True)[0]
-    gvdm_shells = [t_batch_jacobian(calc_eig, dm, dm.shape[-1]) 
+    pdm_shells = [dm.requires_grad_(True) for dm in t_make_pdm(dm, ovlp_shells)]
+    gvdm_shells = [t_batch_jacobian(t_shell_eig, dm, dm.shape[-1]) 
                         for dm in pdm_shells]
     gdmx_shells = t_make_grad_pdm_x(mol, dm, ovlp_shells, ipov_shells)
     gvx_shells = [torch.einsum("bxapq,avpq->bxav", gdmx, gvdm) 

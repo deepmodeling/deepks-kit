@@ -32,11 +32,14 @@ def t_make_pdm(dm, ovlp_shells):
     return pdm_shells
 
 
+def t_shell_eig(pdm):
+    return torch.symeig(pdm, eigenvectors=True)[0]
+
+
 def t_make_eig(dm, ovlp_shells):
     """return eigenvalues of projected density matrix"""
     pdm_shells = t_make_pdm(dm, ovlp_shells)
-    eig_shells = [torch.symeig(dm, eigenvectors=True)[0]
-                    for dm in pdm_shells]
+    eig_shells = [t_shell_eig(dm) for dm in pdm_shells]
     ceig = torch.cat(eig_shells, dim=-1)
     return ceig
 
