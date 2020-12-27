@@ -136,7 +136,7 @@ def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
     mol.atom = atom
     mol.basis = basis
     mol.verbose = verbose
-    mol.__dict__.update(kwargs)
+    mol.set(**kwargs)
     mol.spin = mol.nelectron % 2
     mol.build(0,0)
     return mol
