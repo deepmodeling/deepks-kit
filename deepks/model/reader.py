@@ -286,6 +286,7 @@ class GroupReader(object) :
         X = np.concatenate([all_sdm, all_natm.reshape(-1,1)], -1)
         y = np.concatenate([r.data_ec for r in self.readers])
         I = np.identity(X.shape[1])
+        I[-1,-1] = 0 # do not punish the bias term
         # solve ridge reg
         coef = np.linalg.solve(X.T @ X + ridge_alpha * I, X.T @ y).reshape(-1)
         return coef[:-1], coef[-1]
