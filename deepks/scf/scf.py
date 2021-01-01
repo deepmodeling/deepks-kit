@@ -220,6 +220,9 @@ class NetMixin(CorrMixin):
         """return eigenvalues of projected density matrix"""
         if dm is None:
             dm = self.make_rdm1()
+        dm = np.asanyarray(dm)
+        if dm.ndim >= 3 and isinstance(self, scf.uhf.UHF):
+            dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).double()
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells)
         return t_eig.detach().cpu().numpy()
