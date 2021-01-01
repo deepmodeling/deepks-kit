@@ -21,4 +21,4 @@ The program provides a command line interface `deepks` that contains five sub-co
 
 ## Usage
 
-Please see [`examples`](./examples) folder for the usage of `deepks` library. A detailed example with executable data for water molecules can be found [here](./examples/water).
+Please see [`examples`](./examples) folder for the usage of `deepks` library. A detailed example with executable data for single water molecules can be found [here](./examples/water_single). A more complicated one for training water clusters can be found [here](./examples/water_cluster).
