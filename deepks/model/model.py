@@ -17,6 +17,8 @@ def parse_actv_fn(code):
         return torch.relu
     if lcode == 'softplus':
         return nn.Softplus()
+    if lcode == 'silu':
+        return nn.SiLU()
     if lcode == 'gelu':
         return nn.functional.gelu
     if lcode == 'mygelu':
@@ -71,7 +73,7 @@ class CorrNet(nn.Module):
 
     @log_args('_init_args')
     def __init__(self, input_dim, hidden_sizes=(100,100,100), 
-                 actv_fn='mygelu', use_resnet=True, 
+                 actv_fn='gelu', use_resnet=True, 
                  input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
