@@ -6,6 +6,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import scf, dft
+from deepks.utils import load_basis
 from deepks.model.model import CorrNet
 from deepks.scf.penalty import PenaltyMixin
 
@@ -63,28 +64,6 @@ def gen_proj_mol(mol, basis) :
     test_mol.basis = basis
     test_mol.build(0,0,unit="Ang")
     return test_mol
-
-
-_zeta = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])
-_coef = np.diag(np.ones(_zeta.size)) - np.diag(np.ones(_zeta.size-1), k=1)
-_table = np.concatenate([_zeta.reshape(-1,1), _coef], axis=1)
-DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolist()]]
-
-def load_basis(basis):
-    if basis is None:
-        return DEFAULT_BASIS
-    elif isinstance(basis, np.ndarray) and basis.ndim == 2:
-        return [[ll, *basis.tolist()] for ll in range(3)]
-    elif not isinstance(basis, str):
-        return basis
-    elif basis.endswith(".npy"):
-        table = np.load(basis)
-        return [[ll, *table.tolist()] for ll in range(3)]
-    elif basis.endswith(".npz"):
-        all_tables = np.load(basis).values()
-        return [[ll, *table.tolist()] for ll, table in enumerate(all_tables)]
-    else:
-        return gto.basis.load(basis, symb="Ne")
 
 
 class CorrMixin(abc.ABC):
@@ -240,12 +219,6 @@ class NetMixin(CorrMixin):
         proj = self.proj_intor("int1e_ovlp")
         # return shape [nao x natom x nproj]
         return proj.reshape(nao, natm, pnao // natm)
-
-    def save_model(self, filename, with_basis=True):
-        extra_info = {}
-        if with_basis:
-            extra_info["proj_basis"] = self._pbas
-        self.net.save(filename, **extra_info)
 
 
 class DSCF(NetMixin, PenaltyMixin, dft.rks.RKS):

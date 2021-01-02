@@ -51,8 +51,10 @@ def preprocess(model, g_reader,
                 prefit=True, prefit_ridge=10, prefit_trainable=False):
     shift = model.input_shift.cpu().detach().numpy()
     scale = model.input_scale.cpu().detach().numpy()
+    symm_sec = model.shell_sec # will be None if no embedding
+    prefit_trainable = prefit_trainable and symm_sec is None # no embedding
     if preshift or prescale:
-        davg, dstd = g_reader.compute_data_stat()
+        davg, dstd = g_reader.compute_data_stat(symm_sec)
         if preshift: 
             shift = davg
         if prescale: 
@@ -63,7 +65,9 @@ def preprocess(model, g_reader,
                 scale = scale.clip(prescale_clip)
         model.set_normalization(shift, scale)
     if prefit:
-        weight, bias = g_reader.compute_prefitting(shift=shift, scale=scale, ridge_alpha=prefit_ridge)
+        weight, bias = g_reader.compute_prefitting(
+            shift=shift, scale=scale, 
+            ridge_alpha=prefit_ridge, symm_sections=symm_sec)
         model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
@@ -73,6 +77,7 @@ def train(model, g_reader, n_epoch=1000,
           weight_decay=0.0, display_epoch=100, ckpt_file="model.pth", device=DEVICE):
     
     model = model.to(device)
+    model.eval()
     print("# working on device:", device)
     if test_reader is None:
         test_reader = g_reader
@@ -98,6 +103,7 @@ def train(model, g_reader, n_epoch=1000,
         tic = time()
         loss_list = []
         for sample in g_reader:
+            model.train()
             optimizer.zero_grad()
             loss = evaluator(model, sample)
             loss.backward()
@@ -106,6 +112,7 @@ def train(model, g_reader, n_epoch=1000,
         scheduler.step()
 
         if epoch % display_epoch == 0:
+            model.eval()
             trn_loss = np.mean(loss_list)
             trn_time = time() - tic
             tic = time()
@@ -122,7 +129,7 @@ def main(train_paths, test_paths=None,
          restart=None, ckpt_file=None, 
          model_args=None, data_args=None, 
          preprocess_args=None, train_args=None, 
-         seed=None, device=None):
+         proj_basis=None, seed=None, device=None):
    
     if seed is None: 
         seed = np.random.randint(0, 2**32)
@@ -134,6 +141,8 @@ def main(train_paths, test_paths=None,
     if data_args is None: data_args = {}
     if preprocess_args is None: preprocess_args = {}
     if train_args is None: train_args = {}
+    if proj_basis is None:
+        model_args["proj_basis"] = proj_basis
     if ckpt_file is not None:
         train_args["ckpt_file"] = ckpt_file
     if device is not None:

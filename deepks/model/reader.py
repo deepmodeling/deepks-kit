@@ -281,7 +281,7 @@ class GroupReader(object) :
             all_std = np.concatenate(std_shells, axis=-1)
         return all_mean, all_std
 
-    def compute_prefitting(self, shift=None, scale=None, ridge_alpha=1e-10, symm_sections=None):
+    def compute_prefitting(self, shift=None, scale=None, ridge_alpha=1e-8, symm_sections=None):
         if shift is None or scale is None:
             all_mean, all_std = self.compute_data_stat(symm_sections=symm_sections)
             if shift is None:

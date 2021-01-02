@@ -11,6 +11,40 @@ from itertools import chain
 QCDIR = os.path.dirname(os.path.realpath(__file__))
 
 
+# below are basis set settings
+
+_zeta = 1.5**np.array([17,13,10,7,5,3,2,1,0,-1,-2,-3])
+_coef = np.diag(np.ones(_zeta.size)) - np.diag(np.ones(_zeta.size-1), k=1)
+_table = np.concatenate([_zeta.reshape(-1,1), _coef], axis=1)
+DEFAULT_BASIS = [[0, *_table.tolist()], [1, *_table.tolist()], [2, *_table.tolist()]]
+
+def load_basis(basis):
+    if basis is None:
+        return DEFAULT_BASIS
+    elif isinstance(basis, np.ndarray) and basis.ndim == 2:
+        return [[ll, *basis.tolist()] for ll in range(3)]
+    elif not isinstance(basis, str):
+        return basis
+    elif basis.endswith(".npy"):
+        table = np.load(basis)
+        return [[ll, *table.tolist()] for ll in range(3)]
+    elif basis.endswith(".npz"):
+        all_tables = np.load(basis).values()
+        return [[ll, *table.tolist()] for ll, table in enumerate(all_tables)]
+    else:
+        from pyscf import gto
+        return gto.basis.load(basis, symb="Ne")
+
+
+def get_shell_sec(basis):
+    if not isinstance(basis, (list, tuple)):
+        basis = load_basis(basis)
+    shell_sec = []
+    for l, *coeff in basis:
+        shell_sec.extend([2*l+1] * len(coeff))
+    return shell_sec
+    
+
 # below are argument chekcing utils
 
 def check_list(arg, nullable=True):

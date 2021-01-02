@@ -16,6 +16,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def test(model, g_reader, dump_prefix="test", group=False):
+    model.eval()
     loss_fn=nn.MSELoss()
     label_list = []
     pred_list = []

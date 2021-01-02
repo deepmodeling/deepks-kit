@@ -52,6 +52,8 @@ def train_cli(args=None):
                         help='paths to the folders of testing data')
     parser.add_argument('-o', '--ckpt-file',
                         help='file to save the model parameters, default: model.pth')
+    parser.add_argument("-P", "--proj_basis",
+                        help="basis set used to project density matrix")   
     parser.add_argument('-S', '--seed', type=int,
                         help='use specified seed in initialization and training')
     parser.add_argument("-D", "--device",
