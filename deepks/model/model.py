@@ -66,7 +66,7 @@ def make_shell_mask(shell_sec):
     return mask
 
 
-def pad_lastdim(sequences, padding_value=0.0):
+def pad_lastdim(sequences, padding_value=0.):
     # assuming trailing dimensions and type of all the Tensors
     # in sequences are same and fetching those from sequences[0]
     max_size = sequences[0].size()
@@ -81,9 +81,21 @@ def pad_lastdim(sequences, padding_value=0.0):
     return out_tensor
 
 
-def unpad_lastdim(tensor, length_list):
+def pad_masked(tensor, mask, padding_value=0.):
+    # equiv to pad_lastdim(tensor.split(shell_sec, dim=-1))
+    new_shape = tensor.shape[:-1] + mask.shape
+    return tensor.new_full(new_shape, padding_value).masked_scatter_(mask, tensor) 
+
+
+def unpad_lastdim(padded, length_list):
     # inverse of pad_lastdim
-    return [tensor[...,i,:length] for i, length in enumerate(length_list)]
+    return [padded[...,i,:length] for i, length in enumerate(length_list)]
+
+
+def unpad_masked(padded, mask):
+    # equiv to torch.cat(unpad_lastdim(padded, shell_sec), dim=-1)
+    new_shape = padded.shape[:-mask.ndim] + (mask.sum(),)
+    return torch.masked_select(padded, mask).reshape(new_shape)
 
 
 def masked_softmax(input, mask, dim=-1):
@@ -141,13 +153,14 @@ class ThermalEmbedding(nn.Module):
         super().__init__()
         input_dim = sum(shell_sec)
         self.shell_sec = shell_sec
-        self.shell_mask = make_shell_mask(shell_sec) # shape: [l, m]
+        self.register_buffer("shell_mask", make_shell_mask(shell_sec), False)# shape: [l, m]
         if embd_sizes is None:
             embd_sizes = shell_sec
         if isinstance(embd_sizes, int):
             embd_sizes = [embd_sizes] * len(shell_sec)
         assert len(embd_sizes) == len(shell_sec)
         self.embd_sizes = embd_sizes
+        self.register_buffer("embd_mask", make_shell_mask(embd_sizes), False)
         self.ndesc = sum(embd_sizes)
         self.beta = nn.Parameter( # shape: [l, p], padded
             pad_lastdim([torch.linspace(init_beta, -init_beta, ne) 
@@ -158,10 +171,9 @@ class ThermalEmbedding(nn.Module):
         self.register_buffer('num_batches_tracked', torch.tensor(0, dtype=torch.long))
 
     def forward(self, x):
-        x_shells = x.split(self.shell_sec, dim=-1)
+        x_padded = pad_masked(x, self.shell_mask, 0.) # shape: [n, a, l, m]
         if self.training:
-            self.update_running_stats(x_shells)
-        x_padded = pad_lastdim(x_shells) # shape: [n, a, l, m]
+            self.update_running_stats(x_padded)
         nx_padded = ((x_padded - self.running_mean.unsqueeze(-1)) 
                     / (self.running_var.sqrt().unsqueeze(-1) + SCALE_EPS)
                     * self.shell_mask.to(x_padded))
@@ -169,16 +181,21 @@ class ThermalEmbedding(nn.Module):
             torch.einsum("...lm,lp->...lmp", nx_padded, -self.beta),
             self.shell_mask.unsqueeze(-1), dim=-2)
         desc_padded = torch.einsum("...m,...mp->...p", x_padded, weight)
-        return torch.cat(unpad_lastdim(desc_padded, self.embd_sizes), dim=-1)
+        return unpad_masked(desc_padded, self.embd_mask)
 
-    def update_running_stats(self, x_shells):
+    def update_running_stats(self, x_padded):
+        if self.num_batches_tracked > 1000 and self.momentum is None:
+            return # stop update after 1000 batches, so the scaling becomes a fixed parameter
         self.num_batches_tracked += 1
         exp_factor = 1. - 1. / float(self.num_batches_tracked)
         if self.momentum is not None:
             exp_factor = max(exp_factor, self.momentum)
         with torch.no_grad():
-            batch_mean = torch.stack([sx.detach().mean() for sx in x_shells])
-            batch_var = torch.stack([sx.detach().var() for sx in x_shells])
+            fmask = self.shell_mask.to(x_padded)
+            pad_portion = fmask.mean(-1)
+            x_masked = x_padded * fmask # make sure padded part is zero
+            batch_mean = x_masked.mean((*range(x_masked.ndim-2), -1)) / pad_portion
+            batch_var = x_masked.var((*range(x_masked.ndim-2), -1)) / pad_portion
             self.running_mean[:] = exp_factor * self.running_mean + (1-exp_factor) * batch_mean
             self.running_var[:] = exp_factor * self.running_var + (1-exp_factor) * batch_var
         
