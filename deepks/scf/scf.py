@@ -6,7 +6,7 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
 from pyscf import scf, dft
-from deepks.utils import load_basis
+from deepks.utils import load_basis, get_shell_sec
 from deepks.model.model import CorrNet
 from deepks.scf.penalty import PenaltyMixin
 
@@ -132,21 +132,19 @@ class NetMixin(CorrMixin):
     def __init__(self, model, proj_basis=None, device=DEVICE):
         # make sure you call this method after the base SCF class init
         # otherwise it would throw an error due to the lack of mol attr
-        rawmodel = model
         self.device = device
         if isinstance(model, str):
             model = CorrNet.load(model).double()
         if isinstance(model, torch.nn.Module):
-            model = model.to(self.device)
+            model = model.to(self.device).eval()
         self.net = model
         # try load basis from model file
-        if proj_basis is None and isinstance(rawmodel, str):
-            mdict = torch.load(rawmodel, map_location="cpu")
-            proj_basis = mdict.get("extra_info", {}).get("proj_basis", None)
+        if proj_basis is None:
+            proj_basis = getattr(model, "_pbas", None)
         # should be a list here, follow pyscf convention
         self._pbas = load_basis(proj_basis)
         # [1,1,1,...,3,3,3,...,5,5,5,...]
-        self._shell_sec = sum(([2*b[0]+1] * (len(b)-1) for b in self._pbas), [])
+        self._shell_sec = get_shell_sec(self._pbas)
         # total number of projected basis per atom
         self.nproj = sum(self._shell_sec)
         # prepare overlap integrals used in projection
