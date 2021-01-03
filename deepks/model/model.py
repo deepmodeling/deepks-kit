@@ -151,7 +151,6 @@ class ThermalEmbedding(nn.Module):
 
     def __init__(self, shell_sec, embd_sizes=None, init_beta=1., momentum=None):
         super().__init__()
-        input_dim = sum(shell_sec)
         self.shell_sec = shell_sec
         self.register_buffer("shell_mask", make_shell_mask(shell_sec), False)# shape: [l, m]
         if embd_sizes is None:
@@ -203,7 +202,6 @@ class ThermalEmbedding(nn.Module):
         self.running_mean.zero_()
         self.running_var.fill_(1)
         self.num_batches_tracked.zero_()
-
 
 
 class CorrNet(nn.Module):
