@@ -30,6 +30,18 @@ def parse_actv_fn(code):
     raise ValueError(f'{code} is not a valid activation function')
 
 
+def make_embedder(type, shell_sec, **kwargs):
+    ltype = type.lower()
+    if ltype in ("trace", "sum"):
+        EmbdCls = TraceEmbedding
+    elif ltype in ("thermal", "softmax"):
+        EmbdCls = ThermalEmbedding
+    else:
+        raise ValueError(f'{type} is not a valid embedding type')
+    embedder = EmbdCls(shell_sec, **kwargs)
+    return embedder
+
+
 def mygelu(x):
     return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
 
@@ -43,6 +55,42 @@ def log_args(name):
             func(self, *args, **kwargs)
         return warpper
     return decorator
+
+
+def make_shell_mask(shell_sec):
+    lsize = len(shell_sec)
+    msize = max(shell_sec)
+    mask = torch.zeros(lsize, msize, dtype=bool)
+    for l, m in enumerate(shell_sec):
+        mask[l, :m] = 1
+    return mask
+
+
+def pad_lastdim(sequences, padding_value=0.0):
+    # assuming trailing dimensions and type of all the Tensors
+    # in sequences are same and fetching those from sequences[0]
+    max_size = sequences[0].size()
+    front_dims = max_size[:-1]
+    max_len = max([s.size(-1) for s in sequences])
+    out_dims = front_dims + (len(sequences), max_len)
+    out_tensor = sequences[0].new_full(out_dims, padding_value)
+    for i, tensor in enumerate(sequences):
+        length = tensor.size(-1)
+        # use index notation to prevent duplicate references to the tensor
+        out_tensor[..., i, :length] = tensor
+    return out_tensor
+
+
+def unpad_lastdim(tensor, length_list):
+    # inverse of pad_lastdim
+    return [tensor[...,i,:length] for i, length in enumerate(length_list)]
+
+
+def masked_softmax(input, mask, dim=-1):
+    exps = torch.exp(input - input.max(dim=dim, keepdim=True)[0])
+    mexps = exps * mask.to(exps)
+    msums = mexps.sum(dim=dim, keepdim=True).clamp(1e-10)
+    return mexps / msums
 
 
 class DenseNet(nn.Module):
@@ -74,18 +122,6 @@ class DenseNet(nn.Module):
         return x
 
 
-def make_embedder(type, shell_sec, **kwargs):
-    ltype = type.lower()
-    if ltype in ("trace", "sum"):
-        EmbdCls = TraceEmbedding
-    elif ltype in ("thermal", "softmax"):
-        EmbdCls = ThermalEmbedding
-    else:
-        raise ValueError(f'{type} is not a valid embedding type')
-    embedder = EmbdCls(shell_sec, **kwargs)
-    return embedder
-
-
 class TraceEmbedding(nn.Module):
 
     def __init__(self, shell_sec):
@@ -105,6 +141,7 @@ class ThermalEmbedding(nn.Module):
         super().__init__()
         input_dim = sum(shell_sec)
         self.shell_sec = shell_sec
+        self.shell_mask = make_shell_mask(shell_sec) # shape: [l, m]
         if embd_sizes is None:
             embd_sizes = shell_sec
         if isinstance(embd_sizes, int):
@@ -112,9 +149,9 @@ class ThermalEmbedding(nn.Module):
         assert len(embd_sizes) == len(shell_sec)
         self.embd_sizes = embd_sizes
         self.ndesc = sum(embd_sizes)
-        self.beta_shells = nn.ParameterList(
-            [nn.Parameter(torch.linspace(init_beta, -init_beta, ne))
-                for ne in embd_sizes])
+        self.beta = nn.Parameter( # shape: [l, p], padded
+            pad_lastdim([torch.linspace(init_beta, -init_beta, ne) 
+                            for ne in embd_sizes]))
         self.momentum = momentum
         self.register_buffer('running_mean', torch.zeros(len(shell_sec)))
         self.register_buffer('running_var', torch.ones(len(shell_sec)))
@@ -124,14 +161,15 @@ class ThermalEmbedding(nn.Module):
         x_shells = x.split(self.shell_sec, dim=-1)
         if self.training:
             self.update_running_stats(x_shells)
-        nx_shells = [(sx - m) / (v.sqrt() + SCALE_EPS) 
-            for sx, m, v in zip(x_shells, self.running_mean, self.running_var)]
-        desc_shells = [
-            torch.sum(sx.unsqueeze(-1) 
-                * F.softmax(-sbeta * snx.unsqueeze(-1), dim=-2), dim=-2)
-            for sx, snx, sbeta in zip(x_shells, nx_shells, self.beta_shells)
-        ]
-        return torch.cat(desc_shells, dim=-1)
+        x_padded = pad_lastdim(x_shells) # shape: [n, a, l, m]
+        nx_padded = ((x_padded - self.running_mean.unsqueeze(-1)) 
+                    / (self.running_var.sqrt().unsqueeze(-1) + SCALE_EPS)
+                    * self.shell_mask.to(x_padded))
+        weight = masked_softmax(
+            torch.einsum("...lm,lp->...lmp", nx_padded, -self.beta),
+            self.shell_mask.unsqueeze(-1), dim=-2)
+        desc_padded = torch.einsum("...m,...mp->...p", x_padded, weight)
+        return torch.cat(unpad_lastdim(desc_padded, self.embd_sizes), dim=-1)
 
     def update_running_stats(self, x_shells):
         self.num_batches_tracked += 1
