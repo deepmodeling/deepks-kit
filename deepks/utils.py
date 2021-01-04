@@ -36,6 +36,12 @@ def load_basis(basis):
         return gto.basis.load(basis, symb="Ne")
 
 
+def save_basis(file, basis):
+    """Save the basis to npz file from internal format of pyscf"""
+    tables = [np.array(b[1:]) for b in basis]
+    np.savez(file, *tables)
+
+
 def get_shell_sec(basis):
     if not isinstance(basis, (list, tuple)):
         basis = load_basis(basis)

@@ -8,6 +8,7 @@ except ImportError as e:
 from deepks.utils import copy_file, link_file
 from deepks.utils import load_yaml, save_yaml
 from deepks.utils import load_sys_paths
+from deepks.utils import load_basis, save_basis
 from deepks.task.workflow import Sequence, Iteration
 from deepks.iterate.template import make_scf, make_train
 
@@ -38,6 +39,7 @@ INIT_TRN_NAME = "init_train.yaml"
 DATA_TRAIN = "data_train"
 DATA_TEST  = "data_test"
 MODEL_FILE = "model.pth"
+PROJ_BASIS = "proj_basis.npz"
 
 SCF_STEP_DIR = "00.scf"
 TRN_STEP_DIR = "01.train"
@@ -128,11 +130,12 @@ def collect_systems(systems, folder=None):
     return targets
 
 
-def make_iterate(systems_train=None, systems_test=None,
-                 n_iter=0, *, workdir=".", share_folder="share",
+def make_iterate(systems_train=None, systems_test=None, n_iter=0, 
+                 *, proj_basis=None, workdir=".", share_folder="share",
                  scf_input=True, scf_machine=None,
                  train_input=True, train_machine=None,
                  init_model=False, init_scf=True, init_train=True,
+                 init_scf_machine=None, init_train_machine=None,
                  cleanup=False, strict=True):
     r"""
     Make a `Workflow` to do the iterative training procedure.
@@ -155,6 +158,10 @@ def make_iterate(systems_train=None, systems_test=None,
         system in the training set as testing system.
     n_iter: int, optional
         The number of iterations to do. Default is 0.
+    proj_basis: str, optional
+        The basis set used to project the density matrix onto. 
+        Can be a `.npz` file specifying the coefficients in pyscf's format.
+        If not given, use the default basis.
     workdir: str, optional
         The working directory. Default is current directory (`.`).
     share_folder: str, optional
@@ -190,9 +197,13 @@ def make_iterate(systems_train=None, systems_test=None,
     init_scf: bool or str or dict, optional 
         Similar to `scf_input` but used for init calculation. The target
         location is ``$share_folder/init_scf.yaml``. Defaults to True.
+    init_scf_machine: str or dict, optional
+        If specified, use different machine settings for init scf jobs.
     init_train: bool or str or dict, optional 
         Similar to `train_input` but used for init calculation. The target
         location is ``$share_folder/init_train.yaml``. Defaults to True.
+    init_train_machine: str or dict, optional
+        If specified, use different machine settings for init training job.
     cleanup: bool, optional 
         Whether to remove job files during calculation, 
         such as ``slurm-*.out`` and ``err``. Defaults to False.
@@ -232,18 +243,22 @@ def make_iterate(systems_train=None, systems_test=None,
     # check required machine parameters
     scf_machine = check_arg_dict(scf_machine, DEFAULT_SCF_MACHINE, strict)
     train_machine = check_arg_dict(train_machine, DEFAULT_TRN_MACHINE, strict)
+    # handle projection basis
+    if proj_basis is not None:
+        save_basis(os.path.join(share_folder, PROJ_BASIS), load_basis(proj_basis))
+        proj_basis = PROJ_BASIS
     # make tasks
     scf_step = make_scf(
         systems_train=systems_train, systems_test=systems_test,
         train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
         workdir=SCF_STEP_DIR, share_folder=share_folder,
         source_arg=scf_args_name, source_model=MODEL_FILE,
-        cleanup=cleanup, **scf_machine
+        source_pbasis=proj_basis, cleanup=cleanup, **scf_machine
     )
     train_step = make_train(
         source_train=DATA_TRAIN, source_test=DATA_TEST,
-        restart=True, source_model=MODEL_FILE, 
-        save_model=MODEL_FILE, source_arg=train_args_name, 
+        restart=True, source_model=MODEL_FILE, save_model=MODEL_FILE, 
+        source_pbasis=proj_basis, source_arg=train_args_name, 
         workdir=TRN_STEP_DIR, share_folder=share_folder,
         cleanup=cleanup, **train_machine
     )
@@ -258,17 +273,21 @@ def make_iterate(systems_train=None, systems_test=None,
     elif init_scf or init_train: # otherwise, make an init iteration to train the first model
         init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
+        init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
+            if init_scf_machine is not None else scf_machine)
+        init_train_machine = (check_arg_dict(init_train_machine, DEFAULT_SCF_MACHINE, strict)
+            if init_train_machine is not None else train_machine)
         scf_init = make_scf(
         systems_train=systems_train, systems_test=systems_test,
         train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
         workdir=SCF_STEP_DIR, share_folder=share_folder,
-        source_arg=init_scf_name, source_model=None,
+        source_arg=init_scf_name, source_model=None, source_pbasis=proj_basis,
         cleanup=cleanup, **scf_machine
         )
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
-            restart=False, source_model=MODEL_FILE, 
-            save_model=MODEL_FILE, source_arg=init_train_name, 
+            restart=False, source_model=MODEL_FILE, save_model=MODEL_FILE, 
+            source_pbasis=proj_basis, source_arg=init_train_name, 
             workdir=TRN_STEP_DIR, share_folder=share_folder,
             cleanup=cleanup, **train_machine
         )
@@ -287,73 +306,7 @@ def main(*args, **kwargs):
     Each iteration of the procedure is done in sub-folder ``iter.XX``, 
     which further containes two sub-folders, ``00.scf`` and ``01.train``.
 
-    Parameters
-    ----------
-    systems_train: str or list of str, optional
-        System paths used as training set in the procedure. These paths 
-        can refer to systems or a file that contains multiple system paths.
-        Systems must be .xyz files or folders contains .npy files.
-        If not given, use ``$share_folder/systems_train.raw`` as default.
-    systems_test: str or list of str, optional
-        System paths used as testing (or validation) set in the procedure. 
-        The format is same as `systems_train`. If not given, use the last
-        system in the training set as testing system.
-    n_iter: int, optional
-        The number of iterations to do. Default is 0.
-    workdir: str, optional
-        The working directory. Default is current directory (`.`).
-    share_folder: str, optional
-        The folder to store shared files in the iteration, including
-        ``scf_input.yaml``, ``train_input.yaml``, and possibly files for
-        initialization. Default is ``share``.
-    scf_input: bool or str or dict, optional
-        Arguments used to specify the SCF calculation. If given `None` or
-        `False`, bypass the checking and use program default (unreliable). 
-        Otherwise, the arguments would be saved as a YAML file at 
-        ``$share_folder/scf_input.yaml`` and used for SCF calculation. 
-        Default is `True`, which will check and use the existing file.
-        If given a string of file path, copy the corresponding file into 
-        target location. If given a dict, dump it into the target file.
-    scf_machine: str or dict, optional
-        Arguments used to specify the job settings of SCF calculation,
-        including submitting method, resources, group size, etc..
-        If given a string of file path, load that file as a dict using 
-        YAML format. If not given, using program default setup.
-    train_input: bool or str or dict, optional 
-        Arguments used to specify the training of neural network. 
-        It follows the same rule as `scf_input`, only that the target 
-        location is ``$share_folder/train_input.yaml``.
-    train_machine: str or dict, optional 
-        Arguments used to specify the job settings of NN training. 
-        It Follows the same rule as `scf_machine`, but without group.
-    init_model: bool or str, optional 
-        Decide whether to use an existing model as the starting point.
-        If set to `False` (default), use `init_scf` and `init_train` 
-        to run an extra initialization iteration in folder ``iter.init``. 
-        If set to `True`, look for a model at ``$share_folder/init/model.pth``.
-        If given a string of path, copy that file into target location.
-    init_scf: bool or str or dict, optional 
-        Similar to `scf_input` but used for init calculation. The target
-        location is ``$share_folder/init_scf.yaml``. Defaults to True.
-    init_train: bool or str or dict, optional 
-        Similar to `train_input` but used for init calculation. The target
-        location is ``$share_folder/init_train.yaml``. Defaults to True.
-    cleanup: bool, optional 
-        Whether to remove job files during calculation, 
-        such as ``slurm-*.out`` and ``err``. Defaults to False.
-    strict: bool, optional 
-        Whether to allow additional arguments to be passed to task constructor,
-        through `scf_machine` and `train_machine`. Defaults to True.
-
-    Returns
-    -------
-    None
-    
-    Raises
-    ------
-    FileNotFoundError
-        Raise an Error when the system or argument files are required but 
-        not found in the share folder.
+    See `make_iterate` for detailed parameters.
     """
     # pass all arguments to make_iterate and run it
     iterate = make_iterate(*args, **kwargs)

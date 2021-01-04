@@ -68,6 +68,7 @@ def make_cleanup(pattern="slurm-*.out", workdir=".", **task_args):
 def make_scf_task(*, workdir=".",
                   arg_file="scf_input.yaml", source_arg=None,
                   model_file="model.pth", source_model=None,
+                  proj_basis=None, source_pbasis=None,
                   systems="systems.raw", link_systems=True, 
                   dump_dir="results", share_folder="share", 
                   outlog="log.scf", group_data=None,
@@ -93,6 +94,11 @@ def make_scf_task(*, workdir=".",
             if source_model is not None:
                 link_prev.append((source_model, model_file))
             forward_files.append(model_file)
+    if proj_basis:
+        command += f" -P {proj_basis}"
+        if source_pbasis is not None:
+            link_share.append((source_pbasis, proj_basis))
+        forward_files.append(proj_basis)
     if systems:
         # check system paths and make forward files
         sys_paths = [os.path.abspath(s) for s in load_sys_paths(systems)]
@@ -140,7 +146,7 @@ def make_run_scf(systems_train, systems_test=None, *,
                  no_model=False, group_data=None,
                  workdir='.', share_folder='share', outlog="log.scf",
                  source_arg="scf_input.yaml", source_model="model.pth",
-                 dispatcher=None, resources=None, 
+                 source_pbasis=None, dispatcher=None, resources=None, 
                  sub_size=1, group_size=1, ingroup_parallel=1, 
                  sub_res=None, python='python', **task_args):
     # if no test systems, use last one in train systems
@@ -161,6 +167,7 @@ def make_run_scf(systems_train, systems_test=None, *,
     test_sets = [systems_test[i::ntask_tst] for i in range(ntask_tst)]
     # make subtasks
     model_file = "../model.pth" if not no_model else "NONE"
+    proj_basis = "../proj_basis.npz" if source_pbasis else None
     nd = max(len(str(ntask_trn+ntask_tst)), 2)
     if sub_res is None:
         sub_res = {}
@@ -169,6 +176,7 @@ def make_run_scf(systems_train, systems_test=None, *,
         make_scf_task(systems=sset, workdir=f"task.trn.{i:0{nd}}", 
                       arg_file="../scf_input.yaml", source_arg=None,
                       model_file=model_file, source_model=None,
+                      proj_basis=proj_basis, source_pbasis=None,
                       dump_dir=f"../{train_dump}", group_data=group_data,
                       link_systems=True, resources=sub_res, python=python)
         for i, sset in enumerate(train_sets)
@@ -177,6 +185,7 @@ def make_run_scf(systems_train, systems_test=None, *,
         make_scf_task(systems=sset, workdir=f"task.tst.{i:0{nd}}", 
                       arg_file="../scf_input.yaml", source_arg=None,
                       model_file=model_file, source_model=None,
+                      proj_basis=proj_basis, source_pbasis=None,
                       dump_dir=f"../{test_dump}", group_data=group_data, 
                       link_systems=True, resources=sub_res, python=python)
         for i, sset in enumerate(test_sets)
@@ -184,6 +193,8 @@ def make_run_scf(systems_train, systems_test=None, *,
     # set up optional args
     link_share = task_args.pop("link_share_files", [])
     link_share.append((source_arg, "scf_input.yaml"))
+    if source_pbasis:
+        link_share.append((source_pbasis, "proj_basis.npz"))
     link_prev = task_args.pop("link_prev_files", [])
     if not no_model:
         link_prev.append((source_model, "model.pth"))
@@ -193,6 +204,7 @@ def make_run_scf(systems_train, systems_test=None, *,
     # make task
     return GroupBatchTask(
         trn_tasks + tst_tasks,
+        workdir=workdir,
         group_size=group_size,
         ingroup_parallel=ingroup_parallel,
         dispatcher=dispatcher,
@@ -237,7 +249,7 @@ def make_scf(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test",
              no_model=False, workdir='00.scf', share_folder='share',
              source_arg="scf_input.yaml", source_model="model.pth",
-             dispatcher=None, resources=None, 
+             source_pbasis=None, dispatcher=None, resources=None, 
              sub_size=1, group_size=1, ingroup_parallel=1, 
              sub_res=None, python='python', 
              cleanup=False, **task_args):
@@ -246,7 +258,7 @@ def make_scf(systems_train, systems_test=None, *,
         train_dump=train_dump, test_dump=test_dump, 
         no_model=no_model, group_data=False,
         workdir=".", outlog="log.scf", share_folder=share_folder, 
-        source_arg=source_arg, source_model=source_model,
+        source_arg=source_arg, source_model=source_model, source_pbasis=source_pbasis,
         dispatcher=dispatcher, resources=resources, 
         group_size=group_size, ingroup_parallel=ingroup_parallel,
         sub_size=sub_size, sub_res=sub_res, python=python, **task_args
@@ -272,7 +284,8 @@ def make_scf(systems_train, systems_test=None, *,
 
 def make_train_task(*, workdir=".",
                     arg_file="train_input.yaml", source_arg=None,
-                    restart=None, source_model=None, 
+                    restart_model=None, source_model=None, 
+                    proj_basis=None, source_pbasis=None,
                     save_model="model.pth", group_data=False,
                     data_train="data_train", source_train=None,
                     data_test="data_test", source_test=None,
@@ -291,11 +304,16 @@ def make_train_task(*, workdir=".",
         if source_arg is not None:
             link_share.append((source_arg, arg_file))
         forward_files.append(arg_file)
-    if restart:
-        command += f" -r {restart}"
+    if restart_model:
+        command += f" -r {restart_model}"
         if source_model is not None:
-            link_prev.append((source_model, restart))
-        forward_files.append(restart)
+            link_prev.append((source_model, restart_model))
+        forward_files.append(restart_model)
+    if proj_basis:
+        command += f" -P {proj_basis}"
+        if source_pbasis is not None:
+            link_share.append((source_pbasis, proj_basis))
+        forward_files.append(proj_basis)
     if data_train:
         command += f" -d {data_train}" + ("" if group_data else "/*")
         if source_train is not None:
@@ -330,19 +348,20 @@ def make_train_task(*, workdir=".",
 
 
 def make_run_train(source_train="data_train", source_test="data_test", *,
-                   restart=True, source_model="model.pth", 
-                   save_model="model.pth", source_arg="train_input.yaml", 
+                   restart=True, source_model="model.pth", save_model="model.pth", 
+                   source_pbasis=None, source_arg="train_input.yaml", 
                    workdir=".", share_folder="share", outlog="log.train",
                    dispatcher=None, resources=None, 
                    python="python", **task_args):
     # just add some presetted arguments of make_train_task
     # have not implement parrallel training for multiple models
-    if restart:
-        restart = "old_model.pth"
+    restart_model = "old_model.pth" if restart else None
+    proj_basis = "proj_basis.npz" if source_pbasis else None
     return make_train_task(
         workdir=workdir, 
         arg_file="train_input.yaml", source_arg=source_arg,
-        restart=restart, source_model=source_model, 
+        restart_model=restart_model, source_model=source_model, 
+        proj_basis=proj_basis, source_pbasis=source_pbasis,
         save_model=save_model, group_data=False,
         data_train="data_train", source_train=source_train,
         data_test="data_test", source_test=source_test,
@@ -372,15 +391,16 @@ def make_test_train(data_paths, model_file="model.pth", *,
 
 
 def make_train(source_train="data_train", source_test="data_test", *,
-               restart=True, source_model="model.pth", 
-               save_model="model.pth", source_arg="train_input.yaml", 
+               restart=True, source_model="model.pth", save_model="model.pth",
+               source_pbasis=None, source_arg="train_input.yaml", 
                workdir="01.train", share_folder="share",
                dispatcher=None, resources=None, 
                python="python", cleanup=False, **task_args):
     run_train = make_run_train(
         source_train=source_train, source_test=source_test,
         restart=restart, source_model=source_model, save_model=save_model,
-        source_arg=source_arg, workdir=".", share_folder=share_folder,
+        source_pbasis=source_pbasis, source_arg=source_arg, 
+        workdir=".", share_folder=share_folder,
         outlog="log.train", dispatcher=dispatcher, resources=resources,
         python=python, **task_args
     )

@@ -141,7 +141,7 @@ def main(train_paths, test_paths=None,
     if data_args is None: data_args = {}
     if preprocess_args is None: preprocess_args = {}
     if train_args is None: train_args = {}
-    if proj_basis is None:
+    if proj_basis is not None:
         model_args["proj_basis"] = proj_basis
     if ckpt_file is not None:
         train_args["ckpt_file"] = ckpt_file

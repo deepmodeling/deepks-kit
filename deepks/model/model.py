@@ -149,7 +149,7 @@ class TraceEmbedding(nn.Module):
 
 class ThermalEmbedding(nn.Module):
 
-    def __init__(self, shell_sec, embd_sizes=None, init_beta=1., momentum=None):
+    def __init__(self, shell_sec, embd_sizes=None, init_beta=5., momentum=None):
         super().__init__()
         self.shell_sec = shell_sec
         self.register_buffer("shell_mask", make_shell_mask(shell_sec), False)# shape: [l, m]
