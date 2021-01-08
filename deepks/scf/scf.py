@@ -2,6 +2,7 @@ import abc
 import time
 import torch
 import numpy as np
+from torch import nn
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf import gto
@@ -49,7 +50,7 @@ def t_get_corr(model, dm, ovlp_shells, with_vc=True):
     """return the "correction" energy (and potential) given by a NN model"""
     dm.requires_grad_(True)
     ceig = t_make_eig(dm, ovlp_shells) # natoms x nproj
-    _dref = next(model.parameters())
+    _dref = next(model.parameters()) if isinstance(model, nn.Module) else DEVICE
     ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
     if not with_vc:
         return ec.to(ceig)

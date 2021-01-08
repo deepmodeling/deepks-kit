@@ -183,9 +183,9 @@ class ThermalEmbedding(nn.Module):
         return unpad_masked(desc_padded, self.embd_mask)
 
     def update_running_stats(self, x_padded):
+        self.num_batches_tracked += 1
         if self.num_batches_tracked > 1000 and self.momentum is None:
             return # stop update after 1000 batches, so the scaling becomes a fixed parameter
-        self.num_batches_tracked += 1
         exp_factor = 1. - 1. / float(self.num_batches_tracked)
         if self.momentum is not None:
             exp_factor = max(exp_factor, self.momentum)

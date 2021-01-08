@@ -59,7 +59,7 @@ def main(data_paths, model_file="model.pth",
          output_prefix='test', group=False,
          e_name='l_e_delta', d_name=['dm_eig']):
     data_paths = load_dirs(data_paths)
-    g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name)
+    g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name, conv_filter=False)
     model_file = check_list(model_file)
     for f in model_file:
         print(f)

@@ -9,7 +9,7 @@ class Reader(object):
                  conv_filter=True, conv_name="conv", **kwargs):
         # copy from config
         self.data_path = data_path
-        self.batch_size = batch_size   
+        self.batch_size = batch_size
         self.e_name = e_name
         self.d_name = d_name if isinstance(d_name, (list, tuple)) else [d_name]
         self.c_filter = conv_filter

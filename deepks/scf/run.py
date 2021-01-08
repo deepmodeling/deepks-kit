@@ -25,8 +25,8 @@ DEFAULT_HF_ARGS = {
 
 DEFAULT_SCF_ARGS = {
     "conv_tol": 1e-7,
-    "level_shift": 0.1,
-    "diis_space": 20
+    # "level_shift": 0.1,
+    # "diis_space": 20
 }
 
 MOL_ATTRIBUTE = {"charge"} # basis, symmetry, and more
