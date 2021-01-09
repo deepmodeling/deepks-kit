@@ -26,7 +26,7 @@ def calc_force(ene, eig, gvx):
     return force
 
 
-DEFAULT_LOSS = nn.MSELoss(reduction="sum")
+DEFAULT_LOSS = nn.MSELoss()
 
 def make_evaluator(force_factor=0., grad_penalty=0., loss_fn=DEFAULT_LOSS, device=DEVICE):
     # make evaluator a closure to save parameters
@@ -40,7 +40,7 @@ def make_evaluator(force_factor=0., grad_penalty=0., loss_fn=DEFAULT_LOSS, devic
             eig.requires_grad_(True)
         # begin the calculation
         e_pred = model(eig)
-        e_loss = loss_fn(e_pred, e_label) / nframe
+        e_loss = loss_fn(e_pred, e_label) #/ nframe
         part_loss.append(e_loss)
         tot_loss = tot_loss + e_loss
         if force_factor > 0 or grad_penalty > 0:
@@ -49,13 +49,13 @@ def make_evaluator(force_factor=0., grad_penalty=0., loss_fn=DEFAULT_LOSS, devic
                         retain_graph=True, create_graph=True, only_inputs=True)
             if grad_penalty > 0:
                 # this does not enter into partloss since it is a penalty
-                gp_loss = gev.square().sum() / nframe
+                gp_loss = gev.square().mean() #.sum() / nframe
                 tot_loss = tot_loss + grad_penalty * gp_loss
         # optional force calculation
             if force_factor > 0:
                 f_label, gvx = force_sample
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
-                f_loss = loss_fn(f_pred, f_label) / nframe
+                f_loss = loss_fn(f_pred, f_label) #/ nframe
                 part_loss.append(f_loss)
                 tot_loss = tot_loss + force_factor * f_loss
         return (tot_loss, *part_loss)
