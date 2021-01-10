@@ -20,9 +20,9 @@ def parse_actv_fn(code):
     if lcode == 'relu':
         return torch.relu
     if lcode == 'softplus':
-        return nn.Softplus()
+        return F.softplus
     if lcode == 'silu':
-        return nn.SiLU()
+        return F.silu
     if lcode == 'gelu':
         return F.gelu
     if lcode == 'mygelu':

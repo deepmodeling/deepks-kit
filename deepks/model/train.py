@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from time import time
 try:
@@ -25,10 +26,14 @@ def calc_force(ene, eig, gvx):
     force = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
     return force
 
+L2_MEAN =  lambda diff: diff.square().mean()
+L2_SUM =   lambda diff: diff.square().sum()
+L2_BMEAN = lambda diff: diff.square().sum() / diff.shape[0]
+DEFAULT_LOSS = L2_MEAN
 
-DEFAULT_LOSS = nn.MSELoss()
-
-def make_evaluator(force_factor=0., grad_penalty=0., loss_fn=DEFAULT_LOSS, device=DEVICE):
+def make_evaluator(force_factor=0., grad_penalty=0., 
+                   energy_shrink=0., force_shrink=0.,
+                   loss_fn=DEFAULT_LOSS, device=DEVICE):
     # make evaluator a closure to save parameters
     def evaluator(model, sample):
         # allocate data first
@@ -40,24 +45,26 @@ def make_evaluator(force_factor=0., grad_penalty=0., loss_fn=DEFAULT_LOSS, devic
             eig.requires_grad_(True)
         # begin the calculation
         e_pred = model(eig)
-        e_loss = loss_fn(e_pred, e_label) #/ nframe
-        part_loss.append(e_loss)
-        tot_loss = tot_loss + e_loss
+        e_diff = e_label - e_pred
+        part_loss.append(loss_fn(e_diff))
+        tot_loss = tot_loss\
+                 + loss_fn(F.softshrink(e_diff, energy_shrink))
         if force_factor > 0 or grad_penalty > 0:
             [gev] = torch.autograd.grad(e_pred, eig, 
                         grad_outputs=torch.ones_like(e_pred),
                         retain_graph=True, create_graph=True, only_inputs=True)
             if grad_penalty > 0:
                 # this does not enter into partloss since it is a penalty
-                gp_loss = gev.square().mean() #.sum() / nframe
-                tot_loss = tot_loss + grad_penalty * gp_loss
+                tot_loss = tot_loss\
+                         + grad_penalty * loss_fn(gev)
         # optional force calculation
             if force_factor > 0:
                 f_label, gvx = force_sample
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
-                f_loss = loss_fn(f_pred, f_label) #/ nframe
-                part_loss.append(f_loss)
-                tot_loss = tot_loss + force_factor * f_loss
+                f_diff = f_label - f_pred
+                part_loss.append(loss_fn(f_diff))
+                tot_loss = tot_loss\
+                         + force_factor * loss_fn(F.softshrink(f_diff, force_shrink))
         return (tot_loss, *part_loss)
     # return the closure
     return evaluator
@@ -93,6 +100,7 @@ def train(model, g_reader, n_epoch=1000,
           start_lr=0.001, decay_steps=100, 
           decay_rate=0.96, stop_lr=None,
           weight_decay=0., grad_penalty=0.,
+          energy_shrink=0., force_shrink=0.,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
     
     model = model.to(device)
@@ -108,7 +116,9 @@ def train(model, g_reader, n_epoch=1000,
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     # evaluator returns a list of [tot_loss, *part_loss]
     # where part_loss = [e_loss, f_loss, ...] if they present.
-    evaluator = make_evaluator(force_factor, grad_penalty, DEFAULT_LOSS, device)
+    evaluator = make_evaluator(force_factor=force_factor, grad_penalty=grad_penalty, 
+                               energy_shrink=energy_shrink, force_shrink=force_shrink,
+                               loss_fn=DEFAULT_LOSS, device=device)
 
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()

@@ -34,6 +34,9 @@ class Workflow(AbstructStep):
         if restart_tag is not None:
             last_idx = restart_tag[0]
             rest_tag = restart_tag[1:]
+            if last_idx >= len(self.child_tasks):
+                print(f'# restart tag {last_idx} out of range, stop now')
+                return
             if rest_tag:
                 last_tag = parent_tag+(last_idx,)
                 self.child_tasks[last_idx].run(last_tag, restart_tag=rest_tag)
