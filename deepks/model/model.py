@@ -66,7 +66,7 @@ def make_shell_mask(shell_sec):
     return mask
 
 
-def pad_lastdim(sequences, padding_value=0.):
+def pad_lastdim(sequences, padding_value=0):
     # assuming trailing dimensions and type of all the Tensors
     # in sequences are same and fetching those from sequences[0]
     max_size = sequences[0].size()
@@ -81,7 +81,7 @@ def pad_lastdim(sequences, padding_value=0.):
     return out_tensor
 
 
-def pad_masked(tensor, mask, padding_value=0.):
+def pad_masked(tensor, mask, padding_value=0):
     # equiv to pad_lastdim(tensor.split(shell_sec, dim=-1))
     new_shape = tensor.shape[:-1] + mask.shape
     return tensor.new_full(new_shape, padding_value).masked_scatter_(mask, tensor) 
@@ -125,7 +125,7 @@ class DenseNet(nn.Module):
             tmp = layer(x)
             if i < len(self.layers) - 1:
                 tmp = self.actv_fn(tmp)
-            if self.use_resnet and tmp.shape == x.shape:
+            if self.use_resnet and layer.in_features == layer.out_features:
                 if self.dts is not None:
                     tmp = tmp * self.dts[i]
                 x = x + tmp
@@ -149,7 +149,8 @@ class TraceEmbedding(nn.Module):
 
 class ThermalEmbedding(nn.Module):
 
-    def __init__(self, shell_sec, embd_sizes=None, init_beta=5., momentum=None):
+    def __init__(self, shell_sec, embd_sizes=None, init_beta=5., 
+                 momentum=None, max_memory=1000):
         super().__init__()
         self.shell_sec = shell_sec
         self.register_buffer("shell_mask", make_shell_mask(shell_sec), False)# shape: [l, m]
@@ -165,6 +166,7 @@ class ThermalEmbedding(nn.Module):
             pad_lastdim([torch.linspace(init_beta, -init_beta, ne) 
                             for ne in embd_sizes]))
         self.momentum = momentum
+        self.max_memory = max_memory
         self.register_buffer('running_mean', torch.zeros(len(shell_sec)))
         self.register_buffer('running_var', torch.ones(len(shell_sec)))
         self.register_buffer('num_batches_tracked', torch.tensor(0, dtype=torch.long))
@@ -184,7 +186,7 @@ class ThermalEmbedding(nn.Module):
 
     def update_running_stats(self, x_padded):
         self.num_batches_tracked += 1
-        if self.num_batches_tracked > 1000 and self.momentum is None:
+        if self.momentum is None and self.num_batches_tracked > self.max_memory:
             return # stop update after 1000 batches, so the scaling becomes a fixed parameter
         exp_factor = 1. - 1. / float(self.num_batches_tracked)
         if self.momentum is not None:
@@ -193,8 +195,9 @@ class ThermalEmbedding(nn.Module):
             fmask = self.shell_mask.to(x_padded)
             pad_portion = fmask.mean(-1)
             x_masked = x_padded * fmask # make sure padded part is zero
-            batch_mean = x_masked.mean((*range(x_masked.ndim-2), -1)) / pad_portion
-            batch_var = x_masked.var((*range(x_masked.ndim-2), -1)) / pad_portion
+            reduced_dim = (*range(x_masked.ndim-2), -1)
+            batch_mean = x_masked.mean(reduced_dim) / pad_portion
+            batch_var = x_masked.var(reduced_dim) / pad_portion
             self.running_mean[:] = exp_factor * self.running_mean + (1-exp_factor) * batch_mean
             self.running_var[:] = exp_factor * self.running_var + (1-exp_factor) * batch_var
         
