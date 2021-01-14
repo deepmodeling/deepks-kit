@@ -100,7 +100,7 @@ def train(model, g_reader, n_epoch=1000,
           start_lr=0.001, decay_steps=100, 
           decay_rate=0.96, stop_lr=None,
           weight_decay=0., grad_penalty=0.,
-          energy_shrink=0., force_shrink=0.,
+          energy_shrink=0., force_shrink=0., fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
     
     model = model.to(device)
@@ -108,6 +108,10 @@ def train(model, g_reader, n_epoch=1000,
     print("# working on device:", device)
     if test_reader is None:
         test_reader = g_reader
+    # fix parameters if needed
+    if fix_embedding and model.embedder is not None:
+        model.embedder.requires_grad_(False)
+    # set up optimizer and lr scheduler
     optimizer = optim.Adam(model.parameters(), lr=start_lr, weight_decay=weight_decay)
     if stop_lr is not None:
         decay_rate = (stop_lr / start_lr) ** (1 / (n_epoch // decay_steps))
