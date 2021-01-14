@@ -185,7 +185,6 @@ class GroupReader(object) :
             path_list = [path_list]
         self.path_list = path_list
         self.batch_size = batch_size
-        self.nsystems = len(self.path_list)
         # init system readers
         Reader_class = ForceReader if with_force else Reader
         self.readers = []
@@ -197,6 +196,7 @@ class GroupReader(object) :
                 continue
             self.readers.append(ireader)
             self.nframes.append(ireader.get_nframes())
+        self.nsystems = len(self.readers)
         # probability of each system
         self.ndesc = self.readers[0].ndesc
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
