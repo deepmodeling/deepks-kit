@@ -187,17 +187,17 @@ class GroupReader(object) :
         self.batch_size = batch_size
         self.nsystems = len(self.path_list)
         # init system readers
-        self.readers = []
         Reader_class = ForceReader if with_force else Reader
-        for ii in self.path_list :
-            self.readers.append(Reader_class(ii, batch_size, **kwargs))
-        # prepare all systems
-        # for ii in self.readers:
-        #     ii.prepare()
-        # probability of each system
+        self.readers = []
         self.nframes = []
-        for ii in self.readers :
-            self.nframes.append(ii.get_nframes())
+        for ipath in self.path_list :
+            ireader = Reader_class(ipath, batch_size, **kwargs)
+            if ireader.get_nframes() == 0:
+                print('# ignore empty dataset:', ipath, file=sys.stderr)
+                continue
+            self.readers.append(ireader)
+            self.nframes.append(ireader.get_nframes())
+        # probability of each system
         self.ndesc = self.readers[0].ndesc
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
         
