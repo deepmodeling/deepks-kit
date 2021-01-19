@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+from numpy.lib.arraysetops import isin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,18 +27,45 @@ def calc_force(ene, eig, gvx):
     force = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
     return force
 
-L2_MEAN =  lambda diff: diff.square().mean()
-L2_SUM =   lambda diff: diff.square().sum()
-L2_BMEAN = lambda diff: diff.square().sum() / diff.shape[0]
-DEFAULT_LOSS = L2_MEAN
 
-def make_evaluator(force_factor=0., grad_penalty=0., 
-                   energy_shrink=0., force_shrink=0.,
-                   loss_fn=DEFAULT_LOSS, device=DEVICE):
+def make_loss(cap=None, shrink=None, reduction="mean"):
+    def loss_fn(input, target):
+        diff = target - input
+        if shrink and shrink > 0:
+            diff = F.softshrink(diff, shrink)
+        sqdf = diff.square()
+        if cap and cap > 0:
+            abdf = diff.abs()
+            sqdf = torch.where(abdf < cap, sqdf, cap * (2*abdf - cap))
+        if reduction is None or reduction.lower() == "none":
+            return sqdf
+        elif reduction.lower() == "mean":
+            return sqdf.mean()
+        elif reduction.lower() == "sum":
+            return sqdf.sum()
+        elif reduction.lower() in ("batch", "bmean"):
+            return sqdf.sum() / sqdf.shape[0]
+        else:
+            raise ValueError(f"{reduction} is not a valid reduction type")
+    return loss_fn
+
+# equiv to nn.MSELoss()
+L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
+
+
+def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0., 
+                   energy_lossfn=None, force_lossfn=None, device=DEVICE):
+    if energy_lossfn is None:
+        energy_lossfn = {}
+    if isinstance(energy_lossfn, dict):
+        energy_lossfn = make_loss(**energy_lossfn)
+    if force_lossfn is None:
+        force_lossfn = {}
+    if isinstance(force_lossfn, dict):
+        force_lossfn = make_loss(**force_lossfn)
     # make evaluator a closure to save parameters
     def evaluator(model, sample):
         # allocate data first
-        part_loss = []
         tot_loss = 0.
         e_label, eig, *force_sample = [d.to(device, non_blocking=True) for d in sample]
         nframe = e_label.shape[0]
@@ -45,27 +73,20 @@ def make_evaluator(force_factor=0., grad_penalty=0.,
             eig.requires_grad_(True)
         # begin the calculation
         e_pred = model(eig)
-        e_diff = e_label - e_pred
-        part_loss.append(loss_fn(e_diff))
-        tot_loss = tot_loss\
-                 + loss_fn(F.softshrink(e_diff, energy_shrink))
+        tot_loss = tot_loss + energy_factor * energy_lossfn(e_pred, e_label)
         if force_factor > 0 or grad_penalty > 0:
             [gev] = torch.autograd.grad(e_pred, eig, 
                         grad_outputs=torch.ones_like(e_pred),
                         retain_graph=True, create_graph=True, only_inputs=True)
             if grad_penalty > 0:
-                # this does not enter into partloss since it is a penalty
-                tot_loss = tot_loss\
-                         + grad_penalty * loss_fn(gev)
-        # optional force calculation
+                # for now always use pure l2 loss for gradient penalty
+                tot_loss = tot_loss + grad_penalty * gev.square().mean()
+            # optional force calculation
             if force_factor > 0:
                 f_label, gvx = force_sample
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
-                f_diff = f_label - f_pred
-                part_loss.append(loss_fn(f_diff))
-                tot_loss = tot_loss\
-                         + force_factor * loss_fn(F.softshrink(f_diff, force_shrink))
-        return (tot_loss, *part_loss)
+                tot_loss = tot_loss + force_factor * force_lossfn(f_pred, f_label)
+        return tot_loss
     # return the closure
     return evaluator
 
@@ -95,12 +116,10 @@ def preprocess(model, g_reader,
         model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
-def train(model, g_reader, n_epoch=1000, 
-          test_reader=None, force_factor=0.,
-          start_lr=0.001, decay_steps=100, 
-          decay_rate=0.96, stop_lr=None,
-          weight_decay=0., grad_penalty=0.,
-          energy_shrink=0., force_shrink=0., fix_embedding=False,
+def train(model, g_reader, n_epoch=1000, test_reader=None, *,
+          energy_factor=1., force_factor=0., energy_loss=None, force_loss=None,
+          start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
+          weight_decay=0., grad_penalty=0., fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
     
     model = model.to(device)
@@ -118,17 +137,19 @@ def train(model, g_reader, n_epoch=1000,
         print(f"# resetting decay_rate: {decay_rate:.4f} "
               + f"to satisfy stop_lr: {stop_lr:.2e}")
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
-    # evaluator returns a list of [tot_loss, *part_loss]
-    # where part_loss = [e_loss, f_loss, ...] if they present.
-    evaluator = make_evaluator(force_factor=force_factor, grad_penalty=grad_penalty, 
-                               energy_shrink=energy_shrink, force_shrink=force_shrink,
-                               loss_fn=DEFAULT_LOSS, device=device)
+    # make evaluators for training
+    evaluator = make_evaluator(energy_factor=energy_factor, force_factor=force_factor, 
+                               energy_lossfn=energy_loss, force_lossfn=force_loss,
+                               grad_penalty=grad_penalty, device=device)
+    # make test evaluator that only returns l2loss of energy
+    test_eval = make_evaluator(energy_factor=1., force_factor=0, grad_penalty=0.,
+                               energy_lossfn=L2LOSS, device=device)
 
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
-    trn_loss = np.mean([evaluator(model, batch)[1].item() 
+    trn_loss = np.mean([evaluator(model, batch).item() 
                     for batch in g_reader.sample_all_batch()])
-    tst_loss = np.mean([evaluator(model, batch)[1].item() 
+    tst_loss = np.mean([test_eval(model, batch).item() 
                     for batch in test_reader.sample_all_batch()])
     tst_time = time() - tic
     print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}"
@@ -140,7 +161,7 @@ def train(model, g_reader, n_epoch=1000,
         for sample in g_reader:
             model.train()
             optimizer.zero_grad()
-            loss = evaluator(model, sample)[0]
+            loss = evaluator(model, sample)
             loss.backward()
             optimizer.step()
             loss_list.append(loss.item())
@@ -151,7 +172,7 @@ def train(model, g_reader, n_epoch=1000,
             trn_loss = np.mean(loss_list)
             trn_time = time() - tic
             tic = time()
-            tst_loss = np.mean([evaluator(model, batch)[1].item() 
+            tst_loss = np.mean([test_eval(model, batch).item() 
                             for batch in test_reader.sample_all_batch()])
             tst_time = time() - tic
             print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}"
