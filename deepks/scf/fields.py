@@ -19,6 +19,10 @@ def select_fields(names):
 
 BOHR = 0.52917721092
 
+def isinbohr(mol):
+    return mol.unit.upper().startswith(("B", "AU"))
+
+
 SCF_FIELDS = [
     Field("e_base", 
           ["ebase", "ene_base", "e0",
@@ -61,19 +65,23 @@ GRAD_FIELDS = [
           ["fbase", "force_base", "f0",
            "f_hf", "fhf", "force_hf", 
            "f_ks", "fks", "force_ks"], 
-          lambda grad: - grad.get_base() / BOHR,
+          lambda grad: - grad.get_base() 
+                       / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3)"),
     Field("f_tot", 
           ["f_cf", "fcf", "force_cf", "ftot", "force", "f"], 
-          lambda grad: - grad.de / BOHR,
+          lambda grad: - grad.de 
+                       / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3)"),
     Field("gdmx",
           ["grad_dm_x", "grad_pdm_x"],
-          lambda grad: grad.make_grad_pdm_x(flatten=True) / BOHR,
+          lambda grad: grad.make_grad_pdm_x(flatten=True) 
+                       / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3, natom, -1)"),
     Field("grad_vx",
           ["grad_eig_x", "geigx", "gvx"],
-          lambda grad: grad.make_grad_eig_x() / BOHR,
+          lambda grad: grad.make_grad_eig_x()  
+                       / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3, natom, nproj)"),
 ]
 
