@@ -17,6 +17,8 @@ from deepks.utils import is_xyz, load_sys_paths
 from deepks.utils import load_yaml, load_array
 from deepks.utils import get_sys_name, get_with_prefix
 
+DEFAULT_UNIT = "Angstrom"
+
 DEFAULT_FNAMES = {"e_tot", "e_base", "dm_eig", "conv"}
 
 DEFAULT_HF_ARGS = {
@@ -29,7 +31,7 @@ DEFAULT_SCF_ARGS = {
     # "diis_space": 20
 }
 
-MOL_ATTRIBUTE = {"charge"} # basis, symmetry, and more
+MOL_ATTRIBUTE = {"charge", "basis", "unit"} # other molecule properties
 
 def solve_mol(mol, model, fields,
               proj_basis=None, penalties=None, device=None,
@@ -94,6 +96,8 @@ def system_iter(path, labels=None):
     if is_xyz(path):
         atom = path
         attr_dict = {at: load_array(attr_paths[at]) for at in attrs}
+        if "unit" not in attr_dict:
+            attr_dict["unit"] = "Angstrom"
         label_dict = {lb: load_array(label_paths[lb]) for lb in labels}
         yield atom, attr_dict, label_dict
         return
@@ -126,13 +130,13 @@ def system_iter(path, labels=None):
         return
 
 
-def build_mol(atom, basis='ccpvdz', verbose=0, **kwargs):
+def build_mol(atom, basis='ccpvdz', unit=DEFAULT_UNIT, verbose=0, **kwargs):
     # build a molecule using given atom input
     # set the default basis to cc-pVDZ and use input unit 'Ang"
     mol = gto.Mole()
     # change minimum max memory to 16G
     # mol.max_memory = max(16000, mol.max_memory) 
-    mol.unit = "Ang"
+    mol.unit = unit
     mol.atom = atom
     mol.basis = basis
     mol.verbose = verbose
