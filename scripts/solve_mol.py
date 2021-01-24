@@ -30,14 +30,18 @@ def get_method(name: str):
     if lname == "hf":
         return calc_hf
     if lname[:3] == "dft":
-        xc = lname.split("@")[1]
+        xc = lname.split("@")[1] if "@" in lname else "pbe"
         return lambda mol, **scfargs: calc_dft(mol, xc, **scfargs)
     if lname == "mp2":
         return calc_mp2
     if lname == "ccsd":
         return calc_ccsd
-    if lname in ("ccsd_t", "ccsd-t", "ccsd(t)"):
+    if lname.startswith(("ccsd_t", "ccsd-t", "ccsd(t)")):
+        if lname.endswith(("nof", "noforce")):
+            return lambda mol, **scfargs: calc_ccsd_t(mol, False, **scfargs)
         return calc_ccsd_t
+    if lname == "fci":
+        return calc_fci
     raise ValueError(f"Unknown calculation method: {name}")
 
 def calc_hf(mol, **scfargs):
@@ -80,17 +84,28 @@ def calc_ccsd(mol, **scfargs):
     ccdm = np.einsum('...pi,...ij,...qj->...pq', mf.mo_coeff, mycc.make_rdm1(), mf.mo_coeff.conj())
     return etot, -grad/BOHR, ccdm
 
-def calc_ccsd_t(mol, **scfargs):
+def calc_ccsd_t(mol, calc_force=True, **scfargs):
     import pyscf.cc
-    import pyscf.grad.ccsd_t as ccsd_t_grad
     mf = scf.HF(mol).run(**scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     mycc = mf.CCSD().run()
     et_correction = mycc.ccsd_t()
     etot = mycc.e_tot + et_correction
+    if not calc_force:
+        return etot, None, None
+    import pyscf.grad.ccsd_t as ccsd_t_grad
     grad = ccsd_t_grad.Gradients(mycc).kernel()
     return etot, -grad/BOHR, None
+
+def calc_fci(mol, **scfargs):
+    import pyscf.fci
+    mf = scf.HF(mol).run(**scfargs)
+    if not mf.converged:
+        raise RuntimeError("SCF not converged!")
+    myci = pyscf.fci.FCI(mf)
+    etot = myci.kernel()[0]
+    return etot, None, None
 
 
 if __name__ == "__main__":
@@ -130,7 +145,8 @@ if __name__ == "__main__":
             dump_dir = args.dump_dir
         dump = os.path.join(dump_dir, os.path.splitext(os.path.basename(fn))[0])
         np.save(dump+".energy.npy", [etot])
-        np.save(dump+".force.npy", force)
+        if force is not None:
+            np.save(dump+".force.npy", force)
         if rdm is not None:
             np.save(dump+".dm.npy", rdm)
         if args.verbose:
