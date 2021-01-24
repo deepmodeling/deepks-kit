@@ -20,8 +20,10 @@ def parse_xyz(filename, basis='ccpvdz', **kwargs):
     mol.atom = xyz_str
     mol.basis = basis
     mol.set(**kwargs)
+    mol.spin = mol.nelectron % 2
     mol.build(0,0,unit="Ang")
     return mol  
+
 
 def get_method(name: str):
     lname = name.lower()
@@ -34,7 +36,7 @@ def get_method(name: str):
         return calc_mp2
     if lname == "ccsd":
         return calc_ccsd
-    if lname == "ccsd_t" or lname == "ccsd(t)":
+    if lname in ("ccsd_t", "ccsd-t", "ccsd(t)"):
         return calc_ccsd_t
     raise ValueError(f"Unknown calculation method: {name}")
 
@@ -75,7 +77,7 @@ def calc_ccsd(mol, **scfargs):
     mycc = mf.CCSD().run()
     etot = mycc.e_tot
     grad = mycc.nuc_grad_method().kernel()
-    ccdm = np.einsum('pi,ij,qj->pq', mf.mo_coeff, mycc.make_rdm1(), mf.mo_coeff.conj())
+    ccdm = np.einsum('...pi,...ij,...qj->...pq', mf.mo_coeff, mycc.make_rdm1(), mf.mo_coeff.conj())
     return etot, -grad/BOHR, ccdm
 
 def calc_ccsd_t(mol, **scfargs):
