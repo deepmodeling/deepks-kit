@@ -59,8 +59,10 @@ def calc_dft(mol, xc="pbe", **scfargs):
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     etot = mf.e_tot
-    grad = mf.nuc_grad_method().kernel()
     rdm = mf.make_rdm1()
+    if dft.libxc.xc_type(xc) in ('MGGA', 'NLC'):
+        return etot, None, rdm
+    grad = mf.nuc_grad_method().kernel()
     return etot, -grad/BOHR, rdm
 
 def calc_mp2(mol, **scfargs):
