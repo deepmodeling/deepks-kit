@@ -3,6 +3,7 @@ import numpy as np
 from glob import glob
 
 
+BOHR = 0.52917721092
 ELEMENTS = ['X',  # Ghost
     'H' , 'He', 'Li', 'Be', 'B' , 'C' , 'N' , 'O' , 'F' , 'Ne',
     'Na', 'Mg', 'Al', 'Si', 'P' , 'S' , 'Cl', 'Ar', 'K' , 'Ca',
@@ -29,6 +30,20 @@ def parse_xyz(filename):
     elements = [a[0] for a in atom_list]
     coords = np.array([a[1:] for a in atom_list], dtype=float)
     return natom, comments, elements, coords
+
+
+def parse_unit(rawunit):
+    if isinstance(rawunit, str):
+        try:
+            unit = float(rawunit)
+        except ValueError:
+            if rawunit.upper().startswith(('B', 'AU')):
+                unit = BOHR
+            else: #unit[:3].upper() == 'ANG':
+                unit = 1.
+    else:
+        unit = rawunit
+    return unit
 
 
 def load_array(file):
@@ -71,13 +86,16 @@ def load_system(xyz_file):
     return ele, coord, energy, force, dm
 
 
-def dump_systems(xyz_files, dump_dir, ext_type=False):
+def dump_systems(xyz_files, dump_dir, unit="ang", ext_type=False):
     print(f"saving to {dump_dir} ... ", end="", flush=True)
     os.makedirs(dump_dir, exist_ok=True)
     if not xyz_files:
         print("empty list! did nothing")
         return
-    a_ele, a_coord, a_energy, a_force, a_dm = zip(*[load_system(fl) for fl in xyz_files])
+    unit = parse_unit(unit)
+    a_ele, a_coord, a_energy, a_force, a_dm = map(np.array,
+        zip(*[load_system(fl) for fl in xyz_files]))
+    a_coord /= unit
     if ext_type:
         ele = a_ele[0]
         assert all(e == ele for e in a_ele), "element type for each xyz file has to be the same"
@@ -92,6 +110,7 @@ def dump_systems(xyz_files, dump_dir, ext_type=False):
         np.save(os.path.join(dump_dir, "energy.npy"), a_energy)
     if not all(ff is None for ff in a_force):
         assert not any(ff is None for ff in a_force)
+        a_force *= unit
         np.save(os.path.join(dump_dir, "force.npy"), a_force)
     if not all(dm is None for dm in a_dm):
         assert not any(dm is None for dm in a_dm)
@@ -100,11 +119,11 @@ def dump_systems(xyz_files, dump_dir, ext_type=False):
     return
 
 
-def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", ext_type=False):
+def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", unit="ang", ext_type=False):
     if isinstance(xyz_files, str):
         xyz_files = [xyz_files]
     if group_size <= 0:
-        dump_systems(xyz_files, dump_dir, ext_type)
+        dump_systems(xyz_files, dump_dir, unit=unit, ext_type=ext_type)
         return
     ns = len(xyz_files)
     ngroup = np.ceil(ns / group_size).astype(int)
@@ -112,7 +131,7 @@ def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", ext_type=Fa
     for i in range(ngroup):
         dump_systems(xyz_files[i*group_size:(i+1)*group_size],
                      os.path.join(dump_dir, f"{group_prefix}.{i:0>{nd}d}"),
-                     ext_type=ext_type)
+                     unit=unit, ext_type=ext_type)
     return
 
 
@@ -126,10 +145,12 @@ if __name__ == "__main__":
                         help="input xyz files")
     parser.add_argument("-d", "--dump-dir", 
                         help="directory of dumped system, default is current dir")
+    parser.add_argument("-U", "--unit", 
+                        help="length unit used to save npy files (assume xyz in Angstrom)")
     parser.add_argument("-G", "--group-size", type=int, 
                         help="if positive, split data into sub systems with given size, default: -1")
     parser.add_argument("-P", "--group-prefix", 
-                        help=r"save sub systems with given prefix as `dump_dir/$prefix.ii`, default: sys")
+                        help=r"save sub systems with given prefix as `$dump_dir/$prefix.ii`, default: sys")
     parser.add_argument("-T", "--ext-type", action="store_true", 
                         help="if set, save the element type into separete `type.raw` file")
     args = parser.parse_args()
