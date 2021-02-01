@@ -11,7 +11,7 @@ that runs the iterative learning procedure in background and record its PID in t
 
 ## System preparation
 
-We use randomly generated water monomers, dimers and trimers as training datasets. Each dataset contains 100 near equilibrium configurations. We also include 50 tetramers as a validation dataset. We use energy and force as labels. The reference values are given by CCSD calculation with cc-pVDZ basis. The system configurations and corresponding labels are grouped into different folders by the number of atoms, follow the convention described in [another example](../water_single/README.md). The path to the folders can be specified in the config file as follows:
+We use randomly generated water monomers, dimers and trimers as training datasets. Each dataset contains 100 near equilibrium configurations. We also include 50 tetramers as a validation dataset. We use energy and force as labels. The reference values are given by CCSD calculation with cc-pVDZ basis. The system configurations and corresponding labels are grouped into different folders by the number of atoms, follow the convention described in [another example](../water_single/README.md). Note that the default length unit in deepks is Bohr. The systems we provided here are in Angstrom, so we add a `unit.raw` file containing "Angstrom" in each system folder to specify the unit different from default. The path to the folders can be specified in the config file as follows:
 ```yaml
 systems_train: # can also be files that containing system paths
   - ./systems/train.n[1-3]

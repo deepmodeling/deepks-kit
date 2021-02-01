@@ -86,7 +86,7 @@ def load_system(xyz_file):
     return ele, coord, energy, force, dm
 
 
-def dump_systems(xyz_files, dump_dir, unit="ang", ext_type=False):
+def dump_systems(xyz_files, dump_dir, unit="Bohr", ext_type=False):
     print(f"saving to {dump_dir} ... ", end="", flush=True)
     os.makedirs(dump_dir, exist_ok=True)
     if not xyz_files:
@@ -119,7 +119,7 @@ def dump_systems(xyz_files, dump_dir, unit="ang", ext_type=False):
     return
 
 
-def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", unit="ang", ext_type=False):
+def main(xyz_files, dump_dir=".", group_size=-1, group_prefix="sys", unit="Bohr", ext_type=False):
     if isinstance(xyz_files, str):
         xyz_files = [xyz_files]
     if group_size <= 0:

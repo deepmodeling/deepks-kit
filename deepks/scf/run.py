@@ -17,7 +17,7 @@ from deepks.utils import is_xyz, load_sys_paths
 from deepks.utils import load_yaml, load_array
 from deepks.utils import get_sys_name, get_with_prefix
 
-DEFAULT_UNIT = "Angstrom"
+DEFAULT_UNIT = "Bohr"
 
 DEFAULT_FNAMES = {"e_tot", "e_base", "dm_eig", "conv"}
 
@@ -136,6 +136,8 @@ def build_mol(atom, basis='ccpvdz', unit=DEFAULT_UNIT, verbose=0, **kwargs):
     mol = gto.Mole()
     # change minimum max memory to 16G
     # mol.max_memory = max(16000, mol.max_memory) 
+    if isinstance(unit, np.ndarray):
+        unit = unit.tolist()
     mol.unit = unit
     mol.atom = atom
     mol.basis = basis

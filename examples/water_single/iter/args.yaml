@@ -100,7 +100,7 @@ init_train:
     hidden_sizes: [100, 100, 100]
     output_scale: 100
     use_resnet: true
-    actv_fn: mygelu
+    actv_fn: gelu
   data_args: 
     batch_size: 16
     group_batch: 1
@@ -110,10 +110,10 @@ init_train:
     prefit_ridge: 1e1
     prefit_trainable: false
   train_args: 
-    decay_rate: 0.96
-    decay_steps: 500
+    decay_rate: 0.95
+    decay_steps: 300
     display_epoch: 100
-    n_epoch: 50000
+    n_epoch: 15000
     start_lr: 0.0003
 
 # other settings
