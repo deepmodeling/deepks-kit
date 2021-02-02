@@ -109,10 +109,10 @@ init_train:
     prefit_ridge: 1e1
     prefit_trainable: false
   train_args: 
-    decay_rate: 0.95
-    decay_steps: 300
+    decay_rate: 0.95 # 0.96 in paper example
+    decay_steps: 300 # 500 in paper example
     display_epoch: 100
-    n_epoch: 15000
+    n_epoch: 15000 # 50000 in paper example
     start_lr: 0.0003
 
 # other settings
