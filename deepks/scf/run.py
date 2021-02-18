@@ -45,8 +45,10 @@ def solve_mol(mol, model, fields,
                 proj_basis=proj_basis, 
                 penalties=penalties, 
                 device=device)
-    cf.set(chkfile=chkfile)
+    cf.set(chkfile=chkfile, verbose=verbose)
+    grid_args = scf_args.pop("grids", {})
     cf.set(**scf_args)
+    cf.grids.set(**grid_args)
     cf.kernel()
 
     natom = mol.natm
