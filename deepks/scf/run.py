@@ -83,7 +83,7 @@ def get_required_labels(fields=None, penalty_dicts=None):
 def system_iter(path, labels=None):
     """
     return an iterator that gives atoms and required labels each time
-    path: either an xyz file, or a folder contains (atom.npy | (coord.npy @ type.raw))
+    path: either an xyz file, or a folder contains (atom.npy | (coord.npy & type.raw))
     labels: a set contains required label names, will be load by $base[.|/]$label.npy
     $base will be the basename of the xyz file (followed by .) or the folder (followed by /)
     """
