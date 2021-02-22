@@ -53,7 +53,7 @@ train_input:
   data_args: 
     batch_size: 16
     group_batch: 1
-    with_force: true
+    extra_label: true
     conv_filter: true
     conv_name: conv
   preprocess_args:

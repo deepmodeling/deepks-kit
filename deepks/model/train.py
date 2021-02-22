@@ -19,6 +19,31 @@ from deepks.utils import load_dirs
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+def preprocess(model, g_reader, 
+                preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
+                prefit=True, prefit_ridge=10, prefit_trainable=False):
+    shift = model.input_shift.cpu().detach().numpy()
+    scale = model.input_scale.cpu().detach().numpy()
+    symm_sec = model.shell_sec # will be None if no embedding
+    prefit_trainable = prefit_trainable and symm_sec is None # no embedding
+    if preshift or prescale:
+        davg, dstd = g_reader.compute_data_stat(symm_sec)
+        if preshift: 
+            shift = davg
+        if prescale: 
+            scale = dstd
+            if prescale_sqrt: 
+                scale = np.sqrt(scale)
+            if prescale_clip: 
+                scale = scale.clip(prescale_clip)
+        model.set_normalization(shift, scale)
+    if prefit:
+        weight, bias = g_reader.compute_prefitting(
+            shift=shift, scale=scale, 
+            ridge_alpha=prefit_ridge, symm_sections=symm_sec)
+        model.set_prefitting(weight, bias, trainable=prefit_trainable)
+
+
 def calc_force(ene, eig, gvx):
     [gev] = torch.autograd.grad(ene, eig, 
                                 grad_outputs=torch.ones_like(ene),
@@ -67,7 +92,8 @@ def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0.,
     def evaluator(model, sample):
         # allocate data first
         tot_loss = 0.
-        e_label, eig, *force_sample = [d.to(device, non_blocking=True) for d in sample]
+        sample = {k: v.to(device, non_blocking=True) for k, v in sample.items()}
+        e_label, eig = sample["lb_e"], sample["eig"]
         nframe = e_label.shape[0]
         if force_factor > 0 or grad_penalty > 0:
             eig.requires_grad_(True)
@@ -83,37 +109,12 @@ def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0.,
                 tot_loss = tot_loss + grad_penalty * gev.square().mean()
             # optional force calculation
             if force_factor > 0:
-                f_label, gvx = force_sample
+                f_label, gvx = sample["lb_f"], sample["gvx"]
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
                 tot_loss = tot_loss + force_factor * force_lossfn(f_pred, f_label)
         return tot_loss
     # return the closure
     return evaluator
-
-
-def preprocess(model, g_reader, 
-                preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
-                prefit=True, prefit_ridge=10, prefit_trainable=False):
-    shift = model.input_shift.cpu().detach().numpy()
-    scale = model.input_scale.cpu().detach().numpy()
-    symm_sec = model.shell_sec # will be None if no embedding
-    prefit_trainable = prefit_trainable and symm_sec is None # no embedding
-    if preshift or prescale:
-        davg, dstd = g_reader.compute_data_stat(symm_sec)
-        if preshift: 
-            shift = davg
-        if prescale: 
-            scale = dstd
-            if prescale_sqrt: 
-                scale = np.sqrt(scale)
-            if prescale_clip: 
-                scale = scale.clip(prescale_clip)
-        model.set_normalization(shift, scale)
-    if prefit:
-        weight, bias = g_reader.compute_prefitting(
-            shift=shift, scale=scale, 
-            ridge_alpha=prefit_ridge, symm_sections=symm_sec)
-        model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,

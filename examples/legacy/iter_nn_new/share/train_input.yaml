@@ -8,7 +8,7 @@ data_args:
   group_batch: 1
   e_name: l_e_delta
   f_name: l_f_delta
-  with_force: true
+  extra_label: true
 preprocess_args:
   preshift: false 
   prescale: false

@@ -43,7 +43,7 @@ dump_fields: [conv, e_tot, dm_eig, l_e_delta, f_tot, grad_vx, l_f_delta]
 ```
 Due to the complexity of the neural network functional, we use looser (but still accurate enough) convergence criteria in `scf_args`, with `conv_tol` to be 1e-6.
 
-The training parameters are provided in the `train_input` key, similar to `init_train`. But since we are restarting from the existing model, no `model_args` is needed, and the preprocessing procedure can be turned off. In addition, we add `with_force: true` in `data_args` and `force_factor: 1` in `train_args` to enable using forces in training. The total number of training epochs is also reduced to 5000. The learning rate starts as 1e-4 and decays by a factor of 0.5 for every 1000 steps.
+The training parameters are provided in the `train_input` key, similar to `init_train`. But since we are restarting from the existing model, no `model_args` is needed, and the preprocessing procedure can be turned off. In addition, we add `extra_label: true` in `data_args` and `force_factor: 1` in `train_args` to enable using forces in training. The total number of training epochs is also reduced to 5000. The learning rate starts as 1e-4 and decays by a factor of 0.5 for every 1000 steps.
 
 ## Machine settings
 
