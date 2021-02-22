@@ -67,6 +67,25 @@ def gen_proj_mol(mol, basis) :
     return test_mol
 
 
+def coulomb_loss_grad(mol, target_dm, mo_energy, mo_coeff, mo_occ):
+    # return coulomb loss and its grad with respect to fock matrix
+    # only support single dm, do not use directly for UHF
+    iocc = mo_occ>0
+    eo, ev = mo_energy[iocc], mo_energy[~iocc]
+    co, cv = mo_coeff[:, iocc], mo_coeff[:, ~iocc]
+    dm = (co * mo_occ[iocc]) @ co.T
+    # calc loss
+    ddm = dm - target_dm
+    dvj, _ = scf.hf.get_jk(mol, ddm, with_k=False)
+    loss = 0.5 * np.einsum("ij,ji", ddm, dvj)
+    # calc grad with respect to fock matrix
+    ie_mn = 1. / (-ev.reshape(-1, 1) + eo)
+    temp_mn = (cv.T @ dvj @ co) * ie_mn
+    dldv = cv @ temp_mn @ co.T
+    dldv = 2 * (dldv + dldv.T)
+    return loss, dldv
+
+
 class CorrMixin(abc.ABC):
     """Abstruct mixin class to add "correction" term to the mean-field Hamiltionian"""
 
@@ -204,6 +223,35 @@ class NetMixin(CorrMixin):
         t_dm = torch.from_numpy(dm).double()
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells)
         return t_eig.detach().cpu().numpy()
+
+    def make_grad_coul_veig(self, target_dm,  
+            mo_energy=None, mo_coeff=None, mo_occ=None):
+        # this function is only used for iterative training. use with caution
+        if mo_energy is None: mo_energy = self.mo_energy
+        if mo_coeff is None: mo_coeff = self.mo_coeff
+        if mo_occ is None: mo_occ = self.mo_occ
+        # calculate grad of coul loss wrt fock matrix
+        if target_dm.ndim == 2: # rhf case
+            _, dldv = coulomb_loss_grad(self.mol, 
+                target_dm, mo_energy, mo_coeff, mo_occ)
+        else: # uhf case
+            _, l_dldv = zip(*[
+                coulomb_loss_grad(self.mol,tdm, me, mc, mo)
+                for tdm, me, mc, mo in zip(target_dm, mo_energy, mo_coeff, mo_occ)
+            ])
+            dldv = sum(l_dldv)
+        t_dldv = torch.from_numpy(dldv)
+        # calculate rest part of grad, wrt veig := partial ec / partial dm_eig
+        dm = self.make_rdm1(mo_coeff, mo_occ)
+        if dm.ndim >= 3 and isinstance(self, scf.uhf.UHF):
+            dm = dm.sum(0)
+        t_dm = torch.from_numpy(dm).requires_grad_()
+        t_eig = t_make_eig(t_dm, self._t_ovlp_shells).requires_grad_()
+        t_ec = self.net(t_eig.to(self.device))
+        t_veig = torch.autograd.grad(t_ec, t_eig)[0].requires_grad_()
+        [t_vc] = torch.autograd.grad(t_eig, t_dm, t_veig, create_graph=True)
+        [t_ghead] = torch.autograd.grad(t_vc, t_veig, t_dldv)
+        return t_ghead.detach().cpu().numpy()
 
     def proj_intor(self, intor):
         """1-electron integrals between origin and projected basis"""

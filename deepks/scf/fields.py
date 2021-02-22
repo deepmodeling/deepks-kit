@@ -79,7 +79,13 @@ SCF_FIELDS = [
           ["e_err", "err_e_tot", "err_e_cf"],
           lambda mf, **lbl: lbl["energy"] - mf.e_tot,
           "(nframe, 1)",
-          ["energy"])
+          ["energy"]),
+    # the following one is used for coulomb loss optimization
+    Field("grad_ldv",
+          ["grad_coul_dv", "grad_coul_deig", "coulomb_grad"], 
+          lambda mf, **lbl: mf.make_grad_coul_veig(target_dm=lbl["dm"]),
+          "(nframe, natom, nproj)",
+          ["dm"]),
 ]
 
 GRAD_FIELDS = [
@@ -95,7 +101,7 @@ GRAD_FIELDS = [
           lambda grad: - grad.de 
                        / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3)"),
-    Field("gdmx",
+    Field("grad_dmx",
           ["grad_dm_x", "grad_pdm_x"],
           lambda grad: grad.make_grad_pdm_x(flatten=True) 
                        / (1. if isinbohr(grad.mol) else BOHR),
@@ -122,5 +128,5 @@ GRAD_FIELDS = [
           lambda grad, **lbl: lbl["force"] 
               - (-grad.de / (1. if isinbohr(grad.mol) else BOHR)),
           "(nframe, natom, 3)",
-          ["force"])
+          ["force"]),
 ]
