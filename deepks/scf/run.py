@@ -33,7 +33,7 @@ DEFAULT_SCF_ARGS = {
 
 MOL_ATTRIBUTE = {"charge", "basis", "unit"} # other molecule properties
 
-def solve_mol(mol, model, fields,
+def solve_mol(mol, model, fields, labels=None,
               proj_basis=None, penalties=None, device=None,
               chkfile=None, verbose=0,
               **scf_args):
@@ -57,12 +57,16 @@ def solve_mol(mol, model, fields,
     meta = np.array([natom, nao, nproj])
 
     res = {}
+    if labels is None:
+        labels = {}
     for fd in fields["scf"]:
-        res[fd.name] = fd.calc(cf)
+        fls = {k:labels[k] for k in fd.required_labels}
+        res[fd.name] = fd.calc(cf, **fls)
     if fields["grad"]:
         gd = cf.nuc_grad_method().run()
         for fd in fields["grad"]:
-            res[fd.name] = fd.calc(gd)
+            fls = {k:labels[k] for k in fd.required_labels}
+            res[fd.name] = fd.calc(gd, **fls)
     
     tac = time.time()
     if verbose:
@@ -159,14 +163,6 @@ def build_penalty(pnt_dict, label_dict={}):
     return PenaltyClass(*label_arrays, **pnt_dict)
 
 
-def make_labels(res, lbl, label_fields):
-    if isinstance(label_fields, dict):
-        label_fields = label_fields["label"]
-    for fd in label_fields:
-        res[fd.name] = fd.calc(res, lbl)
-    return res
-
-
 def collect_fields(fields, meta, res_list):
     if isinstance(fields, dict):
         fields = sum(fields.values(), [])
@@ -215,7 +211,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     scf_args = {**default_scf_args, **scf_args}
     fields = select_fields(dump_fields)
     # check label names from label fields and penalties
-    label_names = get_required_labels(fields["label"], penalty_terms)
+    label_names = get_required_labels(fields["scf"]+fields["grad"], penalty_terms)
 
     if verbose:
         print(f"starting calculation with OMP threads: {lib.num_threads()}",
@@ -236,10 +232,9 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             mol = build_mol(**mol_input)
             penalties = [build_penalty(pd, labels) for pd in penalty_terms]
             try:
-                meta, result = solve_mol(mol, model, fields,
+                meta, result = solve_mol(mol, model, fields, labels,
                                          proj_basis=proj_basis, penalties=penalties,
                                          device=device, verbose=verbose, **scf_args)
-                result = make_labels(result, labels, fields["label"])
             except Exception as e:
                 print(fl, 'failed! error:', e, file=sys.stderr)
                 # continue

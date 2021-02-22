@@ -1,7 +1,16 @@
-from collections import namedtuple
+from typing import List, Callable
+from dataclasses import dataclass, field
 
-Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
-LabelField = namedtuple("LabelField", ["name", "alias", "calc", "shape", "required_labels"])
+# Field = namedtuple("Field", ["name", "alias", "calc", "shape"])
+# LabelField = namedtuple("LabelField", ["name", "alias", "calc", "shape", "required_labels"])
+@dataclass
+class Field:
+      name: str
+      alias: List[str]
+      calc: Callable
+      shape: str
+      required_labels: List[str] = field(default_factory=list)
+
 
 def select_fields(names):
     names = [n.lower() for n in names]
@@ -11,10 +20,7 @@ def select_fields(names):
     grads  = [fd for fd in GRAD_FIELDS 
                   if fd.name in names 
                   or any(al in names for al in fd.alias)]
-    labels = [fd for fd in LABEL_FIELDS
-                  if fd.name in names
-                  or any(al in names for al in fd.alias)]
-    return {"scf": scfs, "grad": grads, "label": labels}
+    return {"scf": scfs, "grad": grads}
 
 
 BOHR = 0.52917721092
@@ -57,7 +63,23 @@ SCF_FIELDS = [
     Field("mo_ene_occ", # do not support UHF
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
-          "(nframe, -1)")
+          "(nframe, -1)"),
+    # below are fields that requires labels
+    Field("l_e_ref", 
+          ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
+          lambda mf, **lbl: lbl["energy"],
+          "(nframe, 1)",
+          ["energy"]),
+    Field("l_e_delta", 
+          ["le_delta", "lbl_e_delta", "label_e_delta", "lbl_ed"],
+          lambda mf, **lbl: lbl["energy"] - mf.energy_tot0(),
+          "(nframe, 1)",
+          ["energy"]),
+    Field("err_e", 
+          ["e_err", "err_e_tot", "err_e_cf"],
+          lambda mf, **lbl: lbl["energy"] - mf.e_tot,
+          "(nframe, 1)",
+          ["energy"])
 ]
 
 GRAD_FIELDS = [
@@ -83,37 +105,22 @@ GRAD_FIELDS = [
           lambda grad: grad.make_grad_eig_x()  
                        / (1. if isinbohr(grad.mol) else BOHR),
           "(nframe, natom, 3, natom, nproj)"),
-]
-
-LABEL_FIELDS = [
-    LabelField("l_e_ref", 
-               ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
-               lambda res, lbl: lbl["energy"],
-               "(nframe, 1)",
-               ["energy"]),
-    LabelField("l_f_ref", 
-               ["f_ref", "lbl_f_ref", "label_f_ref", "lf_ref"],
-               lambda res, lbl: lbl["force"],
-               "(nframe, natom, 3)",
-               ["force"]),
-    LabelField("l_e_delta", 
-               ["le_delta", "lbl_e_delta", "label_e_delta", "lbl_ed"],
-               lambda res, lbl: lbl["energy"] - res["e_base"],
-               "(nframe, 1)",
-               ["energy"]),
-    LabelField("l_f_delta", 
-               ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
-               lambda res, lbl: lbl["force"] - res["f_base"],
-               "(nframe, natom, 3)",
-               ["force"]),
-    LabelField("err_e", 
-               ["e_err", "err_e_tot", "err_e_cf"],
-               lambda res, lbl: lbl["energy"] - res["e_tot"],
-               "(nframe, 1)",
-               ["energy"]),
-    LabelField("err_f", 
-               ["f_err", "err_f_tot", "err_f_cf"],
-               lambda res, lbl: lbl["force"] - res["f_tot"],
-               "(nframe, natom, 3)",
-               ["force"])
+    # below are fields that requires labels
+    Field("l_f_ref", 
+          ["f_ref", "lbl_f_ref", "label_f_ref", "lf_ref"],
+          lambda grad, **lbl: lbl["force"],
+          "(nframe, natom, 3)",
+          ["force"]),
+    Field("l_f_delta", 
+          ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
+          lambda grad, **lbl: lbl["force"] 
+              - (-grad.get_base() / (1. if isinbohr(grad.mol) else BOHR)),
+          "(nframe, natom, 3)",
+          ["force"]),
+    Field("err_f", 
+          ["f_err", "err_f_tot", "err_f_cf"],
+          lambda grad, **lbl: lbl["force"] 
+              - (-grad.de / (1. if isinbohr(grad.mol) else BOHR)),
+          "(nframe, natom, 3)",
+          ["force"])
 ]
