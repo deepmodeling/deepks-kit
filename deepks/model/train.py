@@ -44,15 +44,6 @@ def preprocess(model, g_reader,
         model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
-def calc_force(ene, eig, gvx):
-    [gev] = torch.autograd.grad(ene, eig, 
-                                grad_outputs=torch.ones_like(ene),
-                                retain_graph=True, create_graph=True, only_inputs=True)
-    # minus sign as froce = - grad_x E
-    force = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
-    return force
-
-
 def make_loss(cap=None, shrink=None, reduction="mean"):
     def loss_fn(input, target):
         diff = target - input
@@ -78,47 +69,65 @@ def make_loss(cap=None, shrink=None, reduction="mean"):
 L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
 
 
-def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0., 
-                   energy_lossfn=None, force_lossfn=None, device=DEVICE):
-    if energy_lossfn is None:
-        energy_lossfn = {}
-    if isinstance(energy_lossfn, dict):
-        energy_lossfn = make_loss(**energy_lossfn)
-    if force_lossfn is None:
-        force_lossfn = {}
-    if isinstance(force_lossfn, dict):
-        force_lossfn = make_loss(**force_lossfn)
-    # make evaluator a closure to save parameters
-    def evaluator(model, sample):
-        # allocate data first
+class Evaluator:
+    def __init__(self,
+                 energy_factor=1., force_factor=0., 
+                 density_factor=0., grad_penalty=0., 
+                 energy_lossfn=None, force_lossfn=None):
+        # energy term
+        if energy_lossfn is None:
+            energy_lossfn = {}
+        if isinstance(energy_lossfn, dict):
+            energy_lossfn = make_loss(**energy_lossfn)
+        self.e_factor = energy_factor
+        self.e_lossfn = energy_lossfn
+        # force term
+        if force_lossfn is None:
+            force_lossfn = {}
+        if isinstance(force_lossfn, dict):
+            force_lossfn = make_loss(**force_lossfn)
+        self.f_factor = force_factor
+        self.f_lossfn = force_lossfn
+        # coulomb term of dm; requires head gradient
+        self.d_factor = density_factor
+        # gradient penalty, not very useful
+        self.g_penalty = grad_penalty
+
+    def __call__(self, model, sample):
+        _dref = next(model.parameters())
         tot_loss = 0.
-        sample = {k: v.to(device, non_blocking=True) for k, v in sample.items()}
+        sample = {k: v.to(_dref, non_blocking=True) for k, v in sample.items()}
         e_label, eig = sample["lb_e"], sample["eig"]
         nframe = e_label.shape[0]
-        if force_factor > 0 or grad_penalty > 0:
-            eig.requires_grad_(True)
+        requires_grad =  ( (self.f_factor > 0 and "lb_f" in sample) 
+                        or (self.d_factor > 0 and "gldv" in sample)
+                        or self.g_penalty > 0)
+        eig.requires_grad_(requires_grad)
         # begin the calculation
         e_pred = model(eig)
-        tot_loss = tot_loss + energy_factor * energy_lossfn(e_pred, e_label)
-        if force_factor > 0 or grad_penalty > 0:
+        tot_loss = tot_loss + self.e_factor * self.e_lossfn(e_pred, e_label)
+        if requires_grad:
             [gev] = torch.autograd.grad(e_pred, eig, 
                         grad_outputs=torch.ones_like(e_pred),
                         retain_graph=True, create_graph=True, only_inputs=True)
-            if grad_penalty > 0:
-                # for now always use pure l2 loss for gradient penalty
-                tot_loss = tot_loss + grad_penalty * gev.square().mean()
+            # for now always use pure l2 loss for gradient penalty
+            if self.g_penalty > 0:
+                tot_loss = tot_loss + self.g_penalty * gev.square().mean()
             # optional force calculation
-            if force_factor > 0:
+            if self.f_factor > 0 and "lb_f" in sample:
                 f_label, gvx = sample["lb_f"], sample["gvx"]
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
-                tot_loss = tot_loss + force_factor * force_lossfn(f_pred, f_label)
+                tot_loss = tot_loss + self.f_factor * self.f_lossfn(f_pred, f_label)
+            # density loss with fix head grad
+            if self.d_factor > 0 and "gldv" in sample:
+                gldv = sample["gldv"]
+                tot_loss = tot_loss + self.d_factor * (gldv * gev).mean(0).sum()
         return tot_loss
-    # return the closure
-    return evaluator
 
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,
-          energy_factor=1., force_factor=0., energy_loss=None, force_loss=None,
+          energy_factor=1., force_factor=0., density_factor=0.,
+          energy_loss=None, force_loss=None,
           start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
           weight_decay=0., grad_penalty=0., fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
@@ -139,12 +148,12 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
               + f"to satisfy stop_lr: {stop_lr:.2e}")
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     # make evaluators for training
-    evaluator = make_evaluator(energy_factor=energy_factor, force_factor=force_factor, 
-                               energy_lossfn=energy_loss, force_lossfn=force_loss,
-                               grad_penalty=grad_penalty, device=device)
+    evaluator = Evaluator(energy_factor=energy_factor, force_factor=force_factor, 
+                          energy_lossfn=energy_loss, force_lossfn=force_loss,
+                          density_factor=density_factor, grad_penalty=grad_penalty)
     # make test evaluator that only returns l2loss of energy
-    test_eval = make_evaluator(energy_factor=1., force_factor=0, grad_penalty=0.,
-                               energy_lossfn=L2LOSS, device=device)
+    test_eval = Evaluator(energy_factor=1., energy_lossfn=L2LOSS, 
+                          force_factor=0., density_factor=0., grad_penalty=0.)
 
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()
@@ -153,7 +162,7 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
     tst_loss = np.mean([test_eval(model, batch).item() 
                     for batch in test_reader.sample_all_batch()])
     tst_time = time() - tic
-    print(f"  {0:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}"
+    print(f"  {0:<8d}  {np.sqrt(np.abs(trn_loss)):>.2e}  {np.sqrt(np.abs(tst_loss)):>.2e}"
           f"  {start_lr:>.2e}  {0:>8.2f}  {tst_time:>8.2f}")
 
     for epoch in range(1, n_epoch+1):
@@ -176,7 +185,7 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
             tst_loss = np.mean([test_eval(model, batch).item() 
                             for batch in test_reader.sample_all_batch()])
             tst_time = time() - tic
-            print(f"  {epoch:<8d}  {np.sqrt(trn_loss):>.2e}  {np.sqrt(tst_loss):>.2e}"
+            print(f"  {epoch:<8d}  {np.sqrt(np.abs(trn_loss)):>.2e}  {np.sqrt(np.abs(tst_loss)):>.2e}"
                   f"  {scheduler.get_last_lr()[0]:>.2e}  {trn_time:>8.2f}  {tst_time:8.2f}")
             if ckpt_file:
                 model.save(ckpt_file)
@@ -206,11 +215,11 @@ def main(train_paths, test_paths=None,
         train_args["device"] = device
 
     train_paths = load_dirs(train_paths)
-    print(f'# training with {len(train_paths)} system(s)')
+    # print(f'# training with {len(train_paths)} system(s)')
     g_reader = GroupReader(train_paths, **data_args)
     if test_paths is not None:
         test_paths = load_dirs(test_paths)
-        print(f'# testing with {len(test_paths)} system(s)')
+        # print(f'# testing with {len(test_paths)} system(s)')
         test_reader = GroupReader(test_paths, **data_args)
     else:
         print('# testing with training set')

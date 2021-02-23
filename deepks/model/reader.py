@@ -25,13 +25,14 @@ class Reader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
                  f_name="l_f_delta", gvx_name="grad_vx", 
-                 conv_name="conv", **kwargs):
+                 gldv_name="grad_ldv", conv_name="conv", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_path = self.check_exist(e_name+".npy")
         self.f_path = self.check_exist(f_name+".npy")
         self.d_path = self.check_exist(d_name+".npy")
         self.gvx_path = self.check_exist(gvx_name+".npy")
+        self.gldv_path = self.check_exist(gldv_name+".npy")
         self.c_path = self.check_exist(conv_name+".npy")
         # load data
         self.load_meta()
@@ -45,9 +46,6 @@ class Reader(object):
         fpath = os.path.join(self.data_path, fname)
         if os.path.exists(fpath):
             return fpath
-        else:
-            print("#", f"{fname} not found, skip corresponding labels", file=sys.stderr)
-            return None
 
     def load_meta(self):
         try:
@@ -78,7 +76,8 @@ class Reader(object):
         self.nframes = conv.sum()
         if self.nframes < self.batch_size:
             self.batch_size = self.nframes
-            print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
+            print('#', self.data_path, 
+                 f"reset batch size to {self.batch_size}", file=sys.stderr)
         # load data in torch
         self.t_data = {}
         self.t_data["lb_e"] = torch.tensor(self.data_ec)
@@ -90,6 +89,11 @@ class Reader(object):
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
                   .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
+        if self.gldv_path is not None:
+            self.t_data["gldv"] = torch.tensor(
+                np.load(self.gldv_path)\
+                  .reshape(raw_nframes, self.natm, self.ndesc)
+            )
 
     def sample_train(self):
         if self.batch_size == self.nframes == 1:
@@ -114,7 +118,7 @@ class Reader(object):
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size=1, group_batch=1, extra_label=False, **kwargs) :
+    def __init__ (self, path_list, batch_size=1, group_batch=1, extra_label=True, **kwargs) :
         if isinstance(path_list, str):
             path_list = [path_list]
         self.path_list = path_list
@@ -130,7 +134,11 @@ class GroupReader(object) :
                 continue
             self.readers.append(ireader)
             self.nframes.append(ireader.get_nframes())
+        if not self.readers:
+            raise RuntimeError("No system is avaliable")
         self.nsystems = len(self.readers)
+        data_keys = self.readers[0].sample_all().keys()
+        print(f"# load {self.nsystems} systems with fields {set(data_keys)}")
         # probability of each system
         self.ndesc = self.readers[0].ndesc
         self.sys_prob = [float(ii) for ii in self.nframes] / np.sum(self.nframes)
