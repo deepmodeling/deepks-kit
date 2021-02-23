@@ -23,8 +23,9 @@ def test(model, g_reader, dump_prefix="test", group=False):
 
     for i in range(g_reader.nsystems):
         sample = g_reader.sample_all(i)
-        nframes = sample[0].shape[0]
-        label, data, *_ = [d.to(DEVICE) for d in sample]
+        nframes = sample["lb_e"].shape[0]
+        sample = {k: v.to(DEVICE, non_blocking=True) for k, v in sample.items()}
+        label, data = sample["lb_e"], sample["eig"]
         pred = model(data)
         error = torch.sqrt(loss_fn(pred, label))
 
@@ -59,7 +60,8 @@ def main(data_paths, model_file="model.pth",
          output_prefix='test', group=False,
          e_name='l_e_delta', d_name=['dm_eig']):
     data_paths = load_dirs(data_paths)
-    g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name, conv_filter=False)
+    g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name, 
+                           conv_filter=False, extra_label=False)
     model_file = check_list(model_file)
     for f in model_file:
         print(f)
