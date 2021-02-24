@@ -92,8 +92,7 @@ class Reader(object):
         if self.gldv_path is not None:
             self.t_data["gldv"] = torch.tensor(
                 np.load(self.gldv_path)\
-                  .reshape(raw_nframes, self.natm, self.ndesc)
-            )
+                  .reshape(raw_nframes, self.natm, self.ndesc)[conv])
 
     def sample_train(self):
         if self.batch_size == self.nframes == 1:
