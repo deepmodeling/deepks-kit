@@ -81,9 +81,9 @@ SCF_FIELDS = [
           "(nframe, 1)",
           ["energy"]),
     # the following one is used for coulomb loss optimization
-    Field("grad_ldv",
-          ["grad_coul_dv", "grad_coul_deig", "coulomb_grad"], 
-          lambda mf, **lbl: mf.make_grad_coul_veig(target_dm=lbl["dm"]),
+    Field("l_veig",
+          ["optim_veig", "l_opt_v", "l_optim_veig"], 
+          lambda mf, **lbl: mf.calc_optim_veig(lbl["dm"], nstep=2),
           "(nframe, natom, nproj)",
           ["dm"]),
 ]

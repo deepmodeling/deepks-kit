@@ -67,25 +67,6 @@ def gen_proj_mol(mol, basis) :
     return test_mol
 
 
-def coulomb_loss_grad(mol, target_dm, mo_energy, mo_coeff, mo_occ):
-    # return coulomb loss and its grad with respect to fock matrix
-    # only support single dm, do not use directly for UHF
-    iocc = mo_occ>0
-    eo, ev = mo_energy[iocc], mo_energy[~iocc]
-    co, cv = mo_coeff[:, iocc], mo_coeff[:, ~iocc]
-    dm = (co * mo_occ[iocc]) @ co.T
-    # calc loss
-    ddm = dm - target_dm
-    dvj, _ = scf.hf.get_jk(mol, ddm, with_k=False)
-    loss = 0.5 * np.einsum("ij,ji", ddm, dvj)
-    # calc grad with respect to fock matrix
-    ie_mn = 1. / (-ev.reshape(-1, 1) + eo)
-    temp_mn = (cv.T @ dvj @ co) * ie_mn
-    dldv = cv @ temp_mn @ co.T
-    dldv = 2 * (dldv + dldv.T)
-    return loss, dldv
-
-
 class CorrMixin(abc.ABC):
     """Abstruct mixin class to add "correction" term to the mean-field Hamiltionian"""
 
@@ -224,34 +205,58 @@ class NetMixin(CorrMixin):
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells)
         return t_eig.detach().cpu().numpy()
 
-    def make_grad_coul_veig(self, target_dm,  
-            mo_energy=None, mo_coeff=None, mo_occ=None):
-        # this function is only used for iterative training. use with caution
-        if mo_energy is None: mo_energy = self.mo_energy
-        if mo_coeff is None: mo_coeff = self.mo_coeff
-        if mo_occ is None: mo_occ = self.mo_occ
-        # calculate grad of coul loss wrt fock matrix
-        if target_dm.ndim == 2: # rhf case
-            _, dldv = coulomb_loss_grad(self.mol, 
-                target_dm, mo_energy, mo_coeff, mo_occ)
-        else: # uhf case
-            _, l_dldv = zip(*[
-                coulomb_loss_grad(self.mol,tdm, me, mc, mo)
-                for tdm, me, mc, mo in zip(target_dm, mo_energy, mo_coeff, mo_occ)
-            ])
-            dldv = sum(l_dldv)
-        t_dldv = torch.from_numpy(dldv)
-        # calculate rest part of grad, wrt veig := partial ec / partial dm_eig
-        dm = self.make_rdm1(mo_coeff, mo_occ)
-        if dm.ndim >= 3 and isinstance(self, scf.uhf.UHF):
+    def gen_coul_loss(self, fock=None, ovlp=None, mo_occ=None):
+        nao = self.mol.nao
+        fock = (fock if fock is not None else self.get_fock()).reshape(-1, nao, nao)
+        s1e = ovlp if ovlp is not None else self.get_ovlp()
+        mo_occ = (mo_occ if mo_occ is not None else self.mo_occ).reshape(-1, nao)
+        def _coul_loss_grad(v, target_dm):
+            # return coulomb loss and its grad with respect to fock matrix
+            # only support single dm, do not use directly for UHF
+            a_loss = 0.
+            a_grad = 0.
+            target_dm = target_dm.reshape(fock.shape)
+            for tdm, f1e, nocc in zip(target_dm, fock, mo_occ):
+                iocc = nocc>0
+                moe, moc = self._eigh(f1e+v, s1e)
+                eo, ev = moe[iocc], moe[~iocc]
+                co, cv = moc[:, iocc], moc[:, ~iocc]
+                dm = (co * nocc[iocc]) @ co.T
+                # calc loss
+                ddm = dm - tdm
+                dvj = self.get_j(dm=ddm)
+                loss = 0.5 * np.einsum("ij,ji", ddm, dvj)
+                a_loss += loss
+                # calc grad with respect to fock matrix
+                ie_mn = 1. / (-ev.reshape(-1, 1) + eo)
+                temp_mn = cv.T @ dvj @ co * nocc[iocc] * ie_mn
+                dldv = cv @ temp_mn @ co.T
+                dldv = dldv + dldv.T
+                a_grad += dldv
+            return a_loss, a_grad
+        return _coul_loss_grad
+    
+    def calc_optim_veig(self, target_dm, nstep=1, **optim_args):
+        clfn = self.gen_coul_loss(fock=self.get_fock(vhf=self.get_veff0()))
+        dm = self.make_rdm1()
+        if dm.ndim == 3 and isinstance(self, scf.uhf.UHF):
             dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).requires_grad_()
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells).requires_grad_()
         t_ec = self.net(t_eig.to(self.device))
         t_veig = torch.autograd.grad(t_ec, t_eig)[0].requires_grad_()
-        [t_vc] = torch.autograd.grad(t_eig, t_dm, t_veig, create_graph=True)
-        [t_ghead] = torch.autograd.grad(t_vc, t_veig, t_dldv)
-        return t_ghead.detach().cpu().numpy()
+        def closure():
+            [t_vc] = torch.autograd.grad(
+                t_eig, t_dm, t_veig, retain_graph=True, create_graph=True)
+            lcl, dldv = clfn(t_vc.detach().numpy(), target_dm)
+            t_veig.grad = torch.autograd.grad(
+                t_vc, t_veig, torch.from_numpy(dldv), only_inputs=True)[0]
+            return lcl
+        optim = torch.optim.LBFGS([t_veig], **optim_args)
+        for _ in range(nstep):
+            optim.step(closure)
+        logger.note(self, f"optimized Coulomb loss = {closure()}")        
+        return t_veig.detach().numpy()
 
     def proj_intor(self, intor):
         """1-electron integrals between origin and projected basis"""

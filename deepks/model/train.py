@@ -72,8 +72,8 @@ L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
 class Evaluator:
     def __init__(self,
                  energy_factor=1., force_factor=0., 
-                 density_factor=0., grad_penalty=0., 
-                 energy_lossfn=None, force_lossfn=None):
+                 veig_factor=0., grad_penalty=0., 
+                 energy_lossfn=None, force_lossfn=None, veig_lossfn=None):
         # energy term
         if energy_lossfn is None:
             energy_lossfn = {}
@@ -89,7 +89,12 @@ class Evaluator:
         self.f_factor = force_factor
         self.f_lossfn = force_lossfn
         # coulomb term of dm; requires head gradient
-        self.d_factor = density_factor
+        if veig_lossfn is None:
+            veig_lossfn = {}
+        if isinstance(veig_lossfn, dict):
+            veig_lossfn = make_loss(**veig_lossfn)
+        self.v_factor = veig_factor
+        self.v_lossfn = veig_lossfn
         # gradient penalty, not very useful
         self.g_penalty = grad_penalty
 
@@ -100,7 +105,7 @@ class Evaluator:
         e_label, eig = sample["lb_e"], sample["eig"]
         nframe = e_label.shape[0]
         requires_grad =  ( (self.f_factor > 0 and "lb_f" in sample) 
-                        or (self.d_factor > 0 and "gldv" in sample)
+                        or (self.v_factor > 0 and "gldv" in sample)
                         or self.g_penalty > 0)
         eig.requires_grad_(requires_grad)
         # begin the calculation
@@ -118,16 +123,16 @@ class Evaluator:
                 f_label, gvx = sample["lb_f"], sample["gvx"]
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
                 tot_loss = tot_loss + self.f_factor * self.f_lossfn(f_pred, f_label)
-            # density loss with fix head grad
-            if self.d_factor > 0 and "gldv" in sample:
-                gldv = sample["gldv"]
-                tot_loss = tot_loss + self.d_factor * (gldv * gev).mean(0).sum()
+            # potential loss with precomputed veig label
+            if self.v_factor > 0 and "lb_v" in sample:
+                v_label = sample["lb_v"]
+                tot_loss = tot_loss + self.v_factor * self.v_lossfn(gev, v_label)
         return tot_loss
 
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,
-          energy_factor=1., force_factor=0., density_factor=0.,
-          energy_loss=None, force_loss=None,
+          energy_factor=1., force_factor=0., veig_factor=0.,
+          energy_loss=None, force_loss=None, veig_loss=None,
           start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
           weight_decay=0., grad_penalty=0., fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
@@ -148,12 +153,13 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
               + f"to satisfy stop_lr: {stop_lr:.2e}")
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     # make evaluators for training
-    evaluator = Evaluator(energy_factor=energy_factor, force_factor=force_factor, 
-                          energy_lossfn=energy_loss, force_lossfn=force_loss,
-                          density_factor=density_factor, grad_penalty=grad_penalty)
+    evaluator = Evaluator(energy_factor=energy_factor, energy_lossfn=energy_loss, 
+                          force_factor=force_factor, force_lossfn=force_loss, 
+                          veig_factor=veig_factor, veig_lossfn=veig_loss, 
+                          grad_penalty=grad_penalty)
     # make test evaluator that only returns l2loss of energy
     test_eval = Evaluator(energy_factor=1., energy_lossfn=L2LOSS, 
-                          force_factor=0., density_factor=0., grad_penalty=0.)
+                          force_factor=0., veig_factor=0., grad_penalty=0.)
 
     print("# epoch      trn_err   tst_err        lr  trn_time  tst_time ")
     tic = time()

@@ -25,14 +25,14 @@ class Reader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
                  f_name="l_f_delta", gvx_name="grad_vx", 
-                 gldv_name="grad_ldv", conv_name="conv", **kwargs):
+                 v_name="l_veig", conv_name="conv", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_path = self.check_exist(e_name+".npy")
         self.f_path = self.check_exist(f_name+".npy")
         self.d_path = self.check_exist(d_name+".npy")
         self.gvx_path = self.check_exist(gvx_name+".npy")
-        self.gldv_path = self.check_exist(gldv_name+".npy")
+        self.v_path = self.check_exist(v_name+".npy")
         self.c_path = self.check_exist(conv_name+".npy")
         # load data
         self.load_meta()
@@ -89,9 +89,9 @@ class Reader(object):
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
                   .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
-        if self.gldv_path is not None:
-            self.t_data["gldv"] = torch.tensor(
-                np.load(self.gldv_path)\
+        if self.v_path is not None:
+            self.t_data["lb_v"] = torch.tensor(
+                np.load(self.v_path)\
                   .reshape(raw_nframes, self.natm, self.ndesc)[conv])
 
     def sample_train(self):
