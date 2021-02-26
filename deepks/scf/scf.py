@@ -236,7 +236,9 @@ class NetMixin(CorrMixin):
             return a_loss, a_grad
         return _coul_loss_grad
     
-    def calc_optim_veig(self, target_dm, nstep=1, **optim_args):
+    def calc_optim_veig(self, target_dm, 
+                        target_dec=None, gvx=None, 
+                        nstep=1, force_factor=1., **optim_args):
         clfn = self.gen_coul_loss(fock=self.get_fock(vhf=self.get_veff0()))
         dm = self.make_rdm1()
         if dm.ndim == 3 and isinstance(self, scf.uhf.UHF):
@@ -245,17 +247,30 @@ class NetMixin(CorrMixin):
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells).requires_grad_()
         t_ec = self.net(t_eig.to(self.device))
         t_veig = torch.autograd.grad(t_ec, t_eig)[0].requires_grad_()
+        t_lde = torch.from_numpy(target_dec) if target_dec is not None else None
+        t_gvx = torch.from_numpy(gvx) if gvx is not None else None
+        # build closure
         def closure():
             [t_vc] = torch.autograd.grad(
                 t_eig, t_dm, t_veig, retain_graph=True, create_graph=True)
-            lcl, dldv = clfn(t_vc.detach().numpy(), target_dm)
-            t_veig.grad = torch.autograd.grad(
+            loss, dldv = clfn(t_vc.detach().numpy(), target_dm)
+            grad = torch.autograd.grad(
                 t_vc, t_veig, torch.from_numpy(dldv), only_inputs=True)[0]
-            return lcl
+            # build closure for force loss
+            if t_lde is not None and t_gvx is not None:
+                t_pde = torch.tensordot(t_gvx, t_veig)
+                lossde = force_factor * torch.sum((t_pde - t_lde)**2)
+                grad = grad + torch.autograd.grad(lossde, t_veig, only_inputs=True)[0]
+                loss = loss + lossde
+            t_veig.grad = grad
+            return loss
+        # do the optimization
         optim = torch.optim.LBFGS([t_veig], **optim_args)
+        tic = (time.clock(), time.time())
         for _ in range(nstep):
             optim.step(closure)
-        logger.note(self, f"optimized Coulomb loss = {closure()}")        
+            tic = logger.timer(self, 'LBFGS step', *tic)
+        logger.note(self, f"optimized loss for veig = {closure()}")        
         return t_veig.detach().numpy()
 
     def proj_intor(self, intor):
