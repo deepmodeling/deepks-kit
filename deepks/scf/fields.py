@@ -86,7 +86,7 @@ SCF_FIELDS = [
     # the following one is used for coulomb loss optimization
     Field("l_veig_raw",
           ["optim_veig_raw", "l_opt_v_raw", "l_optim_veig_raw"], 
-          lambda mf, **lbl: mf.calc_optim_veig(lbl["dm"], nstep=2),
+          lambda mf, **lbl: mf.calc_optim_veig(lbl["dm"], nstep=1),
           "(nframe, natom, nproj)",
           ["dm"]),
 ]
@@ -130,12 +130,12 @@ GRAD_FIELDS = [
     Field("l_veig",
           ["optim_veig", "l_opt_v", "l_optim_veig"], 
           lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], 
-                                  -_Lunit(grad.mol) * lbl["force"], nstep=3),
+                                  -_Lunit(grad.mol) * lbl["force"], nstep=1),
           "(nframe, natom, nproj)",
           ["dm", "force"]),
     Field("l_veig_nof",
           ["optim_veig_nof", "l_opt_v_nof", "l_optim_veig_nof"], 
-          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], grad.de, nstep=3),
+          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], grad.de, nstep=1),
           "(nframe, natom, nproj)",
           ["dm"]),
 ]
