@@ -28,6 +28,9 @@ BOHR = 0.52917721092
 def isinbohr(mol):
     return mol.unit.upper().startswith(("B", "AU"))
 
+def _Lunit(mol):
+    return (1. if isinbohr(mol) else BOHR)
+
 
 SCF_FIELDS = [
     Field("e_base", 
@@ -86,6 +89,11 @@ SCF_FIELDS = [
           lambda mf, **lbl: mf.make_grad_coul_veig(target_dm=lbl["dm"]),
           "(nframe, natom, nproj)",
           ["dm"]),
+    Field("l_veig_raw",
+          ["optim_veig_raw", "l_opt_v_raw", "l_optim_veig_raw"], 
+          lambda mf, **lbl: mf.calc_optim_veig(lbl["dm"], nstep=1),
+          "(nframe, natom, nproj)",
+          ["dm"]),
 ]
 
 GRAD_FIELDS = [
@@ -93,23 +101,19 @@ GRAD_FIELDS = [
           ["fbase", "force_base", "f0",
            "f_hf", "fhf", "force_hf", 
            "f_ks", "fks", "force_ks"], 
-          lambda grad: - grad.get_base() 
-                       / (1. if isinbohr(grad.mol) else BOHR),
+          lambda grad: - grad.get_base() / _Lunit(grad.mol),
           "(nframe, natom, 3)"),
     Field("f_tot", 
           ["f_cf", "fcf", "force_cf", "ftot", "force", "f"], 
-          lambda grad: - grad.de 
-                       / (1. if isinbohr(grad.mol) else BOHR),
+          lambda grad: - grad.de / _Lunit(grad.mol),
           "(nframe, natom, 3)"),
     Field("grad_dmx",
           ["grad_dm_x", "grad_pdm_x"],
-          lambda grad: grad.make_grad_pdm_x(flatten=True) 
-                       / (1. if isinbohr(grad.mol) else BOHR),
+          lambda grad: grad.make_grad_pdm_x(flatten=True) / _Lunit(grad.mol),
           "(nframe, natom, 3, natom, -1)"),
     Field("grad_vx",
           ["grad_eig_x", "geigx", "gvx"],
-          lambda grad: grad.make_grad_eig_x()  
-                       / (1. if isinbohr(grad.mol) else BOHR),
+          lambda grad: grad.make_grad_eig_x()  / _Lunit(grad.mol),
           "(nframe, natom, 3, natom, nproj)"),
     # below are fields that requires labels
     Field("l_f_ref", 
@@ -119,14 +123,24 @@ GRAD_FIELDS = [
           ["force"]),
     Field("l_f_delta", 
           ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
-          lambda grad, **lbl: lbl["force"] 
-              - (-grad.get_base() / (1. if isinbohr(grad.mol) else BOHR)),
+          lambda grad, **lbl: lbl["force"] - (-grad.get_base() / _Lunit(grad.mol)),
           "(nframe, natom, 3)",
           ["force"]),
     Field("err_f", 
           ["f_err", "err_f_tot", "err_f_cf"],
-          lambda grad, **lbl: lbl["force"] 
-              - (-grad.de / (1. if isinbohr(grad.mol) else BOHR)),
+          lambda grad, **lbl: lbl["force"] - (-grad.de / _Lunit(grad.mol)),
           "(nframe, natom, 3)",
           ["force"]),
+    # the following one is used for coulomb loss optimization
+    Field("l_veig",
+          ["optim_veig", "l_opt_v", "l_optim_veig"], 
+          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], 
+                                  -_Lunit(grad.mol) * lbl["force"], nstep=1),
+          "(nframe, natom, nproj)",
+          ["dm", "force"]),
+    Field("l_veig_nof",
+          ["optim_veig_nof", "l_opt_v_nof", "l_optim_veig_nof"], 
+          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], grad.de, nstep=1),
+          "(nframe, natom, nproj)",
+          ["dm"]),
 ]
