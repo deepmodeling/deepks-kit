@@ -205,6 +205,20 @@ class NetMixin(CorrMixin):
         t_eig = t_make_eig(t_dm, self._t_ovlp_shells)
         return t_eig.detach().cpu().numpy()
 
+    def proj_intor(self, intor):
+        """1-electron integrals between origin and projected basis"""
+        proj = gto.intor_cross(intor, self.mol, self._pmol) 
+        return proj
+        
+    def proj_ovlp(self):
+        """overlap between origin and projected basis, reshaped"""
+        nao = self.mol.nao
+        natm = self.mol.natm
+        pnao = self._pmol.nao
+        proj = self.proj_intor("int1e_ovlp")
+        # return shape [nao x natom x nproj]
+        return proj.reshape(nao, natm, pnao // natm)
+
     def gen_coul_loss(self, fock=None, ovlp=None, mo_occ=None):
         nao = self.mol.nao
         fock = (fock if fock is not None else self.get_fock()).reshape(-1, nao, nao)
@@ -235,6 +249,19 @@ class NetMixin(CorrMixin):
                 a_grad += dldv
             return a_loss, a_grad
         return _coul_loss_grad
+    
+    def make_grad_coul_veig(self, target_dm):
+        clfn = self.gen_coul_loss()
+        dm = self.make_rdm1()
+        if dm.ndim == 3 and isinstance(self, scf.uhf.UHF):
+            dm = dm.sum(0)
+        t_dm = torch.from_numpy(dm).requires_grad_()
+        t_eig = t_make_eig(t_dm, self._t_ovlp_shells).requires_grad_()
+        loss, dldv = clfn(np.zeros_like(dm), target_dm)
+        t_veig = torch.zeros_like(t_eig).requires_grad_()
+        [t_vc] = torch.autograd.grad(t_eig, t_dm, t_veig, create_graph=True)
+        [t_ghead] = torch.autograd.grad(t_vc, t_veig, torch.from_numpy(dldv))
+        return t_ghead.detach().cpu().numpy()
     
     def calc_optim_veig(self, target_dm, 
                         target_dec=None, gvx=None, 
@@ -272,20 +299,6 @@ class NetMixin(CorrMixin):
             tic = logger.timer(self, 'LBFGS step', *tic)
         logger.note(self, f"optimized loss for veig = {closure()}")        
         return t_veig.detach().numpy()
-
-    def proj_intor(self, intor):
-        """1-electron integrals between origin and projected basis"""
-        proj = gto.intor_cross(intor, self.mol, self._pmol) 
-        return proj
-        
-    def proj_ovlp(self):
-        """overlap between origin and projected basis, reshaped"""
-        nao = self.mol.nao
-        natm = self.mol.natm
-        pnao = self._pmol.nao
-        proj = self.proj_intor("int1e_ovlp")
-        # return shape [nao x natom x nproj]
-        return proj.reshape(nao, natm, pnao // natm)
 
 
 class DSCF(NetMixin, PenaltyMixin, dft.rks.RKS):
