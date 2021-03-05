@@ -13,7 +13,7 @@ BOHR = 0.52917721092
 _NO_FORCE = False
 _NO_DM = False
 _MUST_UNRES = False
-
+_USE_NEWTON = False
 
 def parse_xyz(filename, basis='ccpvdz', **kwargs):
     with open(filename) as fp:
@@ -46,9 +46,15 @@ def get_method(name: str):
         return calc_fci
     raise ValueError(f"Unknown calculation method: {name}")
 
-def calc_hf(mol, **scfargs):
+def solve_scf(mol, **scfargs):
     HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
     mf = HFmethod(mol).run(**scfargs)
+    if _USE_NEWTON and not mf.converged:
+        mf = scf.fast_newton(mf)
+    return mf
+
+def calc_hf(mol, **scfargs):
+    mf = solve_scf(mol, **scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     etot = mf.e_tot
@@ -72,8 +78,7 @@ def calc_dft(mol, xc="pbe", **scfargs):
 
 def calc_mp2(mol, **scfargs):
     import pyscf.mp
-    HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
-    mf = HFmethod(mol).run(**scfargs)
+    mf = solve_scf(mol, **scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     postmf = pyscf.mp.MP2(mf).run()
@@ -83,8 +88,7 @@ def calc_mp2(mol, **scfargs):
 
 def calc_ccsd(mol, **scfargs):
     import pyscf.cc
-    HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
-    mf = HFmethod(mol).run(**scfargs)
+    mf = solve_scf(mol, **scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     mycc = mf.CCSD().run()
@@ -96,8 +100,7 @@ def calc_ccsd(mol, **scfargs):
 
 def calc_ccsd_t(mol, **scfargs):
     import pyscf.cc
-    HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
-    mf = HFmethod(mol).run(**scfargs)
+    mf = solve_scf(mol, **scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     mycc = mf.CCSD().run()
@@ -111,8 +114,7 @@ def calc_ccsd_t(mol, **scfargs):
 
 def calc_fci(mol, **scfargs):
     import pyscf.fci
-    HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
-    mf = HFmethod(mol).run(**scfargs)
+    mf = solve_scf(mol, **scfargs)
     if not mf.converged:
         raise RuntimeError("SCF not converged!")
     myci = pyscf.fci.FCI(mf)
@@ -133,12 +135,14 @@ if __name__ == "__main__":
     parser.add_argument("-U", "--unrestrict", action="store_true", help="force using unrestricted methods")
     parser.add_argument("-NF", "--no-force", action="store_true", help="do not calculate force")
     parser.add_argument("-ND", "--no-dm", action="store_true", help="do not calculate dm")
+    parser.add_argument("-SO", "--newton", action="store_true", help="allow using newton method when scf not converged")
     parser.add_argument("--scf-input", help="yaml file to specify scf arguments")
     args = parser.parse_args()
     
     if args.unrestrict: _MUST_UNRES = True
     if args.no_force: _NO_FORCE = True
     if args.no_dm: _NO_DM = True
+    if args.newton: _USE_NEWTON = True
 
     scfargs = {}
     if args.scf_input is not None:
