@@ -104,7 +104,7 @@ def collect_systems(systems, folder=None):
     sys_list = [os.path.abspath(s) for s in load_sys_paths(systems)]
     parents, bases = map(list, zip(*[os.path.split(s.rstrip(os.path.sep)) 
                                         for s in sys_list]))
-    dups = range(len(systems))
+    dups = range(len(sys_list))
     while True:
         count_dict = {bases[i]:[] for i in dups}
         for i in dups:
