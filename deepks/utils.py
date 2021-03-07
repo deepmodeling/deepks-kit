@@ -46,8 +46,8 @@ def get_shell_sec(basis):
     if not isinstance(basis, (list, tuple)):
         basis = load_basis(basis)
     shell_sec = []
-    for l, *coeff in basis:
-        shell_sec.extend([2*l+1] * len(coeff))
+    for l, c0, *cr in basis:
+        shell_sec.extend([2*l+1] * (len(c0)-1))
     return shell_sec
     
 
