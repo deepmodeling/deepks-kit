@@ -67,6 +67,15 @@ SCF_FIELDS = [
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
           "(nframe, -1)"),
+    # the following two are used for regularizing the potential
+    Field("grad_veg",
+          ["grad_eig_egrad", "jac_eig_egrad"],
+          lambda mf: mf.make_grad_eig_egrad(),
+          "(nframe, natom, nproj, -1)"),
+    Field("egrad_base",
+          ["ele_grad_base", "egrad0"],
+          lambda mf: mf.get_grad0(),
+          "(nframe, -1)"),
     # below are fields that requires labels
     Field("l_e_ref", 
           ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
