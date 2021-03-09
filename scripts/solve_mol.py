@@ -24,7 +24,8 @@ def parse_xyz(filename, basis='ccpvdz', **kwargs):
     mol.atom = xyz_str
     mol.basis = basis
     mol.set(**kwargs)
-    mol.spin = mol.nelectron % 2
+    if "spin" not in kwargs:
+        mol.spin = mol.nelectron % 2
     mol.build(0,0,unit="Ang")
     return mol  
 
@@ -48,8 +49,12 @@ def get_method(name: str):
 
 def solve_scf(mol, **scfargs):
     HFmethod = scf.HF if not _MUST_UNRES else scf.UHF
-    mf = HFmethod(mol).run(**scfargs)
-    if _USE_NEWTON and not mf.converged:
+    mf = HFmethod(mol).set(init_guess_breaksym=True)
+    init_dm = mf.get_init_guess()
+    # if _MUST_UNRES:
+    #     init_dm[1][:2,:2] = 0
+    mf.kernel(init_dm)
+    if _USE_NEWTON:
         mf = scf.fast_newton(mf)
     return mf
 
@@ -132,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", default=1, type=int, help="output calculation information")
     parser.add_argument("-B", "--basis", default="ccpvdz", type=str, help="basis used to do the calculation")
     parser.add_argument("-C", "--charge", default=0, type=int, help="net charge of the molecule")
+    parser.add_argument("-S", "--spin", default=0, type=int, help="net spin of the molecule")
     parser.add_argument("-M", "--method", default="ccsd", help="method used to do the calculation. support MP2, CCSD and CCSD(T)")
     parser.add_argument("-U", "--unrestrict", action="store_true", help="force using unrestricted methods")
     parser.add_argument("-NF", "--no-force", action="store_true", help="do not calculate force")
@@ -156,7 +162,7 @@ if __name__ == "__main__":
 
     for fn in args.files:
         tic = time.time()
-        mol = parse_xyz(fn, args.basis, verbose=args.verbose, charge=args.charge)
+        mol = parse_xyz(fn, args.basis, verbose=args.verbose, charge=args.charge, spin=args.spin)
         try:
             res = calculator(mol, **scfargs)
         except RuntimeError as err:
