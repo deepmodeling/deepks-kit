@@ -6,7 +6,7 @@ from pyscf import gto, scf, lib
 from pyscf.lib import logger
 from pyscf.grad import rks as rks_grad
 from pyscf.grad import uks as uks_grad
-from deepks.scf.scf import t_make_pdm, t_shell_eig
+from deepks.scf.scf import t_make_pdm, t_shell_eig, t_batch_jacobian
 
 # see ./_old_grad.py for a more clear (but maybe slower) implementation
 # all variables and functions start with "t_" are torch related.
@@ -89,17 +89,6 @@ def t_grad_corr(mol, model, dm, ovlp_shells, ipov_shells, atmlst=None):
             # contribution of < \nabla mol_ao | and | \nabla mol_ao >
             dec[k] += torch.einsum('xrs,rs->x', gouter[:,bg:ed], dm[bg:ed])
     return dec
-
-
-def t_batch_jacobian(f, x, noutputs):
-    nindim = len(x.shape)-1
-    x = x.unsqueeze(1) # b, 1 ,*in_dim
-    n = x.shape[0]
-    x = x.repeat(1, noutputs, *[1]*nindim) # b, out_dim, *in_dim
-    x.requires_grad_(True)
-    y = f(x)
-    input_val = torch.eye(noutputs).reshape(1,noutputs, noutputs).repeat(n, 1, 1)
-    return torch.autograd.grad(y, x, input_val)[0]
 
 
 class CorrGradMixin(abc.ABC):

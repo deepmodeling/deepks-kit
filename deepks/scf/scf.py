@@ -58,6 +58,34 @@ def t_get_corr(model, dm, ovlp_shells, with_vc=True):
     return ec.to(ceig), vc
 
 
+def t_batch_jacobian(f, x, noutputs):
+    nindim = len(x.shape)-1
+    x = x.unsqueeze(1) # b, 1 ,*in_dim
+    n = x.shape[0]
+    x = x.repeat(1, noutputs, *[1]*nindim) # b, out_dim, *in_dim
+    x.requires_grad_(True)
+    y = f(x)
+    input_val = torch.eye(noutputs).reshape(1,noutputs, noutputs).repeat(n, 1, 1)
+    return torch.autograd.grad(y, x, input_val)[0]
+
+
+def t_make_grad_eig_dm(dm, ovlp_shells):
+    """return jacobian of decriptor eigenvalues w.r.t 1-rdm"""
+    # using the sparsity, much faster than naive torch version
+    # v stands for eigen values
+    pdm_shells = [dm.requires_grad_(True) for dm in t_make_pdm(dm, ovlp_shells)]
+    gvdm_shells = [t_batch_jacobian(t_shell_eig, dm, dm.shape[-1]) 
+                        for dm in pdm_shells]
+    vjac_shells = [torch.einsum('rap,avpq,saq->avrs', po, gdm, po)
+                        for po, gdm in zip(ovlp_shells, gvdm_shells)]
+    return torch.cat(vjac_shells, dim=1)
+
+
+def t_ele_grad(bfock, c_vir, c_occ, n_occ):
+    g = torch.einsum("pa,qi,...pq->...ai", c_vir, c_occ*n_occ, bfock)
+    return g.flatten(-2)
+
+
 def gen_proj_mol(mol, basis) :
     mole_coords = mol.atom_coords(unit="Ang")
     test_mol = gto.Mole()
@@ -72,6 +100,12 @@ class CorrMixin(abc.ABC):
 
     def get_veff0(self, *args, **kwargs):
         return super().get_veff(*args, **kwargs)
+    
+    def get_grad0(self, mo_coeff=None, mo_occ=None):
+        if mo_occ is None: mo_occ = self.mo_occ
+        if mo_coeff is None: mo_coeff = self.mo_coeff
+        return super().get_grad(mo_coeff, mo_occ, 
+                                fock=self.get_fock(vhf=self.get_veff0()))
 
     def energy_elec0(self, dm=None, h1e=None, vhf=None):
         if vhf is None: vhf = self.get_veff0(dm=dm)
@@ -218,6 +252,26 @@ class NetMixin(CorrMixin):
         proj = self.proj_intor("int1e_ovlp")
         # return shape [nao x natom x nproj]
         return proj.reshape(nao, natm, pnao // natm)
+
+    def make_grad_eig_egrad(self, mo_coeff=None, mo_occ=None, gfock=None):
+        if mo_occ is None: 
+            mo_occ = self.mo_occ
+        if mo_coeff is None: 
+            mo_coeff = self.mo_coeff
+        if gfock is None:
+            dm = self.make_rdm1(mo_coeff, mo_occ)
+            if dm.ndim >= 3 and isinstance(self, scf.uhf.UHF):
+                dm = dm.sum(0)
+            gfock = t_make_grad_eig_dm(torch.from_numpy(dm), self._t_ovlp_shells).numpy()
+        if mo_coeff.ndim >= 3 and mo_occ.ndim >= 2:
+            return np.concatenate([self.make_grad_eig_egrad(mc, mo, gfock) 
+                for mc, mo in zip(mo_coeff, mo_occ)], axis=-1)
+        iocc = mo_occ>0
+        t_no = torch.from_numpy(mo_occ[iocc]).to(self.device)
+        t_co = torch.from_numpy(mo_coeff[:, iocc]).to(self.device)
+        t_cv = torch.from_numpy(mo_coeff[:, ~iocc]).to(self.device)
+        t_gfock = torch.from_numpy(gfock).to(self.device)
+        return t_ele_grad(t_gfock, t_cv, t_co, t_no)
 
     def gen_coul_loss(self, fock=None, ovlp=None, mo_occ=None):
         nao = self.mol.nao
