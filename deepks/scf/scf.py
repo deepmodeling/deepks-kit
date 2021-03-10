@@ -271,7 +271,7 @@ class NetMixin(CorrMixin):
         t_co = torch.from_numpy(mo_coeff[:, iocc]).to(self.device)
         t_cv = torch.from_numpy(mo_coeff[:, ~iocc]).to(self.device)
         t_gfock = torch.from_numpy(gfock).to(self.device)
-        return t_ele_grad(t_gfock, t_cv, t_co, t_no)
+        return t_ele_grad(t_gfock, t_cv, t_co, t_no).cpu().numpy()
 
     def gen_coul_loss(self, fock=None, ovlp=None, mo_occ=None):
         nao = self.mol.nao

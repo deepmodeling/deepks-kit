@@ -72,8 +72,8 @@ SCF_FIELDS = [
           ["grad_eig_egrad", "jac_eig_egrad"],
           lambda mf: mf.make_grad_eig_egrad(),
           "(nframe, natom, nproj, -1)"),
-    Field("egrad_base",
-          ["ele_grad_base", "egrad0"],
+    Field("eg_base",
+          ["ele_grad_base", "egrad0", "egrad_base"],
           lambda mf: mf.get_grad0(),
           "(nframe, -1)"),
     # below are fields that requires labels
