@@ -124,7 +124,10 @@ def calc_fci(mol, **scfargs):
         raise RuntimeError("SCF not converged!")
     myci = pyscf.fci.FCI(mf)
     etot, fcivec = myci.kernel()
-    rdm = myci.make_rdm1(fcivec, mol.nao, mol.nelec) if not _NO_DM else None
+    rdm = np.einsum('...pi,...ij,...qj->...pq', 
+            mf.mo_coeff, 
+            myci.make_rdm1s(fcivec, mol.nao, mol.nelec), 
+            mf.mo_coeff.conj()).sum(0) if not _NO_DM else None
     return etot, None, rdm
 
 
