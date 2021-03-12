@@ -25,6 +25,7 @@ class Reader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
                  f_name="l_f_delta", gvx_name="grad_vx", 
+                 eg_name="eg_base", gveg_name="grad_veg", 
                  gldv_name="grad_ldv", conv_name="conv", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
@@ -32,6 +33,8 @@ class Reader(object):
         self.f_path = self.check_exist(f_name+".npy")
         self.d_path = self.check_exist(d_name+".npy")
         self.gvx_path = self.check_exist(gvx_name+".npy")
+        self.eg_path = self.check_exist(eg_name+".npy")
+        self.gveg_path = self.check_exist(gveg_name+".npy")
         self.gldv_path = self.check_exist(gldv_name+".npy")
         self.c_path = self.check_exist(conv_name+".npy")
         # load data
@@ -89,6 +92,14 @@ class Reader(object):
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
                   .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
+        if self.eg_path is not None and self.gveg_path is not None:
+            self.t_data['eg0'] = torch.tensor(
+                np.load(self.eg_path)\
+                  .reshape(raw_nframes, -1)[conv])
+            self.t_data["gveg"] = torch.tensor(
+                np.load(self.gveg_path)\
+                  .reshape(raw_nframes, self.natm, self.ndesc, -1)[conv])
+            self.neg = self.t_data['eg0'].shape[-1]
         if self.gldv_path is not None:
             self.t_data["gldv"] = torch.tensor(
                 np.load(self.gldv_path)\
@@ -117,7 +128,7 @@ class Reader(object):
 
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size=1, group_batch=1, extra_label=True, **kwargs) :
+    def __init__ (self, path_list, batch_size=1, group_batch=1, extra_label=True, **kwargs):
         if isinstance(path_list, str):
             path_list = [path_list]
         self.path_list = path_list
@@ -147,12 +158,13 @@ class GroupReader(object) :
             self.group_dict = {}
             # self.group_index = {}
             for idx, r in enumerate(self.readers):
-                if r.natm in self.group_dict:
-                    self.group_dict[r.natm].append(r)
-                    # self.group_index[r.natm].append(idx)
+                shape = (r.natm, getattr(r, "neg", None))
+                if shape in self.group_dict:
+                    self.group_dict[shape].append(r)
+                    # self.group_index[shape].append(idx)
                 else:
-                    self.group_dict[r.natm] = [r]
-                    # self.group_index[r.natm] = [idx]
+                    self.group_dict[shape] = [r]
+                    # self.group_index[shape] = [idx]
             self.group_prob = {n: sum(r.nframes for r in r_list) / sum(self.nframes)
                                 for n, r_list in self.group_dict.items()}
             self.batch_prob_raw = {n: [r.nframes / r.batch_size for r in r_list] 
@@ -182,9 +194,9 @@ class GroupReader(object) :
             self.readers[idx].sample_train()
 
     def sample_train_group(self):
-        cnatm = np.random.choice(list(self.group_prob.keys()), p=list(self.group_prob.values()))
-        cgrp = self.group_dict[cnatm]
-        csys = np.random.choice(cgrp, self.group_batch, p=self.batch_prob[cnatm])
+        cshape = np.random.choice(list(self.group_prob.keys()), p=list(self.group_prob.values()))
+        cgrp = self.group_dict[cshape]
+        csys = np.random.choice(cgrp, self.group_batch, p=self.batch_prob[cshape])
         batch = concat_batch([s.sample_train() for s in csys], dim=0)
         return batch
 

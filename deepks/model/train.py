@@ -111,8 +111,10 @@ class Evaluator:
                         grad_outputs=torch.ones_like(e_pred),
                         retain_graph=True, create_graph=True, only_inputs=True)
             # for now always use pure l2 loss for gradient penalty
-            if self.g_penalty > 0:
-                tot_loss = tot_loss + self.g_penalty * gev.square().mean()
+            if self.g_penalty > 0 and "eg0" in sample:
+                eg_base, gveg = sample["eg0"], sample["gveg"]
+                eg_tot = torch.einsum('...apg,...ap->...g', gveg, gev) + eg_base
+                tot_loss = tot_loss + self.g_penalty * torch.square(eg_tot).mean(0).sum()
             # optional force calculation
             if self.f_factor > 0 and "lb_f" in sample:
                 f_label, gvx = sample["lb_f"], sample["gvx"]
@@ -127,9 +129,9 @@ class Evaluator:
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,
           energy_factor=1., force_factor=0., density_factor=0.,
-          energy_loss=None, force_loss=None,
+          energy_loss=None, force_loss=None, grad_penalty=0.,
           start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
-          weight_decay=0., grad_penalty=0., fix_embedding=False,
+          weight_decay=0.,  fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
     
     model = model.to(device)
