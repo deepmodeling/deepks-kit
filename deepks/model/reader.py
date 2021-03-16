@@ -134,7 +134,9 @@ class GroupReader(object) :
         self.path_list = path_list
         self.batch_size = batch_size
         # init system readers
-        Reader_class = Reader if extra_label else SimpleReader
+        Reader_class = (Reader if extra_label 
+            and isinstance(kwargs.get('d_name', "dm_eig"), str) 
+            else SimpleReader)
         self.readers = []
         self.nframes = []
         for ipath in self.path_list :
