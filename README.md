@@ -22,3 +22,7 @@ The program provides a command line interface `deepks` that contains five sub-co
 ## Usage
 
 Please see [`examples`](./examples) folder for the usage of `deepks` library. A detailed example with executable data for single water molecules can be found [here](./examples/water_single). A more complicated one for training water clusters can be found [here](./examples/water_cluster).
+
+## References:
+[1] Chen, Y., Zhang, L., Wang, H. and E, W., 2020. Ground State Energy Functional with Hartree–Fock Efficiency and Chemical Accuracy. The Journal of Physical Chemistry A, 124(35), pp.7155-7165.
+[2] Chen, Y., Zhang, L., Wang, H. and E, W., 2021. DeePKS: A Comprehensive Data-Driven Approach toward Chemically Accurate Density Functional Theory. Journal of Chemical Theory and Computation, 17(1), pp.170–181.
