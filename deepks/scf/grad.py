@@ -179,15 +179,6 @@ class NetGradMixin(CorrGradMixin):
                     self._t_ovlp_shells, self._t_ipov_shells)
         return t_gvx.detach().cpu().numpy()
 
-    def calc_optim_veig(self, target_dm, target_grad, 
-                        nstep=1, force_factor=1., **optim_args):
-        target_dec = target_grad - self.de0
-        gvx = self.make_grad_eig_x()
-        return self.base.calc_optim_veig(
-                target_dm=target_dm, 
-                target_dec=target_dec, gvx=gvx, 
-                nstep=nstep, force_factor=force_factor, **optim_args)
-
     def as_scanner(self):
         scanner = super().as_scanner()
         # make a new version of call method
@@ -212,6 +203,9 @@ class NetGradMixin(CorrGradMixin):
         # hecking the old scanner's method, bind the new one
         scanner.__class__ = NewScanner
         return scanner
+
+    # additional methods for dm training impl'd in addons
+    # from deepks.scf.addons import gcalc_optim_veig as calc_optim_veig
 
 
 def build_grad(mf):

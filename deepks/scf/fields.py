@@ -67,15 +67,6 @@ SCF_FIELDS = [
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
           "(nframe, -1)"),
-    # the following two are used for regularizing the potential
-    Field("grad_veg",
-          ["grad_eig_egrad", "jac_eig_egrad"],
-          lambda mf: mf.make_grad_eig_egrad(),
-          "(nframe, natom, nproj, -1)"),
-    Field("eg_base",
-          ["ele_grad_base", "egrad0", "egrad_base"],
-          lambda mf: mf.get_grad0(),
-          "(nframe, -1)"),
     # below are fields that requires labels
     Field("l_e_ref", 
           ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
@@ -92,17 +83,6 @@ SCF_FIELDS = [
           lambda mf, **lbl: lbl["energy"] - mf.e_tot,
           "(nframe, 1)",
           ["energy"]),
-    # the following one is used for coulomb loss optimization
-    Field("grad_ldv",
-          ["grad_coul_dv", "grad_coul_deig", "coulomb_grad"], 
-          lambda mf, **lbl: mf.make_grad_coul_veig(target_dm=lbl["dm"]),
-          "(nframe, natom, nproj)",
-          ["dm"]),
-    Field("l_veig_raw",
-          ["optim_veig_raw", "l_opt_v_raw", "l_optim_veig_raw"], 
-          lambda mf, **lbl: mf.calc_optim_veig(lbl["dm"], nstep=1),
-          "(nframe, natom, nproj)",
-          ["dm"]),
 ]
 
 GRAD_FIELDS = [
@@ -140,16 +120,47 @@ GRAD_FIELDS = [
           lambda grad, **lbl: lbl["force"] - (-grad.de / _Lunit(grad.mol)),
           "(nframe, natom, 3)",
           ["force"]),
+]
+
+
+# below are additional methods from addons
+from deepks.scf import addons
+
+SCF_FIELDS.extend([
+    # the following two are used for regularizing the potential
+    Field("grad_veg",
+          ["grad_eig_egrad", "jac_eig_egrad"],
+          lambda mf: addons.make_grad_eig_egrad(mf),
+          "(nframe, natom, nproj, -1)"),
+    Field("eg_base",
+          ["ele_grad_base", "egrad0", "egrad_base"],
+          lambda mf: mf.get_grad0(),
+          "(nframe, -1)"),
     # the following one is used for coulomb loss optimization
+    Field("grad_ldv",
+          ["grad_coul_dv", "grad_coul_deig", "coulomb_grad"], 
+          lambda mf, **lbl: addons.make_grad_coul_veig(mf, target_dm=lbl["dm"]),
+          "(nframe, natom, nproj)",
+          ["dm"]),
+    Field("l_veig_raw",
+          ["optim_veig_raw", "l_opt_v_raw", "l_optim_veig_raw"], 
+          lambda mf, **lbl: addons.calc_optim_veig(mf, lbl["dm"], nstep=1),
+          "(nframe, natom, nproj)",
+          ["dm"]),
+])
+
+GRAD_FIELDS.extend([
+    # the following one is used for coulomb loss optimization from grad class
     Field("l_veig",
           ["optim_veig", "l_opt_v", "l_optim_veig"], 
-          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], 
-                                  -_Lunit(grad.mol) * lbl["force"], nstep=1),
+          lambda grad, **lbl: addons.gcalc_optim_veig(
+              grad, lbl["dm"], -_Lunit(grad.mol)*lbl["force"], nstep=1),
           "(nframe, natom, nproj)",
           ["dm", "force"]),
     Field("l_veig_nof",
           ["optim_veig_nof", "l_opt_v_nof", "l_optim_veig_nof"], 
-          lambda grad, **lbl: grad.calc_optim_veig(lbl["dm"], grad.de, nstep=1),
+          lambda grad, **lbl: addons.gcalc_optim_veig(
+              grad, lbl["dm"], grad.de, nstep=1),
           "(nframe, natom, nproj)",
           ["dm"]),
-]
+])
