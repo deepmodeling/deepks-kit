@@ -49,12 +49,30 @@ def make_loss(cap=None, shrink=None, reduction="mean"):
             raise ValueError(f"{reduction} is not a valid reduction type")
     return loss_fn
 
+def make_dos_fn(orbital_energies, beta):
+    def dos_fn(e):
+        return sum([torch.exp(-beta * (e - oe)**2) for oe in orbital_energies])
+    return dos_fn
+
+def orbital_dos_loss_fn(pred, target):
+    assert len(pred.shape) == len(target.shape) == 2
+    mine = torch.min(target)
+    maxe = torch.max(target)
+    interv = torch.linspace(mine, maxe, 1000)
+    loss = 0
+    for i in range(pred.shape[0]):
+        pred_dos = make_dos_fn(pred[i,:])
+        target_dos = make_dos_fn(target[i,:])
+        loss += sum((pred_dos(interv) - target_dos(interv)) ** 2) / 1000
+    return loss
+
 # equiv to nn.MSELoss()
 L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
 
 
-def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0., 
-                   energy_lossfn=None, force_lossfn=None, device=DEVICE):
+def make_evaluator(energy_factor=1., force_factor=0., orbital_factor=0., grad_penalty=0., 
+                   energy_lossfn=None, force_lossfn=None, 
+                   orbital_lossfn=None, device=DEVICE):
     if energy_lossfn is None:
         energy_lossfn = {}
     if isinstance(energy_lossfn, dict):
@@ -63,11 +81,17 @@ def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0.,
         force_lossfn = {}
     if isinstance(force_lossfn, dict):
         force_lossfn = make_loss(**force_lossfn)
+    if orbital_lossfn is None:
+        orbital_lossfn = {}
+    if isinstance(orbital_lossfn, dict):
+        orbital_lossfn = make_loss(**orbital_lossfn)
     # make evaluator a closure to save parameters
     def evaluator(model, sample):
         # allocate data first
         tot_loss = 0.
-        e_label, eig, *force_sample = [d.to(device, non_blocking=True) for d in sample]
+        e_label, eig, *optional = [d.to(device, non_blocking=True) for d in sample]
+        force_sample = optional[0:2]
+        orbital_sample = optional[2:4]
         nframe = e_label.shape[0]
         if force_factor > 0 or grad_penalty > 0:
             eig.requires_grad_(True)
@@ -86,6 +110,10 @@ def make_evaluator(energy_factor=1., force_factor=0., grad_penalty=0.,
                 f_label, gvx = force_sample
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
                 tot_loss = tot_loss + force_factor * force_lossfn(f_pred, f_label)
+            if orbital_factor > 0:
+                o_label, op = orbital_sample
+                o_pred = - torch.einsum("...iap,...ap->...i", op, gev)
+                tot_loss = tot_loss + orbital_factor * orbital_lossfn(f_pred, o_label)
         return tot_loss
     # return the closure
     return evaluator
@@ -117,7 +145,7 @@ def preprocess(model, g_reader,
 
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,
-          energy_factor=1., force_factor=0., energy_loss=None, force_loss=None,
+          energy_factor=1., force_factor=0., orbital_factor=0., energy_loss=None, force_loss=None, orbital_loss=None, 
           start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
           weight_decay=0., grad_penalty=0., fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth", device=DEVICE):
@@ -138,8 +166,8 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
               + f"to satisfy stop_lr: {stop_lr:.2e}")
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     # make evaluators for training
-    evaluator = make_evaluator(energy_factor=energy_factor, force_factor=force_factor, 
-                               energy_lossfn=energy_loss, force_lossfn=force_loss,
+    evaluator = make_evaluator(energy_factor=energy_factor, force_factor=force_factor, orbital_factor=orbital_factor,
+                               energy_lossfn=energy_loss, force_lossfn=force_loss,orbital_lossfn=orbital_loss,
                                grad_penalty=grad_penalty, device=device)
     # make test evaluator that only returns l2loss of energy
     test_eval = make_evaluator(energy_factor=1., force_factor=0, grad_penalty=0.,

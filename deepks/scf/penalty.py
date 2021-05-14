@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from pyscf.dft import numint, gen_grid
+from pyscf.scf.hf import dip_moment
 from pyscf.lib import logger
 from deepks.utils import check_list
 
@@ -11,6 +12,8 @@ def select_penalty(name):
         return DensityPenalty
     if name == "coulomb":
         return CoulombPenalty
+    if name == "dipole":
+        return DipolePenalty
     raise ValueError(f"unknown penalty type: {name}")
 
 
@@ -140,4 +143,48 @@ class CoulombPenalty(AbstructPenalty):
             diff_norm = np.sum(ddm * v_p)
             logger.info(mf, f"  Coulomb Penalty: |diff| = {diff_norm}")
             logger.timer(mf, "coul_pnt", *tic)
+        return self.strength * v_p
+
+class DipolePenalty(AbstructPenalty):
+    r"""
+    penalty on the difference w.r.t target dipole
+    D = \lambda / 2 * |\vec p - \vec p_target|^2
+    v_xc = (\vec p - \vec p_label) \cdot \vec r
+    The target dipole should be given as 1D vector [3]
+    """
+    required_labels = ["dipole"]
+
+    def __init__(self, target_p, strength=1, random=False, start_cycle=0):
+        self.p_t = target_p
+        self.init_strength = strength
+        self.strength = strength * np.random.rand() if random else strength
+        self.start_cycle = start_cycle
+        # below are values to be initialized later in init_hook
+        self.grids = None
+        self.ao_value = None
+
+    def init_hook(self, mf, **envs):
+        if hasattr(mf, "grid"):
+            self.grids = mf.grids
+        else:
+            self.grids = gen_grid.Grids(mf.mol)
+
+    def fock_hook(self, mf, dm=None, h1e=None, vhf=None, cycle=-1, **envs):
+        # cycle > 0 means it is doing scf iteration
+        if 0 <= cycle < self.start_cycle:
+            return 0
+        if self.grids.coords is None:
+            self.grids.build()
+        if self.ao_value is None:
+            self.ao_value = numint.eval_ao(mf.mol, self.grids.coords, deriv=0)
+        tic = (time.clock(), time.time())
+        p = dip_moment(mf.mol, dm)
+        dp = p - self.p_t
+        kernel = np.dot(self.grids.coords, dp)
+        v_p = numint.eval_mat(mf.mol, self.ao_value, self.grids.weights, None, kernel) # it doesn't really need a rho!
+        # cycle < 0 means it is just checking, we only print here
+        if cycle < 0 and mf.verbose >=4:
+            diff_norm = np.sum(dp * dp)
+            logger.info(mf, f"  Dipole Penalty: |diff| = {diff_norm}")
+            logger.timer(mf, "dip_pnt", *tic)
         return self.strength * v_p

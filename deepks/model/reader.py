@@ -178,15 +178,128 @@ class ForceReader(object):
     def get_nframes(self):
         return self.nframes
 
+class OrbitalReader(object):
+    def __init__(self, data_path, batch_size, 
+                 e_name="l_e_delta", d_name="dm_eig", 
+                 f_name="l_f_delta", gv_name="grad_vx", 
+                 o_name="l_o_delta",
+                 op_name="orbital_precalc",
+                 conv_filter=True, conv_name="conv", **kwargs):
+        self.data_path = data_path
+        self.batch_size = batch_size
+        self.e_name = e_name
+        self.f_name = f_name
+        self.d_name = d_name
+        self.gv_name = gv_name
+        self.o_name = o_name
+        self.op_name = op_name
+        self.c_filter = conv_filter
+        self.c_name = conv_name
+        # load data
+        self.load_meta()
+        self.prepare()
+        # initialize sample index queue
+        self.idx_queue = []
+
+    def load_meta(self):
+        try:
+            sys_meta = np.loadtxt(os.path.join(self.data_path,'system.raw'), dtype = int).reshape([-1])
+            self.natm = sys_meta[0]
+            self.nproj = sys_meta[-1]
+        except:
+            print('#', self.data_path, f"no system.raw, infer meta from data", file=sys.stderr)
+            sys_shape = np.load(os.path.join(self.data_path, f'{self.d_name}.npy')).shape
+            assert len(sys_shape) == 3, \
+                f"{self.d_name[0]} has to be an order-3 array with shape [nframes, natom, nproj]"
+            self.natm = sys_shape[1]
+            self.nproj = sys_shape[2]
+        self.ndesc = self.nproj
+
+    def prepare(self):
+        # load energy and check nframes
+        data_ec = np.load(os.path.join(self.data_path, f'{self.e_name}.npy')).reshape([-1, 1])
+        raw_nframes = data_ec.shape[0]
+        data_dm = np.load(os.path.join(self.data_path, f'{self.d_name}.npy'))\
+                    .reshape([raw_nframes, self.natm, self.ndesc])
+        if self.c_filter:
+            conv = np.load(os.path.join(self.data_path,f'{self.c_name}.npy')).reshape(raw_nframes)
+        else:
+            conv = np.ones(raw_nframes, dtype=bool)
+        self.data_ec = data_ec[conv]
+        self.data_dm = data_dm[conv]
+        self.nframes = conv.sum()
+        if self.nframes < self.batch_size:
+            self.batch_size = self.nframes
+            print('#', self.data_path, f"reset batch size to {self.batch_size}", file=sys.stderr)
+        # load data in torch
+        self.t_ec = torch.tensor(self.data_ec)
+        self.t_eig = torch.tensor(self.data_dm)
+        self.t_fc = torch.tensor(
+            np.load(os.path.join(self.data_path, f'{self.f_name}.npy'))\
+              .reshape(raw_nframes, self.natm, 3)[conv]
+        )
+        self.t_gvx = torch.tensor(
+            np.load(os.path.join(self.data_path, f'{self.gv_name}.npy'))\
+              .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv]
+        )
+        self.t_oc = torch.tensor(
+            np.load(os.path.join(self.data_path, f'{self.o_name}.npy'))\
+              .reshape(raw_nframes, -1)[conv]
+        )
+        self.t_op = torch.tensor(
+            np.load(os.path.join(self.data_path, f'{self.op_name}.npy'))\
+              .reshape(raw_nframes, -1, self.natm, self.ndesc)[conv]
+        )
+        # pin memory
+        if torch.cuda.is_available():
+            self.t_ec = self.t_ec.pin_memory()
+            self.t_fc = self.t_fc.pin_memory()
+            self.t_eig = self.t_eig.pin_memory()
+            self.t_gvx = self.t_gvx.pin_memory()
+            self.t_oc = self.t_oc.pin_memory()
+            self.t_op = self.t_op.pin_memory()
+
+    def sample_train(self):
+        if self.batch_size == self.nframes == 1:
+            return self.sample_all()
+        if len(self.idx_queue) < self.batch_size:
+            self.idx_queue = np.random.choice(self.nframes, self.nframes, replace=False)
+        sample_idx = self.idx_queue[:self.batch_size]
+        self.idx_queue = self.idx_queue[self.batch_size:]
+        return \
+            self.t_ec[sample_idx], \
+            self.t_eig[sample_idx], \
+            self.t_fc[sample_idx], \
+            self.t_gvx[sample_idx], \
+            self.t_oc[sample_idx], \
+            self.t_op[sample_idx]
+
+    def sample_all(self):
+        return \
+            self.t_ec, \
+            self.t_eig, \
+            self.t_fc, \
+            self.t_gvx, \
+            self.t_oc, \
+            self.t_op
+
+    def get_train_size(self):
+        return self.nframes
+
+    def get_batch_size(self):
+        return self.batch_size
+
+    def get_nframes(self):
+        return self.nframes
 
 class GroupReader(object) :
-    def __init__ (self, path_list, batch_size=1, group_batch=1, with_force=False, **kwargs) :
+    def __init__ (self, path_list, batch_size=1, group_batch=1, with_force=False, with_orbital=False, **kwargs) :
         if isinstance(path_list, str):
             path_list = [path_list]
         self.path_list = path_list
         self.batch_size = batch_size
         # init system readers
-        Reader_class = ForceReader if with_force else Reader
+        Reader_class = OrbitalReader if with_orbital else ForceReader if with_force else Reader
         self.readers = []
         self.nframes = []
         for ipath in self.path_list :
