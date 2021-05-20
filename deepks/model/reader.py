@@ -295,7 +295,7 @@ class SimpleReader(object):
         raw_nframes = data_ec.shape[0]
         data_dm = np.concatenate(
             [np.load(os.path.join(self.data_path,f'{dn}.npy'))\
-               .reshape([raw_nframes, self.natm, self.nproj])
+               .reshape([raw_nframes, self.natm, -1])
             for dn in self.d_name], 
             axis=-1)
         if self.c_filter:
