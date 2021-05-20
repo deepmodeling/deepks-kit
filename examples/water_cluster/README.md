@@ -47,7 +47,7 @@ The training parameters are provided in the `train_input` key, similar to `init_
 
 ## Machine settings
 
-How the SCF and training tasks are executed is specified in `scf_machine` and `train_machine`, respectively. Currently, both the initial and the following iterations share the same machine settings. In this example, we run our tasks on local computing cluster with Slurm as the job schedular. The platform to run the tasks is specified under the `dispatcher` key, and the computing resources assigned to each task is specified under `resources`. The setting of this part differs on every computing platform. We provide here our `training_machine` settings as an example:
+How the SCF and training tasks are executed is specified in `scf_machine` and `train_machine`, respectively. Currently, both the initial and the following iterations share the same machine settings. In this example, we run our tasks on local computing cluster with Slurm as the job scheduler. The platform to run the tasks is specified under the `dispatcher` key, and the computing resources assigned to each task is specified under `resources`. The setting of this part differs on every computing platform. We provide here our `training_machine` settings as an example:
 ```yaml
 dispatcher: 
   context: local

@@ -10,13 +10,13 @@ This is an example on how to use `deepks` library to train a energy functional f
 
 ## Prepare data
 
-To prepare data, please first note that `deepks` use the following convention of units. 
+To prepare data, please first note that `deepks` use the atomic units by default but will switch to Angstrom(Å) as length unit when using xyz files as systems. 
 
 Property | Unit
 ---	     | :---:
-Length	 | Å
+Length	 | Bohr (Å if from xyz)
 Energy	 | $E_h$ (Hartree)
-Force	 | $E_h$/Å
+Force	   | $E_h$/Bohr ($E_h$/Å if from xyz)
 
 `deepks` accepts data in three formats. 
 

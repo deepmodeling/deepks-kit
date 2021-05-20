@@ -9,7 +9,7 @@ data_args:
   e_name: l_e_delta
   d_name: dm_eig
   f_name: l_f_delta
-  gvx_name: grad_vx
+  # gvx_name: grad_vx # experimental dm training
   extra_label: true
   conv_name: conv
 preprocess_args:
