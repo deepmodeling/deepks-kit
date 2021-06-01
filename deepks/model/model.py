@@ -217,6 +217,7 @@ class CorrNet(nn.Module):
                  input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
+        self.input_dim = input_dim
         # basis info
         self._pbas = load_basis(proj_basis)
         self._init_args["proj_basis"] = self._pbas
@@ -291,6 +292,20 @@ class CorrNet(nn.Module):
 
     def save(self, filename, **extra_info):
         torch.save(self.save_dict(**extra_info), filename)
+
+    def compile(self, set_eval=True, **kwargs):
+        old_mode = self.training
+        if set_eval:
+            self.eval()
+        smodel = torch.jit.trace(
+            self.forward, 
+            torch.empty((2, 2, self.input_dim)),
+            **kwargs)
+        self.train(old_mode)
+        return smodel
+
+    def compile_save(self, filename, **kwargs):
+        torch.jit.save(self.compile(**kwargs), filename)
     
     @staticmethod
     def load_dict(checkpoint, strict=False):
@@ -305,5 +320,8 @@ class CorrNet(nn.Module):
 
     @staticmethod
     def load(filename, strict=False):
-        checkpoint = torch.load(filename, map_location="cpu")
-        return CorrNet.load_dict(checkpoint, strict=strict)
+        try:
+            return torch.jit.load(filename)
+        except RuntimeError:
+            checkpoint = torch.load(filename, map_location="cpu")
+            return CorrNet.load_dict(checkpoint, strict=strict)
