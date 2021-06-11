@@ -17,10 +17,14 @@ share_folder: "share" # folder that stores all other settings
 scf_input: # can also be specified by a separete file
   basis: ccpvdz
   # this is for force training
+  # the following properties will be dumped in data folder
+  # please refer to https://arxiv.org/abs/2012.14615 for detailed explaination of each fields
   dump_fields: [e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
   verbose: 1
+  # parameters that will be passed directly to pyscf Mol class
   mol_args:
     incore_anyway: True
+  # parameters that will be passed directly to pyscf SCF class
   scf_args:
     conv_tol: 1e-6
     conv_tol_grad: 3e-2
@@ -29,61 +33,102 @@ scf_input: # can also be specified by a separete file
     conv_check: false # pyscf conv_check has a bug
 
 scf_machine: 
-  sub_size: 1 # n systems will be in one task, default is 1
-  group_size: 2 # 2 tasks will be gathered into one group and submitted together
-  ingroup_parallel: 1 # if larger than 1, run n tasks at same time in one group
+  # # of systems that will be in one task, default is 1
+  # task corresponds to a set of commands, and is the smallest unit to be tracked
+  sub_size: 1 
+  # 2 tasks will be gathered into one group and submitted together
+  # group correspond to a job submitted to schedule system
+  group_size: 2 
+  # if larger than 1, run n tasks parallelly in one group (one job)
+  ingroup_parallel: 1 
+  # the parameters determining the machine settings that the jobs are running on
   dispatcher: 
-    context: local
-    batch: slurm
-    remote_profile: null # use lazy local
+    # "local" to run on local machine, or "ssh" to run on a remote machine
+    context: local 
+    # "slurm" to use slurm scheduler system, or "shell" to just use shell
+    batch: slurm 
+    # only needed when using "ssh" in context
+    # pass a dict like {username: USERNAME, password: PASSWORD, work_path: /path/to/tmp/folder}
+    remote_profile: null 
+  # the parameters determining the resources allocated for each job (group of tasks)
+  # only needed when batch is set to "slurm"
+  # for shell users, will automatically use all resources available
   resources:
-    numb_node: 1 # if larger than 1, parallel in two nodes with `ingroup_parallel`
+    # only set to larger than 1 if parallel in multiple nodes with `ingroup_parallel`
+    # otherwise please keep to 1 since pyscf does not support mpi and can only run on a single node
+    numb_node: 1 
     time_limit: '24:00:00'
     cpus_per_task: 8
-    mem_limit: 8
+    mem_limit: 8 #GB
+    # environment variables
     envs:
-      PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
-  sub_res: # resources for each sub task
+      PYSCF_MAX_MEMORY: 8000 #MB, increase from default 4G to 8G to match the mem_limit above
+  # resources for each sub task in jobs (groups of tasks)
+  # only needed when ingroup_parallel is larger than 1 
+  # the resources are reallocated between parallel tasks
+  sub_res: 
     cpus_per_task: 8
   python: "python" # use python in path
 
-# train settings
+# training settings
 train_input:
   # model_args is ignored, since this is used as restart
+  # see init_train for potential model_args
   data_args: 
+    # training batch size, 16 is recommended
     batch_size: 16
+    # if larger than 1, n batch will be grouped together to form a larger one
+    # final batch size would be group_bath * batch_size
+    # only needed when a lot of systems have only one datapoint hence the batch size can only be 1
     group_batch: 1
+    # if set to true, will try to find force labels and use them in training
     extra_label: true
+    # if set to true, will read the convergence data from conv_name 
+    # and only use converged datapoints to train
     conv_filter: true
     conv_name: conv
+  # to speed up training, deepks support first normalize the data (preshift and prescale)
+  # and do a linear regression on the whole training set as prefitting
   preprocess_args:
     preshift: false # restarting model already shifted. Will not recompute shift value
     prescale: false # same as above
-    prefit_ridge: 1e1
-    prefit_trainable: false
+    # prefitting is by default enabled
+    prefit_ridge: 1e1 # the ridge factor used in linear regression
+    prefit_trainable: false # make the linear regression fixed during the training
   train_args: 
+    # the start learning rate, will decay later
+    start_lr: 0.0001
+    # lr will decay a factor of `decay_rate` every `decay_steps` epoches
     decay_rate: 0.5
     decay_steps: 1000
+    # show training results every n epoch
     display_epoch: 100
+    # the prefactor multiplied infront of the force part of the loss
     force_factor: 1
+    # total number of epoch needed in training
     n_epoch: 5000
-    start_lr: 0.0001
 
 train_machine: 
+  # for training, no tasks or groups are needed since there's only one task
+  # the dispatcher settings are same as above
   dispatcher: 
     context: local
     batch: slurm
     remote_profile: null # use lazy local
+  # resources settings are also same as above
   resources:
     time_limit: '24:00:00'
     cpus_per_task: 4
+    # using gpu in training, current only support 1
     numb_gpu: 1
-    mem_limit: 8
+    mem_limit: 8 #GB
   python: "python" # use python in path
 
 # init settings
 init_model: false # do not use existing model in share_folder/init/model.pth
 
+# the first scf iteration, needed if init_model is false
+# possible settings are same as scf_input
 init_scf: 
   basis: ccpvdz
   dump_fields: [e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
@@ -94,21 +139,30 @@ init_scf:
     conv_tol: 1e-8
     conv_check: false # pyscf conv_check has a bug
 
+# the first scf iteration, needed if init_model is false
+# most settings are same as scf_input but model_args will be specified here
 init_train: 
-  model_args: # necessary as this is init training
+  # necessary as this is init training
+  model_args: 
+    # the number of *hidden* neurons
+    # note the first (n_descriptor) and last (1) layer is not included here
     hidden_sizes: [100, 100, 100]
+    # the output will be devided by 100 before comparing with labels, to improve training
     output_scale: 100
+    # use skip connection between layers if the sizes are same
     use_resnet: true
+    # gelu generally performs better than others
     actv_fn: gelu
+  # the rest are the same as abpve
   data_args: 
     batch_size: 16
     group_batch: 1
   preprocess_args:
-    preshift: true
+    preshift: true # init model will shift the input descriptors to mean zero
     prescale: false
     prefit_ridge: 1e1
     prefit_trainable: false
-  train_args: 
+  train_args: # these are suggested parameters
     decay_rate: 0.95 # 0.96 in paper example
     decay_steps: 300 # 500 in paper example
     display_epoch: 100

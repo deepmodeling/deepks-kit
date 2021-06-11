@@ -8,6 +8,7 @@ nohup python -u -m deepks iterate args.yaml >> log.iter 2> err.iter &
 echo $! > PID
 ```
 that runs the iterative learning procedure in background and record its PID in the designated file.
+Here we are using Slurm to schedule jobs. If Slurm is not available, please execute [`./run_shell.sh`](./run_shell.sh) to run on local machine.
 
 ## System preparation
 
@@ -51,7 +52,7 @@ How the SCF and training tasks are executed is specified in `scf_machine` and `t
 ```yaml
 dispatcher: 
   context: local
-  batch: slurm
+  batch: slurm # set to "shell" to run on local machine
   remote_profile: null # unnecessary in local context
 resources:
   time_limit: '24:00:00'
@@ -62,12 +63,14 @@ python: "python" # use python in path
 ```
 where we assign four CPU cores and one GPU to the training task, and set its time limit to be 24 hours and memory limit to be 8GB. The detailed settings available for `dispatcher` and `resources` can be found in the document of DP-GEN software, with a slightly different interface.
 
+In case there's no Slurm scheduler system, DeePKS-kit can also be run on a local machine with vanilla shell scripts, simply by setting `batch: shell`. Please check [`shell.yaml`](./shell.yaml) for an example. In that case, `resources` will be ignored and all available resources on the machine will be used. Support for more scheduler systems will also be implemented in the future.
+
 ## Testing the model
 
 During each iteration of the learning procedure, a brief summary on the accuracy of the SCF calculation can be found in `iter.xx/00.scf/log.data`. Average energy and force (if applicable) errors are shown for both training and validation dataset. The results of the SCF calculations is also stored in `iter.xx/00.scf/data_train` and `iter.xx/00.scf/data_test` grouped by training and testing systems.
 
 After we finished our 10 iterations, the resulted DeePKS model can be found at `iter.09/01.train/model.pth`. The model can be used in either a python script creating the extended PySCF class, or directly the `deepks scf` command. As a testing example, we run the SCF calculation using the learned DeePKS model on the simultaneous six proton transfer path of a water hexamer ring. 
-The command can be found in [test.sh](./test.sh).
+The command can be found in [`test.sh`](./test.sh).
 The results of each configuration during the proton transfer are grouped in the `test_result` folder. 
 
 We can see that all the predicted energy falls within the chemical accuracy range of the reference value given by the CCSD calculation. We note that none of the training dataset includes dissociated configurations in the proton transfer case. The DeePKS model trained on up to three water molecules exhibits good transferability, even in the bond breaking case.

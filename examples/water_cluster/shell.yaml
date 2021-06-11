@@ -1,0 +1,32 @@
+# to use this file, simply add its name as another argument 
+# in the command line after the main args.yaml
+# for example, `deepks iterate args.yaml shell.yaml`
+# this overwrite the settings by those specified in this file 
+
+scf_machine: 
+  # every system will be run as a separate command (a task)
+  sub_size: 1 
+  # 2 tasks will be gathered into one group and submitted together as a shell script
+  # all shell scirpt will be executed at same time 
+  # hence in parallel and share the whole machine's resources
+  # you may want to set this as a large number
+  # because the number of tasks run at same time would be nsystems / (sub_size * group_size)
+  group_size: 2 
+  dispatcher: 
+    context: local
+    batch: shell # set to shell to run on local machine
+    remote_profile: null # not needed in local case
+  # resources are no longer needed, other than the envs can still be set here
+  resources:
+    envs:
+      PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
+  python: "python" # use python in path
+
+train_machine: 
+  dispatcher: 
+    context: local
+    batch: shell # same as above, use shell to run on local machine
+    remote_profile: null # use lazy local
+  python: "python" # use python in path
+  # resources are no longer needed, and the task will use gpu automatically if there is one
+
