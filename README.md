@@ -22,12 +22,12 @@ conda create -n deepks numpy scipy h5py ruamel.yaml paramiko
 conda activate deepks
 ```
 Now you are in the new environment called `deepks`.
-Next, install [`torch`](https://pytorch.org/get-started/locally/) 
+Next, install [PyTorch](https://pytorch.org/get-started/locally/) 
 ```bash
 # assuming a GPU with cudatoolkit 10.2 support
 conda install pytorch cudatoolkit=10.2 -c pytorch
 ```
-and [`pyscf`](https://github.com/pyscf/pyscf).
+and [PySCF](https://github.com/pyscf/pyscf).
 ```bash
 # the conda package does not support python >= 3.8 so we use pip
 pip install pyscf
@@ -41,6 +41,7 @@ pip install git+https://github.com/deepmodeling/deepks-kit/
 ## Usage
 
 Please see [`examples`](./examples) folder for the usage of `deepks` library. A detailed example with executable data for single water molecules can be found [here](./examples/water_single). A more complicated one for training water clusters can be found [here](./examples/water_cluster).
+
 Check [this input file](./examples/water_cluster/args.yaml) for detailed explanation for possible input parameters, and also [this one](./examples/water_cluster/shell.yaml) if you would like to run on local machine instead of using Slurm scheduler.
 
 ## References:

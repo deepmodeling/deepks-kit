@@ -153,6 +153,13 @@ init_train:
     use_resnet: true
     # gelu generally performs better than others
     actv_fn: gelu
+    # whether to use a predefined embedding function 
+    # to further symmetrize the eigenvalues as descriptors
+    # add embedding can make the energy surface smooth, hence improve convergence
+    # but may slightly reduce the accuracy (especially in generalization)
+    # for water we do not use it, if you encounter convergence problem, set it to
+    # embedding: thermal
+    embedding: null
   # the rest are the same as abpve
   data_args: 
     batch_size: 16
@@ -162,11 +169,14 @@ init_train:
     prescale: false
     prefit_ridge: 1e1
     prefit_trainable: false
-  train_args: # these are suggested parameters
-    decay_rate: 0.95 # 0.96 in paper example
-    decay_steps: 300 # 500 in paper example
+  # following are suggested parameters for initial training
+  # note in the deepks-kit paper the training curve shown use a different set of parameters
+  # the paper parameters take an unnecessary length of time and is no longer suggested
+  train_args: 
+    decay_rate: 0.95 # 0.96 in paper example training curve
+    decay_steps: 300 # 500 in paper example training curve
     display_epoch: 100
-    n_epoch: 15000 # 50000 in paper example
+    n_epoch: 15000 # 50000 in paper example training curve
     start_lr: 0.0003
 
 # other settings

@@ -8,7 +8,9 @@ nohup python -u -m deepks iterate args.yaml >> log.iter 2> err.iter &
 echo $! > PID
 ```
 that runs the iterative learning procedure in background and record its PID in the designated file.
-Here we are using Slurm to schedule jobs. If Slurm is not available, please execute [`./run_shell.sh`](./run_shell.sh) to run on local machine.
+Note that we use `python -u -m deepks` to turn off python's output buffer. You can also use `deepks` or `dks` directly if you have installed it properly. 
+
+Here we are using Slurm to schedule jobs. If Slurm is not available, please execute [`./run_shell.sh`](./run_shell.sh) to run on local machine. In the following section we provide a work through on how to write the arguments for deepks input in the [`args.yaml`](./args.yaml). You can also take a look at it for explanation on each specific parameters.
 
 ## System preparation
 
