@@ -50,5 +50,5 @@ init_train: # parameters for nn training
     decay_rate: 0.96 # learning rate decay factor
     decay_steps: 500 # decay the learning rate every this steps
     display_epoch: 100
-    n_epoch: 50000
+    n_epoch: 10000
     start_lr: 0.0003
