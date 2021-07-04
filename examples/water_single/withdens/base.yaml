@@ -29,22 +29,18 @@ scf_input: # can also be specified by a separete file
     conv_check: false # pyscf conv_check has a bug
 
 scf_machine: 
-  sub_size: 5 # 5 systems will be in one task, default is 1
-  group_size: 2 # 2 tasks will be gathered into one group and submitted together
-  ingroup_parallel: 2 # this will set numb_node to 2 in resources
+  # every system will be run as a separate command (a task)
+  sub_size: 1 
+  # 4 tasks will be gathered into one group and submitted together as a shell script
+  group_size: 4
   dispatcher: 
     context: local
-    batch: slurm
-    remote_profile: null # use lazy local
+    batch: shell # set to shell to run on local machine, you can also use `slurm`
+    remote_profile: null # not needed in local case
+  # resources are no longer needed, other than the envs can still be set here
   resources:
-    numb_node: 2 # parallel in two nodes
-    time_limit: '24:00:00'
-    cpus_per_task: 8
-    mem_limit: 8
     envs:
       PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
-  sub_res: # resources for each sub task
-    cpus_per_task: 8
   python: "python" # use python in path
 
 # train settings
@@ -72,14 +68,10 @@ train_input:
 train_machine: 
   dispatcher: 
     context: local
-    batch: slurm
+    batch: shell # same as above, use shell to run on local machine
     remote_profile: null # use lazy local
-  resources:
-    time_limit: '24:00:00'
-    cpus_per_task: 4
-    numb_gpu: 1
-    mem_limit: 8
   python: "python" # use python in path
+  # resources are no longer needed, and the task will use gpu automatically if there is one
 
 # init settings
 init_model: false # do not use existing model in share_folder/init/model.pth
@@ -113,7 +105,7 @@ init_train:
     decay_rate: 0.96
     decay_steps: 500
     display_epoch: 100
-    n_epoch: 50000
+    n_epoch: 15000
     start_lr: 0.0003
 
 # other settings

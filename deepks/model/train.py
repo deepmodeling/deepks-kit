@@ -49,7 +49,7 @@ def make_loss(cap=None, shrink=None, reduction="mean"):
         diff = target - input
         if shrink and shrink > 0:
             diff = F.softshrink(diff, shrink)
-        sqdf = diff.square()
+        sqdf = diff ** 2
         if cap and cap > 0:
             abdf = diff.abs()
             sqdf = torch.where(abdf < cap, sqdf, cap * (2*abdf - cap))
@@ -114,7 +114,7 @@ class Evaluator:
             if self.g_penalty > 0 and "eg0" in sample:
                 eg_base, gveg = sample["eg0"], sample["gveg"]
                 eg_tot = torch.einsum('...apg,...ap->...g', gveg, gev) + eg_base
-                tot_loss = tot_loss + self.g_penalty * torch.square(eg_tot).mean(0).sum()
+                tot_loss = tot_loss + self.g_penalty * eg_tot.pow(2).mean(0).sum()
             # optional force calculation
             if self.f_factor > 0 and "lb_f" in sample:
                 f_label, gvx = sample["lb_f"], sample["gvx"]
