@@ -196,7 +196,8 @@ class GroupReader(object) :
             self.readers[idx].sample_train()
 
     def sample_train_group(self):
-        cshape = np.random.choice(list(self.group_prob.keys()), p=list(self.group_prob.values()))
+        cidx = np.random.choice(len(self.group_prob), p=list(self.group_prob.values()))
+        cshape = list(self.group_prob.keys())[cidx]
         cgrp = self.group_dict[cshape]
         csys = np.random.choice(cgrp, self.group_batch, p=self.batch_prob[cshape])
         batch = concat_batch([s.sample_train() for s in csys], dim=0)
