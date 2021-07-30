@@ -1,3 +1,5 @@
+from build.lib.deepks.scf.run import DEFAULT_SCF_ARGS
+from build.lib.deepks import scf
 import os
 import sys
 import numpy as np
@@ -11,6 +13,7 @@ from deepks.utils import load_sys_paths
 from deepks.utils import load_basis, save_basis
 from deepks.task.workflow import Sequence, Iteration
 from deepks.iterate.template import make_scf, make_train
+from deepks.iterate.template_abacus import make_scf_abacus  #caoyu add 2021-07-22 
 
 
 # args not specified here may cause error
@@ -30,8 +33,27 @@ DEFAULT_TRN_MACHINE = {
     "resources": None, # use default 10 core defined in templete.py
     "python": "python" # use current python in path
 }
-
+DEFAULT_SCF_ARGS_ABACUS={
+    "orb_file": ["orb"],  #atomic number order
+    "pp_file": ["upf"],  #atomic number order
+    "pbasis_file": ["pbasis"], 
+    "lattice_constant": 1,
+    "lattice_vector": ["1 0 0", "0 1 0", "0 0 1"],
+    "nbands": 1,
+    "ecutwfc": 50,
+    "conv_tol": 1e-7,
+    "max_scf_iter": 50,
+    "gamma_only": 1,
+    "proj_lmax": 2,
+    "isforce": 0,
+    "run_cmd": "mpirun",
+    "cpus_per_task": 1,
+    "abacus_path": "/usr/local/bin/ABACUS.mpi",
+    "resources": None, 
+    "dispatcher": None
+}
 SCF_ARGS_NAME = "scf_input.yaml"
+SCF_ARGS_NAME_ABACUS="scf_abacus.yaml"   #for abacus, caoyu add 2021-07-26
 TRN_ARGS_NAME = "train_input.yaml"
 INIT_SCF_NAME = "init_scf.yaml"
 INIT_TRN_NAME = "init_train.yaml"
@@ -136,7 +158,8 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
                  train_input=True, train_machine=None,
                  init_model=False, init_scf=True, init_train=True,
                  init_scf_machine=None, init_train_machine=None,
-                 cleanup=False, strict=True):
+                 cleanup=False, strict=True, 
+                 use_abacus=False, scf_abacus=None):#caoyu add 2021-07-22
     r"""
     Make a `Workflow` to do the iterative training procedure.
 
@@ -243,18 +266,27 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
     # check required machine parameters
     scf_machine = check_arg_dict(scf_machine, DEFAULT_SCF_MACHINE, strict)
     train_machine = check_arg_dict(train_machine, DEFAULT_TRN_MACHINE, strict)
-    # handle projection basis
-    if proj_basis is not None:
-        save_basis(os.path.join(share_folder, PROJ_BASIS), load_basis(proj_basis))
-        proj_basis = PROJ_BASIS
+
     # make tasks
-    scf_step = make_scf(
-        systems_train=systems_train, systems_test=systems_test,
-        train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
-        workdir=SCF_STEP_DIR, share_folder=share_folder,
-        source_arg=scf_args_name, source_model=MODEL_FILE,
-        source_pbasis=proj_basis, cleanup=cleanup, **scf_machine
-    )
+    if use_abacus:  #caoyu add 2021-07-22
+        scf_abacus_name = check_share_folder(scf_abacus, SCF_ARGS_NAME_ABACUS, share_folder)
+        scf_abacus = check_arg_dict(scf_abacus, DEFAULT_SCF_ARGS_ABACUS, strict)
+        scf_step = make_scf_abacus(systems_train=systems_train, systems_test=systems_test,
+            train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
+            workdir=SCF_STEP_DIR, share_folder=share_folder, source_model=MODEL_FILE,
+            cleanup=cleanup, **scf_abacus)
+    else:
+        # handle projection basis
+        if proj_basis is not None:
+            save_basis(os.path.join(share_folder, PROJ_BASIS), load_basis(proj_basis))
+            proj_basis = PROJ_BASIS
+        scf_step = make_scf(
+            systems_train=systems_train, systems_test=systems_test,
+            train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
+            workdir=SCF_STEP_DIR, share_folder=share_folder,
+            source_arg=scf_args_name, source_model=MODEL_FILE,
+            source_pbasis=proj_basis, cleanup=cleanup, **scf_machine
+        )
     train_step = make_train(
         source_train=DATA_TRAIN, source_test=DATA_TEST,
         restart=True, source_model=MODEL_FILE, save_model=MODEL_FILE, 
@@ -271,19 +303,27 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         check_share_folder(init_model, MODEL_FILE, init_folder)
         iterate.set_init_folder(init_folder)
     elif init_scf or init_train: # otherwise, make an init iteration to train the first model
-        init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
+        if use_abacus:  #caoyu add 2021-07-22
+            scf_init = make_scf_abacus(
+                systems_train=systems_train, systems_test=systems_test,
+                train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
+                workdir=SCF_STEP_DIR, share_folder=share_folder, source_model=None, 
+                cleanup=cleanup, **scf_abacus
+            )
+        else:
+            init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
+            init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
+                if init_scf_machine is not None else scf_machine)
+            scf_init = make_scf(
+                systems_train=systems_train, systems_test=systems_test,
+                train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
+                workdir=SCF_STEP_DIR, share_folder=share_folder,
+                source_arg=init_scf_name, source_model=None, source_pbasis=proj_basis,
+                cleanup=cleanup, **scf_machine
+            )
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
-        init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
-            if init_scf_machine is not None else scf_machine)
         init_train_machine = (check_arg_dict(init_train_machine, DEFAULT_SCF_MACHINE, strict)
-            if init_train_machine is not None else train_machine)
-        scf_init = make_scf(
-        systems_train=systems_train, systems_test=systems_test,
-        train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
-        workdir=SCF_STEP_DIR, share_folder=share_folder,
-        source_arg=init_scf_name, source_model=None, source_pbasis=proj_basis,
-        cleanup=cleanup, **scf_machine
-        )
+        if init_train_machine is not None else train_machine)
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
             restart=False, source_model=MODEL_FILE, save_model=MODEL_FILE, 

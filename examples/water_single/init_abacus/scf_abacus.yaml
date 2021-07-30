@@ -1,0 +1,21 @@
+scf_abacus:
+  orb_file: ["H_gga_8au_60Ry_2s1p.orb", "O_gga_7au_60Ry_2s2p1d.orb"]
+  pp_file: ["H_ONCV_PBE-1.0.upf", "O_ONCV_PBE-1.0.upf"]
+  pbasis_file: ["jle.orb"]
+  lattice_constant: 1
+  lattice_vector: ["28 0 0", "0 28 0", "0 0 28"]
+  nbands: 6
+  ecutwfc: 50
+  conv_tol: 1e-7
+  max_scf_iter: 50
+  gamma_only: 1
+  proj_lmax: 2
+  isforce: 0
+  #cmd args
+  run_cmd : "mpirun"
+  cpus_per_task : 1
+  abacus_path: "/home/fortneu49/abacus-develop/bin/ABACUS.mpi"
+  dispatcher: 
+    context: local
+    batch: shell # same as above, use shell to run on local machine
+    remote_profile: null # use lazy local
