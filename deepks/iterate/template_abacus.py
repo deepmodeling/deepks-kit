@@ -1,3 +1,8 @@
+from build.lib.deepks import model
+from build.lib.deepks.model.train import train
+from build.lib.deepks.model.test import test
+from build.lib import deepks
+from sympy.codegen.fnodes import reshape
 from build.lib.deepks.scf import run
 import os
 from posixpath import supports_unicode_filenames
@@ -11,7 +16,7 @@ from deepks.task.task import PythonTask, ShellTask
 from deepks.task.task import BatchTask, GroupBatchTask
 from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
-
+from dpgen.generator.lib.abacus_scf import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
 
 DATA_TRAIN = "data_train"
 DATA_TEST  = "data_test"
@@ -83,40 +88,44 @@ TYPE_WEIGHT ={v:k for k, v in WEIGHT_TYPE.items()}
 def make_scf_abacus(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test", cleanup=None, 
              dispatcher=None, resources =None, 
-             no_model=False, workdir='00.scf', share_folder='share', source_model=None,
-             orb_file=[], pp_file=[], pbasis_file=[], 
+             no_model=True, workdir='00.scf', share_folder='share', model_file=None,
+             orb_files=[], pp_files=[], proj_file=[], 
              **scf_abacus):
-    orb_file=[os.path.abspath(s) for s in flat_file_list(orb_file)]
-    pp_file=[os.path.abspath(s) for s in flat_file_list(pp_file)]
-    pbasis_file=[os.path.abspath(s) for s in flat_file_list(pbasis_file)]
+                 #share orb_files and pp_files
+    from deepks.iterate.iterate import check_share_folder
+    for i in range (len(orb_files)):
+        orb_files[i] = check_share_folder(orb_files[i], orb_files[i], share_folder)
+    for i in range (len(pp_files)):
+        pp_files[i] = check_share_folder(pp_files[i], pp_files[i], share_folder)
+        #share the traced model file
+    for i in range (len(proj_file)):
+        proj_file[i] = check_share_folder(proj_file[i], proj_file[i], share_folder)
+   # if(no_model is False):
+        #model_file=os.path.abspath(model_file)
+        #model_file = check_share_folder(model_file, model_file, share_folder)
+    orb_files=[os.path.abspath(s) for s in flat_file_list(orb_files)]
+    pp_files=[os.path.abspath(s) for s in flat_file_list(pp_files)]
+    proj_file=[os.path.abspath(s) for s in flat_file_list(proj_file)]
+    
     pre_scf_abacus = make_convert_scf_abacus(
             systems_train=systems_train, systems_test=systems_test,
-            no_model=no_model, workdir=SCF_STEP_DIR, share_folder=share_folder, 
-            source_model=source_model, 
-            orb_file=orb_file, pp_file=pp_file, pbasis_file=pbasis_file, **scf_abacus)
+            no_model=no_model, workdir='.', share_folder=share_folder, 
+            model_file=model_file, 
+            orb_files=orb_files, pp_files=pp_files, proj_file=proj_file, **scf_abacus)
     run_scf_abacus = make_run_scf_abacus(systems_train, systems_test,
         train_dump=train_dump, test_dump=test_dump, 
         no_model=no_model, group_data=False,
-        workdir=SCF_STEP_DIR, outlog="log.scf", share_folder=share_folder, 
+        workdir='.', outlog="log.scf", share_folder=share_folder, 
         dispatcher=dispatcher, resources=resources, **scf_abacus)
-    """
     post_scf_abacus = make_stat_scf_abacus(
-        systems_train=systems_train, systems_test=systems_test,
+        systems_train, systems_test,
         train_dump=train_dump, test_dump=test_dump, workdir=".", 
-        outlog="log.data", group_data=False
-    )
-    """
-    """
-    #share orb_file and pp_file
-        for i in range (len(orb_file)):
-            orb_file[i] = check_share_folder(orb_file[i], orb_file[i], share_folder)
-        for i in range (len(pp_file)):
-            pp_file[i] = check_share_folder(pp_file[i], pp_file[i], share_folder)
-        #share the traced model file
-    """
+        **scf_abacus)
+    
+
     # concat
     #seq = [pre_scf_abacus, run_scf_abacus, post_scf_abacus]
-    seq = [pre_scf_abacus, run_scf_abacus]
+    seq = [post_scf_abacus]
     #seq = [pre_scf_abacus]
     if cleanup:
         clean_scf = make_cleanup(
@@ -128,20 +137,20 @@ def make_scf_abacus(systems_train, systems_test=None, *,
         seq,
         workdir=workdir
     )
-### need parameters: orb_file, pp_file, proj_file
+### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
-            source_model=None, pbasis_file=[], 
-            orb_file=[], pp_file=[], lattice_constant=10, lattice_vector=["1 0 0", "0 1 0", "0 0 1"], 
-            nbands=0, ecutwfc=50, conv_tol="1e-6", 
-            max_scf_iter=50, gamma_only=1, proj_lmax=0, 
-            no_model=True, isforce=0, abacus_path="/usr/local/bin/ABACUS.mpi",
+            no_model=True, model_file=None, pp_files=[], 
+            lattice_vector=np.eye(3, dtype=int), 
+            abacus_path="/usr/local/bin/ABACUS.mpi",
             run_cmd="mpirun", cpus_per_task=1, **pre_args):
     #trace a model (if necessary)
     if not no_model:
-        if source_model is not None:
+        if model_file is not None:
             from deepks.model import CorrNet
-            model = CorrNet.load(MODEL_FILE)
+            model = CorrNet.load(model_file)
             model.compile_save(CMODEL_FILE)
+            #set 'deepks_scf' to 1, and give abacus the path of traced model file
+            pre_args.update(deepks_scf=1, model_file=os.path.abspath(CMODEL_FILE))
     # split systems into groups
     nsys_trn = len(systems_train)
     nsys_tst = len(systems_test)
@@ -152,23 +161,25 @@ def convert_data(systems_train, systems_test=None, *,
     systems=systems_train+systems_test
     sys_paths = [os.path.abspath(s) for s in load_sys_paths(systems)]
     #create a shell script to run ABACUS
+    from pathlib import Path
     if not os.path.isfile("./run_abacus.sh"):
-        from pathlib import Path
         Path("./run_abacus.sh").touch()
+    #create a shell script to check convergence
+    if not os.path.isfile("./run_abacus.sh"):
+        Path("./check_conv.sh").touch()
     run_file=open("./run_abacus.sh","w")
+    check_file=open("./check_conv.sh", "w")
+    #init sys_data (dpdata)
     for i, sset in enumerate(train_sets+test_sets):
         atom_data = np.load(f"{sys_paths[i]}/atom.npy")
         nframes = atom_data.shape[0]
         natoms = atom_data.shape[1]
         atoms = atom_data[1,:,0]
+        atoms.sort() # type order
         types = np.unique(atoms) #index in type list
         ntype = types.size
         from collections import Counter
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
-        lat0=lattice_constant
-        lat1=lattice_vector[0]
-        lat2=lattice_vector[1]
-        lat3=lattice_vector[2]
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
             os.mkdir(f"{sys_paths[i]}/ABACUS")
         for f in range(nframes):
@@ -178,76 +189,21 @@ def convert_data(systems_train, systems_test=None, *,
             if not os.path.isfile(f"{sys_paths[i]}/ABACUS/{f}/STRU"):
                 from pathlib import Path
                 Path(f"{sys_paths[i]}/ABACUS/{f}/STRU").touch()
+            #create sys_data for each frame
+            frame_data=atom_data[f]
+            frame_sorted=frame_data[np.lexsort(frame_data[:,::-1].T)] #sort cord by type
+            sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
+                        'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
             #write STRU file
-            stru_file = open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w")
-            stru_file.write("ATOMIC_SPECIES"+"\n")
-            for it in range(ntype):
-                stru_file.write(f"{TYPE_NAME[int(types[it])]} {TYPE_WEIGHT[int(types[it])]} {pp_file[it]}"+"\n")
-            stru_file.write("\n"+"NUMERICAL_ORBITAL"+"\n")
-            for it in range(ntype):
-                stru_file.write(orb_file[it]+"\n")
-            stru_file.write("\n"+"NUMERICAL_DESCRIPTOR"+"\n")
-            stru_file.write(pbasis_file[0]+"\n")
-            stru_file.write("\n"+"LATTICE_CONSTANT"+"\n")
-            stru_file.write(str(lat0)+"\n")
-            stru_file.write("\n"+"LATTICE_VECTORS"+"\n")
-            stru_file.write(lat1+"\n")
-            stru_file.write(lat2+"\n")
-            stru_file.write(lat3+"\n")
-            stru_file.write("\n"+"ATOMIC_POSITIONS"+"\n")
-            stru_file.write("Cartesian"+"\n"+"\n")
-            #stru_file.write("Direct")
-            iat=0
-            for it in range (ntype):
-                stru_file.write(TYPE_NAME[int(types[it])]+"\n")
-                stru_file.write("0"+"\n")
-                stru_file.write(str(nta[types[it]])+"\n")
-                for ia in range (nta[types[it]]):
-                    stru_file.write(f"{atom_data[f, iat, 1]} {atom_data[f, iat, 2]} {atom_data[f, iat, 3]} 1 1 1"+"\n")
-                    iat=iat+1
-            stru_file.close()
-            ### end for STRU file
-            # create INPUT file
-            if not os.path.isfile(f"{sys_paths[i]}/ABACUS/{f}/INPUT"):
-                from pathlib import Path
-                Path(f"{sys_paths[i]}/ABACUS/{f}/INPUT").touch()
+            with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
+                stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args))
             #write INPUT file
-            input_file = open(f"{sys_paths[i]}/ABACUS/{f}/INPUT","w")
-            input_file.write("INPUT_PARAMETERS"+"\n")
-            input_file.write("suffix  abacus"+"\n")
-            input_file.write("calculation  scf"+"\n")
-            input_file.write(f"ntype  {ntype}"+"\n")
-            input_file.write(f"nbands  {nbands}"+"\n")
-            input_file.write("symmetry  0"+"\n")
-            input_file.write(f"ecutwfc  {ecutwfc}"+"\n")
-            input_file.write(f"dr2  {conv_tol}"+"\n")
-            input_file.write(f"niter  {max_scf_iter}"+"\n")
-            input_file.write("basis_type  lcao"+"\n")
-            input_file.write(f"gamma_only  {gamma_only}"+"\n")
-            input_file.write("smearing  gaussian"+"\n")
-            input_file.write("sigma  0.02"+"\n")
-            input_file.write("mixing_type  pulay"+"\n")
-            input_file.write("mixing_beta  0.4"+"\n")
-            input_file.write("\n"+"#DeePKS args"+"\n")
-            input_file.write("out_descriptor  1"+"\n")
-            input_file.write(f"lmax_descriptor  {proj_lmax}"+"\n")
-            input_file.write(f"deepks_scf  {1-int(no_model)}"+"\n")
-            input_file.write(f"force {isforce}"+"\n")
-            input_file.close()
-            ###end for INPUT file
-            ###create KPT file 
-            if not os.path.isfile(f"{sys_paths[i]}/ABACUS/{f}/KPT"):
-                from pathlib import Path
-                Path(f"{sys_paths[i]}/ABACUS/{f}/KPT").touch()
+            with open(f"{sys_paths[i]}/ABACUS/{f}/INPUT", "w") as input_file:
+                input_file.write(make_abacus_scf_input(pre_args))
             #write KPT file (gamma_only)
-            if gamma_only==1:
-                kpt_file=open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w")
-                kpt_file.write("K_POINTS"+"\n")
-                kpt_file.write("0"+"\n")
-                kpt_file.write("Gamma"+"\n")
-                kpt_file.write("1 1 1 0 0 0"+"\n")
-                kpt_file.close()
-            ###end for KPT file
+            with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
+                kpt_file.write(make_abacus_scf_kpt(pre_args))
+        #write the 'run_abacus.sh' script
         run_file.write(f"cd {sys_paths[i]}/ABACUS"+ "\n")
         run_file.write("i=0"+"\n")
         run_file.write(f"while (( $i < {nframes} ))"+ "\n")
@@ -257,16 +213,18 @@ def convert_data(systems_train, systems_test=None, *,
         run_file.write("\t"+"cd .."+ "\n")
         run_file.write("\t"+"let \"i++\""+ "\n")
         run_file.write("done"+ "\n")
+        #write the 'check_conv.sh' script
+        check_file.write(f"cd {sys_paths[i]}/ABACUS"+ "\n")
+        check_file.write("i=0"+"\n")
+        check_file.write(f"while (( $i < {nframes} ))"+ "\n")
+        check_file.write("echo ${i}`grep convergence ${i}/OUT.ABACUS/running_scf.log` >> conv.log")
+        check_file.write("\t"+"let \"i++\""+ "\n")
+        check_file.write("done"+ "\n")
     run_file.close()
+    check_file.close()
     ###end for run_file
     
-def make_convert_scf_abacus(systems_train, systems_test=None, *,
-                no_model=False, workdir='.', source_model=None, 
-                pbasis_file=[],  orb_file=[], pp_file=[],
-                lattice_constant = 10, nbands=0, ecutwfc=50, conv_tol="1e-6", 
-                max_scf_iter=50, gamma_only=1, proj_lmax=0, 
-                isforce=0, run_cmd="mpirun", abacus_path="/usr/local/bin/ABACUS.mpi", 
-                cpus_per_task = 1, **pre_args):
+def make_convert_scf_abacus(systems_train, systems_test=None, **pre_args):
     # if no test systems, use last one in train systems
     systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
@@ -280,29 +238,13 @@ def make_convert_scf_abacus(systems_train, systems_test=None, *,
     pre_args.update(
         systems_train=systems_train, 
         systems_test=systems_test,
-        pbasis_file=pbasis_file,
-        orb_file=orb_file,
-        pp_file=pp_file, 
-        source_model=source_model, 
-        lattice_constant=lattice_constant,
-        nbands=nbands, 
-        ecutwfc=ecutwfc, 
-        conv_tol=conv_tol, 
-        max_scf_iter=max_scf_iter,
-        gamma_only=gamma_only,
-        proj_lmax=proj_lmax, 
-        no_model=no_model, 
-        isforce=isforce, 
-        run_cmd=run_cmd, 
-        abacus_path=abacus_path, 
-       cpus_per_task=cpus_per_task,
        **pre_args)
     return PythonTask(
         convert_data,
         call_kwargs=pre_args,
         outlog="convert.log",
         errlog="err",
-        workdir=workdir, 
+        workdir='.', 
         #link_share_files=link_share_files
     )
 
@@ -313,12 +255,13 @@ DEFAULT_SCF_SUB_RES_ABACUS = {
     "exclusive": True
 }
 ABACUS_CMD="bash run_abacus.sh"
+CHECK_CMD="bash check_conv.sh"
 def make_run_scf_abacus(systems_train, systems_test=None, 
     train_dump="data_train", test_dump="data_test", resources=None, 
     dispatcher=None, share_folder="share", workdir=".", outlog="out.log", 
     **task_args):
     #cmd
-    command = ABACUS_CMD
+    command = ABACUS_CMD + " && "+ CHECK_CMD
     #basic args
     link_share = task_args.pop("link_share_files", [])
     link_prev = task_args.pop("link_prev_files", [])
@@ -363,44 +306,126 @@ def make_run_scf_abacus(systems_train, systems_test=None,
         forward_files=forward_files,
         backward_files=backward_files,
     )
-"""
+
+def gather_stats_abacus(systems_train, systems_test, 
+        train_dump, test_dump, force=0, **stat_args):
+    sys_train_paths = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
+    sys_test_paths = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
+    if train_dump is None:
+        train_dump = "."
+    if test_dump is None:
+        test_dump = "."
+    #concatenate data (train)
+    if not os.path.exists(train_dump):
+                os.mkdir(train_dump)
+    for i in range(len(systems_train)):
+        atom_data = np.load(f"{sys_train_paths[i]}/atom.npy")
+        nframes = atom_data.shape[0]
+        c_list=[]
+        d_list=[]
+        e_list=[]
+        f_list=[]
+        for f in range(nframes):
+            des = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/dm_eig.npy")
+            d_list.append(des)
+            ene = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/e_base.npy")
+            e_list.append(ene)
+            if(force):
+                fcs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/f_base.npy")
+                f_list.append(fcs)
+        with open(f"{sys_train_paths[i]}/ABACUS/conv.log","r") as conv_log:
+            conv=conv_log.read().split('\n')
+            for ic in conv:
+                if ic.isdigit():
+                    c_list.append(True)
+                else:
+                    c_list.append(False)
+        assert(len(c_list)==nframes)
+        np.save(f"{train_dump}/conv.npy", np.array(c_list))
+        dm_eig=np.array(d_list)   #concatenate
+        np.save(f"{train_dump}/dm_eig.npy", dm_eig)
+        e_base=np.array(e_list)
+        np.save(f"{train_dump}/e_base.npy", e_base)
+        e_ref=np.load(f"{sys_train_paths[i]}/energy.npy")
+        np.save(f"{train_dump}/energy.npy", e_ref)
+        np.save(f"{train_dump}/l_e_delta.npy", e_ref-e_base)
+        if(force): 
+            f_base=np.array(f_list)
+            np.save(f"{train_dump}/f_base.npy", f_base)
+            f_ref=np.load(f"{sys_train_paths[i]}/force.npy")
+            np.save(f"{train_dump}/force.npy", f_ref)
+            np.save(f"{train_dump}/l_f_delta.npy", f_ref-f_base)
+    #concatenate data (test)
+    if not os.path.exists(test_dump):
+            os.mkdir(test_dump)
+    for i in range(len(systems_test)):
+        atom_data = np.load(f"{sys_test_paths[i]}/atom.npy")
+        nframes = atom_data.shape[0]
+        c_list=[]
+        d_list=[]
+        e_list=[]
+        f_list=[]
+        for f in range(nframes):
+            des = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/dm_eig.npy")
+            d_list.append(des)
+            ene = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/e_base.npy")
+            e_list.append(ene)
+            if(force):
+                fcs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/f_base.npy")
+                f_list.append(fcs)
+        dm_eig=np.array(d_list)   #concatenate
+        np.save(f"{test_dump}/dm_eig.npy", dm_eig)
+        e_base=np.array(e_list)
+        np.save(f"{test_dump}/e_base.npy", e_base)
+        e_ref=np.load(f"{sys_train_paths[i]}/energy.npy")
+        np.save(f"{test_dump}/energy.npy", e_ref)
+        np.save(f"{test_dump}/l_e_delta.npy", e_ref-e_base)
+        if(force): 
+            f_base=np.array(f_list)
+            np.save(f"{test_dump}/f_base.npy", f_base)
+            f_ref=np.load(f"{sys_test_paths[i]}/force.npy")
+            np.save(f"{test_dump}/force.npy", f_ref)
+            np.save(f"{test_dump}/l_f_delta.npy", f_ref-f_base)
+        with open(f"{sys_train_paths[i]}/ABACUS/conv.log","r") as conv_log:
+            conv=conv_log.read().split('\n')
+            for ic in conv:
+                if ic.isdigit():
+                    c_list.append(True)
+                else:
+                    c_list.append(False)
+        assert(len(c_list)==nframes)
+        np.save(f"{train_dump}/conv.npy", np.array(c_list))
+    #check convergence and print in log
+    from deepks.scf.stats import print_stats
+    print_stats(systems=systems_train, test_sys=systems_test,
+            dump_dir=train_dump, test_dump=test_dump, group=False, 
+            with_conv=True)
+    return
 def make_stat_scf_abacus(systems_train, systems_test=None, *, 
-                  train_dump="data_train", test_dump="data_test", group_data=False,
+                  train_dump="data_train", test_dump="data_test", force=0, 
                   workdir='.', outlog="log.data", **stat_args):
-    #concatenate .npy result
-    #copy them into shared folder
-    return 
-
-ABACUS_CMD= " ".join([
-    "{run_cmd} -n 1",
-    "{abacus_bin_dir} "
-])
-
-#single sub task
-def make_scf_task_abacus(*, workdir=".",
-        abacus_bin_dir = "/usr/local/bin/ABACUS.mpi", run_cmd = "mpirun", 
-        dispatcher=None, resources=None, outlog="log.scf",
-        share_folder="share", **task_args):
-    #set up basic args
-    command = ABACUS_CMD.format(run_cmd=mpirun, abacus_bin_dir=abacus_bin_dir)
-    link_share = task_args.pop("link_share_files", [])
-    link_prev = task_args.pop("link_prev_files", [])
-    link_abs = task_args.pop("link_abs_files", [])
-    forward_files = task_args.pop("forward_files", [])
-    backward_files = task_args.pop("backward_files", [])
-    sys_name = None
-    return BatchTask(
-        command,
-        workdir=workdir,
-        dispatcher=dispatcher,
-        resources=resources,
+    # follow same convention for systems as run_scf
+    systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
+    systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
+    if not systems_test:
+        systems_test.append(systems_train[-1])
+        # if len(systems_train) > 1:
+        #     del systems_train[-1]
+    # load stats function
+    stat_args.update(
+        systems_train=systems_train,
+        systems_test=systems_test,
+        train_dump=train_dump,
+        test_dump=test_dump,
+        force=force)
+    # make task
+    return PythonTask(
+        gather_stats_abacus,
+        call_kwargs=stat_args,
         outlog=outlog,
-        share_folder=share_folder,
-        link_share_files=link_share,
-        link_prev_files=link_prev,
-        link_abs_files=link_abs,
-        forward_files=forward_files,
-        backward_files=backward_files,
-        **task_args
+        errlog="err",
+        workdir=workdir
     )
-"""
+
+
+

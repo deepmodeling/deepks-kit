@@ -18,6 +18,8 @@ train_input: false
 # init settings, these are for DeePHF task
 init_model: false # do not use existing model to restart from
 
+init_scf: True
+
 init_train: # parameters for nn training
   model_args:
     hidden_sizes: [100, 100, 100] # neurons in hidden layers

@@ -34,18 +34,28 @@ DEFAULT_TRN_MACHINE = {
     "python": "python" # use current python in path
 }
 DEFAULT_SCF_ARGS_ABACUS={
-    "orb_file": ["orb"],  #atomic number order
-    "pp_file": ["upf"],  #atomic number order
-    "pbasis_file": ["pbasis"], 
-    "lattice_constant": 1,
-    "lattice_vector": ["1 0 0", "0 1 0", "0 0 1"],
+    "orb_files": ["orb"],  #atomic number order
+    "pp_files": ["upf"],  #atomic number order
+    "proj_file": ["orb"], 
+    "ntype": 1,
     "nbands": 1,
     "ecutwfc": 50,
-    "conv_tol": 1e-7,
-    "max_scf_iter": 50,
+    "dr2": 1e-7,
+    "niter": 50,
+    "basis_type": "lcao",
     "gamma_only": 1,
-    "proj_lmax": 2,
-    "isforce": 0,
+    "smearing":"gaussian",
+    "sigma":0.02,
+    "mixing_type": "pulay",
+    "mixing_beta": 0.4,
+    "force": 0,
+    "stress": 0,
+    "out_descriptor":1,
+    "lmax_descriptor":0,
+    "deepks_scf":0,
+    "model_file": None,
+    "lattice_constant": 1,
+    "lattice_vector": np.eye(3,dtype=int),
     "run_cmd": "mpirun",
     "cpus_per_task": 1,
     "abacus_path": "/usr/local/bin/ABACUS.mpi",
