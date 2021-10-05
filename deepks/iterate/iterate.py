@@ -42,6 +42,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "ecutwfc": 50,
     "dr2": 1e-7,
     "niter": 50,
+    "dft_functional": "pbe", 
     "basis_type": "lcao",
     "gamma_only": 1,
     "smearing":"gaussian",
@@ -58,6 +59,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "lattice_vector": np.eye(3,dtype=int),
     "run_cmd": "mpirun",
     "cpus_per_task": 1,
+    "group_size": 1,
     "abacus_path": "/usr/local/bin/ABACUS.mpi",
     "resources": None, 
     "dispatcher": None
@@ -297,6 +299,8 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
             source_arg=scf_args_name, source_model=MODEL_FILE,
             source_pbasis=proj_basis, cleanup=cleanup, **scf_machine
         )
+    if use_abacus:
+        proj_basis=None
     train_step = make_train(
         source_train=DATA_TRAIN, source_test=DATA_TEST,
         restart=True, source_model=MODEL_FILE, save_model=MODEL_FILE, 
@@ -334,6 +338,8 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
         init_train_machine = (check_arg_dict(init_train_machine, DEFAULT_SCF_MACHINE, strict)
         if init_train_machine is not None else train_machine)
+        if use_abacus:
+            proj_basis = None
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
             restart=False, source_model=MODEL_FILE, save_model=MODEL_FILE, 
