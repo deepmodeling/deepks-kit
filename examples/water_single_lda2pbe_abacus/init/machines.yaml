@@ -1,0 +1,17 @@
+# this is only part of input settings. 
+# should be used together with systems.yaml and params.yaml
+
+train_machine: 
+  dispatcher: 
+    context: local
+    batch: shell # same as above, use shell to run on local machine
+    remote_profile: null # use lazy local
+  python: "python" # use python in path
+  # resources are no longer needed, and the task will use gpu automatically if there is one
+
+# other settings (these are default, can be omitted)
+cleanup: false # whether to delete slurm and err files
+strict: true # do not allow undefined machine parameters
+
+#paras for abacus
+use_abacus: true # use abacus in scf calculation
