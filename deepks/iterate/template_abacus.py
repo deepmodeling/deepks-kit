@@ -168,9 +168,6 @@ def convert_data(systems_train, systems_test=None, *,
     from pathlib import Path
     if not os.path.isfile("./run_abacus.sh"):
         Path("./run_abacus.sh").touch()
-    #create a shell script to check convergence
-    if not os.path.isfile("./run_abacus.sh"):
-        Path("./check_conv.sh").touch()
     run_file=open("./run_abacus.sh","w")
     #init sys_data (dpdata)
     for i, sset in enumerate(train_sets+test_sets):
@@ -208,6 +205,7 @@ def convert_data(systems_train, systems_test=None, *,
         #write the 'run_abacus.sh' script
         if os.path.exists(f"{sys_paths[i]}/ABACUS/conv.log"):
             open(f"{sys_paths[i]}/ABACUS/conv.log", 'w').close()    #clear conv.log
+        run_file.write("export OMP_NUM_THREADS=1\n")
         run_file.write(f"cd {sys_paths[i]}/ABACUS"+ "\n")
         run_file.write("i=0"+"\n")
         run_file.write(f"while (( $i < {nframes} ))"+ "\n")
@@ -346,7 +344,7 @@ def gather_stats_abacus(systems_train, systems_test,
             os.mkdir(train_dump + '/' + sys_train_names[i])
         atom_data = np.load(f"{sys_train_paths[i]}/atom.npy")
         nframes = atom_data.shape[0]
-        c_list=[]
+        c_list=np.full((nframes,1), False)
         d_list=[]
         e0_list=[]
         f0_list=[]
@@ -367,14 +365,11 @@ def gather_stats_abacus(systems_train, systems_test,
         with open(f"{sys_train_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
-                if "not" in ic.split():
-                    c_list.append(False)
-                elif ic == "":
+                if "not" in ic.split() or ic =="":
                     continue
-                else:
-                    c_list.append(True)
-        assert(len(c_list)==nframes)
-        np.save(f"{train_dump}/{sys_train_names[i]}/conv.npy", np.array(c_list))
+                elif "achieved" in ic.split():
+                    c_list[(int)(ic.split()[0])]=True
+        np.save(f"{train_dump}/{sys_train_names[i]}/conv.npy", c_list)
         dm_eig=np.array(d_list)   #concatenate
         np.save(f"{train_dump}/{sys_train_names[i]}/dm_eig.npy", dm_eig)
         e_base=np.array(e0_list)
@@ -398,7 +393,7 @@ def gather_stats_abacus(systems_train, systems_test,
             os.mkdir(test_dump + '/' + sys_test_names[i])
         atom_data = np.load(f"{sys_test_paths[i]}/atom.npy")
         nframes = atom_data.shape[0]
-        c_list=[]
+        c_list=np.full((nframes,1), False)
         d_list=[]
         e0_list=[]
         f0_list=[]
@@ -434,14 +429,11 @@ def gather_stats_abacus(systems_train, systems_test,
         with open(f"{sys_test_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
-                if "not" in ic.split():
-                    c_list.append(False)
-                elif ic == "":
+                if "not" in ic.split() or ic =="":
                     continue
-                else:
-                    c_list.append(True)
-        assert(len(c_list)==nframes)
-        np.save(f"{test_dump}/{sys_test_names[i]}/conv.npy", np.array(c_list))
+                elif "achieved" in ic.split():
+                    c_list[(int)(ic.split()[0])]=True
+        np.save(f"{test_dump}/{sys_test_names[i]}/conv.npy",c_list)
     #check convergence and print in log
     from deepks.scf.stats import print_stats
     print_stats(systems=systems_train, test_sys=systems_test,
