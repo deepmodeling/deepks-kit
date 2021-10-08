@@ -54,7 +54,6 @@ DEFAULT_SCF_ARGS_ABACUS={
     "out_descriptor":1,
     "lmax_descriptor":0,
     "deepks_scf":0,
-    "model_file": None,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
     "run_cmd": "mpirun",
@@ -285,7 +284,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         scf_abacus = check_arg_dict(scf_abacus, DEFAULT_SCF_ARGS_ABACUS, strict)
         scf_step = make_scf_abacus(systems_train=systems_train, systems_test=systems_test,
             train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
-            workdir=SCF_STEP_DIR, share_folder=share_folder, source_model=MODEL_FILE,
+            workdir=SCF_STEP_DIR, share_folder=share_folder,
             cleanup=cleanup, **scf_abacus)
     else:
         # handle projection basis
@@ -321,7 +320,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
             scf_init = make_scf_abacus(
                 systems_train=systems_train, systems_test=systems_test,
                 train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
-                workdir=SCF_STEP_DIR, share_folder=share_folder, source_model=None, 
+                workdir=SCF_STEP_DIR, share_folder=share_folder, model_file=None, 
                 cleanup=cleanup, **scf_abacus
             )
         else:

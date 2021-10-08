@@ -89,7 +89,7 @@ TYPE_WEIGHT ={v:k for k, v in WEIGHT_TYPE.items()}
 def make_scf_abacus(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test", cleanup=None, 
              dispatcher=None, resources =None, group_size=1, 
-             no_model=True, workdir='00.scf', share_folder='share', model_file=None,
+             no_model=True, workdir='00.scf', share_folder='share', model_file="model.pth",
              orb_files=[], pp_files=[], proj_file=[], 
              **scf_abacus):
                  #share orb_files and pp_files
