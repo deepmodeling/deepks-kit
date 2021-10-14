@@ -99,6 +99,23 @@ def flat_file_list(file_list, filter_func=lambda p: True):
                 new_list.extend(sub_list)
     return new_list
 
+def flat_file_list_nosort(file_list, filter_func=lambda p: True):
+    # make sure file list contains desired files
+    # flat all wildcards and files contains other files (once)
+    # if no satisfied files, return empty list
+    file_list = check_list(file_list)
+    file_list = sum([glob(p) for p in file_list], [])
+    new_list = []
+    for p in file_list:
+        if filter_func(p):
+            new_list.append(p)
+        else:
+            with open(p) as f:
+                sub_list = f.read().splitlines()
+                sub_list = sum([glob(p) for p in sub_list], [])
+                new_list.extend(sub_list)
+    return new_list
+
 
 def load_dirs(path_list):
     return flat_file_list(path_list, os.path.isdir)

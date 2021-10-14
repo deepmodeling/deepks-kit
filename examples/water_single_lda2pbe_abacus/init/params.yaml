@@ -30,7 +30,7 @@ train_input:
     decay_rate: 0.5
     decay_steps: 1000
     display_epoch: 100
-    force_factor: 0
+    force_factor: 1
     n_epoch: 5000
     start_lr: 0.0001
 

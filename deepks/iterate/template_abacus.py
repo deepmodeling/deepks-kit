@@ -11,7 +11,7 @@ import sys
 import numpy as np
 from glob import glob
 from deepks.utils import check_list
-from deepks.utils import flat_file_list, load_dirs
+from deepks.utils import flat_file_list_nosort, load_dirs
 from deepks.utils import get_sys_name, load_sys_paths
 from deepks.task.task import PythonTask, ShellTask
 from deepks.task.task import BatchTask, GroupBatchTask
@@ -104,9 +104,9 @@ def make_scf_abacus(systems_train, systems_test=None, *,
    # if(no_model is False):
         #model_file=os.path.abspath(model_file)
         #model_file = check_share_folder(model_file, model_file, share_folder)
-    orb_files=[os.path.abspath(s) for s in flat_file_list(orb_files)]
-    pp_files=[os.path.abspath(s) for s in flat_file_list(pp_files)]
-    proj_file=[os.path.abspath(s) for s in flat_file_list(proj_file)]
+    orb_files=[os.path.abspath(s) for s in flat_file_list_nosort(orb_files)]
+    pp_files=[os.path.abspath(s) for s in flat_file_list_nosort(pp_files)]
+    proj_file=[os.path.abspath(s) for s in flat_file_list_nosort(proj_file)]
     
     pre_scf_abacus = make_convert_scf_abacus(
             systems_train=systems_train, systems_test=systems_test,
@@ -175,7 +175,7 @@ def convert_data(systems_train, systems_test=None, *,
         nframes = atom_data.shape[0]
         natoms = atom_data.shape[1]
         atoms = atom_data[1,:,0]
-        atoms.sort() # type order
+        #atoms.sort() # type order
         types = np.unique(atoms) #index in type list
         ntype = types.size
         from collections import Counter
@@ -190,9 +190,10 @@ def convert_data(systems_train, systems_test=None, *,
                 Path(f"{sys_paths[i]}/ABACUS/{f}/STRU").touch()
             #create sys_data for each frame
             frame_data=atom_data[f]
-            frame_sorted=frame_data[np.lexsort(frame_data[:,::-1].T)] #sort cord by type
+            #frame_sorted=frame_data[np.lexsort(frame_data[:,::-1].T)] #sort cord by type
             sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
-                        'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
+                        #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
+                        'cells': np.array([lattice_vector]), 'coords': [frame_data[:,1:]]}
             #write STRU file
             with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
                 stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args))
@@ -213,6 +214,7 @@ def convert_data(systems_train, systems_test=None, *,
         if group_size==1:
             run_file.write("\t"+"cd ${i}"+ "\n")
             run_file.write("\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+ "\n")
+            run_file.write("\t"+"echo ${i}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
             run_file.write("\t"+"echo ${i}`grep convergence ./OUT.ABACUS/running_scf.log` >> ../conv.log"+ "\n")
             run_file.write("\t"+"cd .."+"\n")
             run_file.write("\t"+"let \"i++\""+ "\n")
@@ -222,6 +224,7 @@ def convert_data(systems_train, systems_test=None, *,
             run_file.write("\t"+"{"+"\n")
             run_file.write("\t\t"+"cd ${j}"+"\n")
             run_file.write("\t\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+"\n")
+            run_file.write("\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
             run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log` >> ../conv.log"+ "\n")
             run_file.write("\t\t"+"cd .."+"\n")
             run_file.write("\t\t"+"sleep 1"+"\n")
@@ -350,6 +353,7 @@ def gather_stats_abacus(systems_train, systems_test,
         f0_list=[]
         e_list=[]
         f_list=[]
+        gvx_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/dm_eig.npy")
             d_list.append(des)
@@ -362,6 +366,9 @@ def gather_stats_abacus(systems_train, systems_test,
                 f0_list.append(fcs/2)    #Ry to Hartree
                 fcs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/f_tot.npy")
                 f_list.append(fcs/2)
+                if os.path.exists(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy"):
+                    gvx=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy")
+                    gvx_list.append(gvx)            
         with open(f"{sys_train_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
@@ -385,6 +392,8 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{train_dump}/{sys_train_names[i]}/force.npy", f_ref)
             np.save(f"{train_dump}/{sys_train_names[i]}/l_f_delta.npy", f_ref-f_base)
             np.save(f"{train_dump}/{sys_train_names[i]}/f_tot.npy", np.array(f_list))
+            if len(gvx_list) > 0:
+                np.save(f"{train_dump}/{sys_train_names[i]}/grad_vx.npy", np.array(gvx_list))
     #concatenate data (test)
     if not os.path.exists(test_dump):
             os.mkdir(test_dump)
@@ -399,6 +408,7 @@ def gather_stats_abacus(systems_train, systems_test,
         f0_list=[]
         e_list=[]
         f_list=[]
+        gvx_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/dm_eig.npy")
             d_list.append(des)
@@ -411,6 +421,9 @@ def gather_stats_abacus(systems_train, systems_test,
                 f0_list.append(fcs/2)    #Ry to Hartree
                 fcs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/f_tot.npy")
                 f_list.append(fcs/2)
+                if os.path.exists(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy"):
+                    gvx=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy")
+                    gvx_list.append(gvx)
         dm_eig=np.array(d_list)   #concatenate
         np.save(f"{test_dump}/{sys_test_names[i]}/dm_eig.npy", dm_eig)
         e_base=np.array(e0_list)
@@ -426,6 +439,8 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{test_dump}/{sys_test_names[i]}/force.npy", f_ref)
             np.save(f"{test_dump}/{sys_test_names[i]}/l_f_delta.npy", f_ref-f_base)
             np.save(f"{test_dump}/{sys_test_names[i]}/f_tot.npy", np.array(f_list))
+            if len(gvx_list)>0:
+                np.save(f"{test_dump}/{sys_test_names[i]}/grad_vx.npy", np.array(gvx_list))
         with open(f"{sys_test_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
