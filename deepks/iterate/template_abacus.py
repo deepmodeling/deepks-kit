@@ -8,21 +8,8 @@ from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
 from deepks.utils import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
 
-DATA_TRAIN = "data_train"
-DATA_TEST  = "data_test"
 MODEL_FILE = "model.pth"
 CMODEL_FILE = "model.ptg"
-PROJ_BASIS = "jle.orb"
-
-SCF_STEP_DIR = "00.scf"
-TRN_STEP_DIR = "01.train"
-
-RECORD = "RECORD"
-
-SYS_TRAIN = "systems_train"
-SYS_TEST = "systems_test"
-DEFAULT_TRAIN = "systems_train.raw"
-DEFAULT_TEST = "systems_test.raw"
 
 NAME_TYPE = {   'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7,
             'O': 8, 'F': 9, 'Ne': 10, 'Na': 11, 'Mg': 12, 'Al': 13,
@@ -49,6 +36,9 @@ NAME_TYPE = {   'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7,
             ## 'Fl': 114, 'Uup': 115, 'Lv': 116, 'Uus': 117, 'Uuo': 118
         } #dict
 TYPE_NAME ={v:k for k, v in NAME_TYPE.items()}
+
+ABACUS_CMD="bash run_abacus.sh"
+
 DEFAULT_SCF_ARGS_ABACUS={
     "orb_files": ["orb"],  #atomic number order
     "pp_files": ["upf"],  #atomic number order
@@ -80,13 +70,14 @@ DEFAULT_SCF_ARGS_ABACUS={
     "dispatcher": None
 }
 
+
 def make_scf_abacus(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test", cleanup=None, 
              dispatcher=None, resources =None, sub_size=1, 
              no_model=True, workdir='00.scf', share_folder='share', model_file="model.pth",
              orb_files=[], pp_files=[], proj_file=[], 
              **scf_abacus):
-                 #share orb_files and pp_files
+    #share orb_files and pp_files
     from deepks.iterate.iterate import check_share_folder
     for i in range (len(orb_files)):
         orb_files[i] = check_share_folder(orb_files[i], orb_files[i], share_folder)
@@ -116,8 +107,6 @@ def make_scf_abacus(systems_train, systems_test=None, *,
         systems_train, systems_test,
         train_dump=train_dump, test_dump=test_dump, workdir=".", 
         **scf_abacus)
-    
-
     # concat
     seq = [pre_scf_abacus, run_scf_abacus, post_scf_abacus]
     #seq = [post_scf_abacus]
@@ -132,12 +121,14 @@ def make_scf_abacus(systems_train, systems_test=None, *,
         seq,
         workdir=workdir
     )
+
+
 ### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
-            no_model=True, model_file=None, pp_files=[], 
-            lattice_vector=np.eye(3, dtype=int), 
-            abacus_path="/usr/local/bin/ABACUS.mpi",
-            run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
+                no_model=True, model_file=None, pp_files=[], 
+                lattice_vector=np.eye(3, dtype=int), 
+                abacus_path="/usr/local/bin/ABACUS.mpi",
+                run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
     #trace a model (if necessary)
     if not no_model:
         if model_file is not None:
@@ -148,7 +139,6 @@ def convert_data(systems_train, systems_test=None, *,
             pre_args.update(deepks_scf=1, model_file=os.path.abspath(CMODEL_FILE))
         else:
             raise FileNotFoundError(f"No required model file in {os.getcwd()}")
-             
     # split systems into groups
     nsys_trn = len(systems_train)
     nsys_tst = len(systems_test)
@@ -229,8 +219,10 @@ def convert_data(systems_train, systems_test=None, *,
         run_file.write("done"+ "\n")
     run_file.close()
     ###end for run_file
-    
-def make_convert_scf_abacus(systems_train, systems_test=None, no_model=True, model_file=None, **pre_args):
+
+
+def make_convert_scf_abacus(systems_train, systems_test=None,
+                no_model=True, model_file=None, **pre_args):
     # if no test systems, use last one in train systems
     systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
@@ -262,17 +254,10 @@ def make_convert_scf_abacus(systems_train, systems_test=None, no_model=True, mod
         link_prev_files=link_prev
     )
 
-DEFAULT_SCF_SUB_RES_ABACUS = {
-    "numb_node": 1,
-    "task_per_node": 1,
-    "cpus_per_task": 1, 
-    "exclusive": True
-}
-ABACUS_CMD="bash run_abacus.sh"
-def make_run_scf_abacus(systems_train, systems_test=None, 
-    train_dump="data_train", test_dump="data_test", resources=None, 
-    dispatcher=None, share_folder="share", workdir=".", outlog="out.log", 
-    no_model=True, source_model=None, **task_args):
+
+def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  
+                train_dump="data_train", test_dump="data_test", resources=None, 
+                dispatcher=None, share_folder="share", workdir=".", **task_args):
     #cmd
     command = ABACUS_CMD
     #basic args
@@ -321,8 +306,9 @@ def make_run_scf_abacus(systems_train, systems_test=None,
         link_abs_files=link_abs,
     )
 
+
 def gather_stats_abacus(systems_train, systems_test, 
-        train_dump, test_dump, force=0, **stat_args):
+                train_dump, test_dump, force=0, **stat_args):
     sys_train_paths = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     sys_test_paths = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
     sys_train_paths = [get_sys_name(s) for s in sys_train_paths]
@@ -450,6 +436,8 @@ def gather_stats_abacus(systems_train, systems_test,
             with_conv=True, with_e=True, e_name="e_tot", 
                with_f=True, f_name="f_tot")
     return
+
+
 def make_stat_scf_abacus(systems_train, systems_test=None, *, 
                   train_dump="data_train", test_dump="data_test", force=0, 
                   workdir='.', outlog="log.data", **stat_args):

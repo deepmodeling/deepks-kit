@@ -280,6 +280,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
     per_iter = Sequence([scf_step, train_step])
     iterate = Iteration(per_iter, n_iter, 
                         workdir=".", record_file=os.path.join(workdir, RECORD))
+
     # make init
     if init_model: # if set true or give str, check share/init/model.pth
         init_folder=os.path.join(share_folder, "init")
