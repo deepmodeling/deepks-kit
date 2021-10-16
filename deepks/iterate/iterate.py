@@ -1,5 +1,3 @@
-from build.lib.deepks.scf.run import DEFAULT_SCF_ARGS
-from build.lib.deepks import scf
 import os
 import sys
 import numpy as np
@@ -309,8 +307,6 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
         init_train_machine = (check_arg_dict(init_train_machine, DEFAULT_SCF_MACHINE, strict)
         if init_train_machine is not None else train_machine)
-        if use_abacus:
-            proj_basis = None
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
             restart=False, source_model=MODEL_FILE, save_model=MODEL_FILE, 

@@ -1,20 +1,9 @@
-from scripts.legacy.calc_eig import split
-from build.lib.deepks import model
-from build.lib.deepks.model.train import train
-from build.lib.deepks.model.test import test
-from build.lib import deepks
-from sympy.codegen.fnodes import reshape
-from build.lib.deepks.scf import run
 import os
-from posixpath import supports_unicode_filenames
-import sys
 import numpy as np
-from glob import glob
-from deepks.utils import check_list
 from deepks.utils import flat_file_list_nosort, load_dirs
 from deepks.utils import get_sys_name, load_sys_paths
-from deepks.task.task import PythonTask, ShellTask
-from deepks.task.task import BatchTask, GroupBatchTask
+from deepks.task.task import PythonTask
+from deepks.task.task import BatchTask
 from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
 from deepks.utils import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
