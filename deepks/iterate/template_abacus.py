@@ -17,7 +17,7 @@ from deepks.task.task import PythonTask, ShellTask
 from deepks.task.task import BatchTask, GroupBatchTask
 from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
-from dpgen.generator.lib.abacus_scf import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
+from deepks.utils import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
 
 DATA_TRAIN = "data_train"
 DATA_TEST  = "data_test"
