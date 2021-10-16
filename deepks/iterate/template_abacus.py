@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from deepks.utils import flat_file_list_nosort, load_dirs
+from deepks.utils import flat_file_list, load_dirs
 from deepks.utils import get_sys_name, load_sys_paths
 from deepks.task.task import PythonTask
 from deepks.task.task import BatchTask
@@ -63,11 +63,8 @@ DEFAULT_SCF_ARGS_ABACUS={
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
     "run_cmd": "mpirun",
-    "cpus_per_task": 1,
     "sub_size": 1,
     "abacus_path": "/usr/local/bin/ABACUS.mpi",
-    "resources": None, 
-    "dispatcher": None
 }
 
 
@@ -89,14 +86,14 @@ def make_scf_abacus(systems_train, systems_test=None, *,
    # if(no_model is False):
         #model_file=os.path.abspath(model_file)
         #model_file = check_share_folder(model_file, model_file, share_folder)
-    orb_files=[os.path.abspath(s) for s in flat_file_list_nosort(orb_files)]
-    pp_files=[os.path.abspath(s) for s in flat_file_list_nosort(pp_files)]
-    proj_file=[os.path.abspath(s) for s in flat_file_list_nosort(proj_file)]
+    orb_files=[os.path.abspath(s) for s in flat_file_list(orb_files, sort=False)]
+    pp_files=[os.path.abspath(s) for s in flat_file_list(pp_files, sort=False)]
+    proj_file=[os.path.abspath(s) for s in flat_file_list(proj_file, sort=False)]
     
     pre_scf_abacus = make_convert_scf_abacus(
             systems_train=systems_train, systems_test=systems_test,
             no_model=no_model, workdir='.', share_folder=share_folder, 
-            sub_size=sub_size, model_file=model_file, 
+            sub_size=sub_size, model_file=model_file, resources=resources,
             orb_files=orb_files, pp_files=pp_files, proj_file=proj_file, **scf_abacus)
     run_scf_abacus = make_run_scf_abacus(systems_train, systems_test,
         train_dump=train_dump, test_dump=test_dump, 
@@ -126,7 +123,7 @@ def make_scf_abacus(systems_train, systems_test=None, *,
 ### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
                 no_model=True, model_file=None, pp_files=[], 
-                lattice_vector=np.eye(3, dtype=int), 
+                lattice_vector=np.eye(3, dtype=int),
                 abacus_path="/usr/local/bin/ABACUS.mpi",
                 run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
     #trace a model (if necessary)
@@ -222,7 +219,7 @@ def convert_data(systems_train, systems_test=None, *,
 
 
 def make_convert_scf_abacus(systems_train, systems_test=None,
-                no_model=True, model_file=None, **pre_args):
+                no_model=True, model_file=None, resources=None, **pre_args):
     # if no test systems, use last one in train systems
     systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     systems_test = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
@@ -239,14 +236,18 @@ def make_convert_scf_abacus(systems_train, systems_test=None,
     #update pre_args
     if not no_model:
         model_file="model.pth"
+    if resources is not None and "cpus_per_task" in resources:
+        cpus_per_task = resources["cpus_per_task"]
+
     pre_args.update(
         systems_train=systems_train, 
         systems_test=systems_test,
         model_file=model_file,
         no_model=no_model, 
-       **pre_args)
+        cpus_per_task = cpus_per_task, 
+        **pre_args)
     return PythonTask(
-        convert_data,
+        convert_data, 
         call_kwargs=pre_args,
         outlog="convert.log",
         errlog="err",
@@ -298,7 +299,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",
         command, 
         workdir=workdir,
         dispatcher=dispatcher,
-        resources=resources,
+        #resources=resources,
         outlog=outlog,
         share_folder=share_folder,
         link_share_files=link_share,

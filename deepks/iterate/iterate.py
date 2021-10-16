@@ -287,6 +287,8 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         check_share_folder(init_model, MODEL_FILE, init_folder)
         iterate.set_init_folder(init_folder)
     elif init_scf or init_train: # otherwise, make an init iteration to train the first model
+        init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
+            if init_scf_machine is not None else scf_machine)
         if use_abacus:  #caoyu add 2021-07-22
             scf_init = make_scf_abacus(
                 systems_train=systems_train, systems_test=systems_test,
@@ -296,8 +298,6 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
             )
         else:
             init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)
-            init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
-                if init_scf_machine is not None else scf_machine)
             scf_init = make_scf(
                 systems_train=systems_train, systems_test=systems_test,
                 train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
@@ -307,7 +307,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
             )
         init_train_name = check_share_folder(init_train, INIT_TRN_NAME, share_folder)
         init_train_machine = (check_arg_dict(init_train_machine, DEFAULT_SCF_MACHINE, strict)
-        if init_train_machine is not None else train_machine)
+            if init_train_machine is not None else train_machine)
         train_init = make_train(
             source_train=DATA_TRAIN, source_test=DATA_TEST,
             restart=False, source_model=MODEL_FILE, save_model=MODEL_FILE, 
