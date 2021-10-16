@@ -1,5 +1,11 @@
 # this is only part of input settings. 
 # should be used together with systems.yaml and params.yaml
+scf_machine: 
+  cpu_per_task: 1 
+  sub_size: 4
+  dispatcher: 
+    context: local
+    batch: shell # set to shell to run on local machine, you can also use `slurm`
 
 train_machine: 
   dispatcher: 

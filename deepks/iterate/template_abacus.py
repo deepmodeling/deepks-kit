@@ -59,36 +59,41 @@ NAME_TYPE = {   'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7,
             ## 'Mt': 109, 'Ds': 110, 'Rg': 111, 'Cn': 112, 'Uut': 113,
             ## 'Fl': 114, 'Uup': 115, 'Lv': 116, 'Uus': 117, 'Uuo': 118
         } #dict
-WEIGHT_TYPE = {   '1.007': 1, '4.002': 2, '6.938': 3, '9.012': 4, '10.806': 5, '12.0096': 6, '14.00643': 7,
-            '15.999': 8, '18.998': 9, '20.1797': 10, '22.99': 11, '24.305': 12, '26.98': 13,
-        '28.084': 14, '30.973': 15, '32.059': 16, '35.446': 17, '39.948': 18, '39.0983': 19,
-        '40.078': 20, '44.956': 21, '47.867': 22, '50.9415': 23, '51.9961': 24, '54.938': 25,
-        '55.845': 26, '58.933': 27, '58.6934': 28, '63.546': 29, '65.38': 30, '69.732': 31,
-        '72.63': 32, '74.9216': 33, '78.96': 34, '79.904': 35, '83.798': 36, '85.4678': 37,
-        '87.62': 38, '88.90585': 39, '91.224': 40, '92.90638': 41, '95.96': 42, '97.907': 43,
-        '101.07': 44, '102.9055': 45, '106.42': 46, '107.8682': 47, '112.411': 48, '114.818': 49,
-        '118.71': 50, '121.76': 51, '127.6': 52, '126.90447': 53, '131.293': 54, '132.9': 55,
-        '137.327': 56, #'La': 57, 'Ce': 58, 'Pr': 59, 'Nd': 60, 'Pm': 61,
-            ## 'Sm': 62, 'Eu': 63, 'Gd': 64, 'Tb': 65, 'Dy': 66, 'Ho': 67,
-            ## 'Er': 68, 'Tm': 69, 'Yb': 70, 
-            ## 'Lu': 71, 
-        '178.49': 72, '180.94788': 73,
-        '183.84': 74, '186.207': 75, '190.23': 76, '192.217': 77, '195.084': 78, '196.9666': 79,
-        '200.59': 80, '204.382': 81, '207.2': 82, '208.98': 83, 
-            ## 'Po': 84, #'At': 85,
-            ## 'Rn': 86, #'Fr': 87, 'Ra': 88, 'Ac': 89, 'Th': 90, 'Pa': 91,
-            ## 'U': 92, 'Np': 93, 'Pu': 94, 'Am': 95, 'Cm': 96, 'Bk': 97,
-            ## 'Cf': 98, 'Es': 99, 'Fm': 100, 'Md': 101, 'No': 102, 'Lr': 103,
-            ## 'Rf': 104, 'Db': 105, 'Sg': 106, 'Bh': 107, 'Hs': 108,
-            ## 'Mt': 109, 'Ds': 110, 'Rg': 111, 'Cn': 112, 'Uut': 113,
-            ## 'Fl': 114, 'Uup': 115, 'Lv': 116, 'Uus': 117, 'Uuo': 118
-        }#dict , modification needed
 TYPE_NAME ={v:k for k, v in NAME_TYPE.items()}
-TYPE_WEIGHT ={v:k for k, v in WEIGHT_TYPE.items()}
+DEFAULT_SCF_ARGS_ABACUS={
+    "orb_files": ["orb"],  #atomic number order
+    "pp_files": ["upf"],  #atomic number order
+    "proj_file": ["orb"], 
+    "ntype": 1,
+    "nbands": 1,
+    "ecutwfc": 50,
+    "dr2": 1e-7,
+    "niter": 50,
+    "dft_functional": "pbe", 
+    "basis_type": "lcao",
+    "gamma_only": 1,
+    "smearing":"gaussian",
+    "sigma":0.02,
+    "mixing_type": "pulay",
+    "mixing_beta": 0.4,
+    "force": 0,
+    "stress": 0,
+    "out_descriptor":1,
+    "lmax_descriptor":0,
+    "deepks_scf":0,
+    "lattice_constant": 1,
+    "lattice_vector": np.eye(3,dtype=int),
+    "run_cmd": "mpirun",
+    "cpus_per_task": 1,
+    "sub_size": 1,
+    "abacus_path": "/usr/local/bin/ABACUS.mpi",
+    "resources": None, 
+    "dispatcher": None
+}
 
 def make_scf_abacus(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test", cleanup=None, 
-             dispatcher=None, resources =None, group_size=1, 
+             dispatcher=None, resources =None, sub_size=1, 
              no_model=True, workdir='00.scf', share_folder='share', model_file="model.pth",
              orb_files=[], pp_files=[], proj_file=[], 
              **scf_abacus):
@@ -111,7 +116,7 @@ def make_scf_abacus(systems_train, systems_test=None, *,
     pre_scf_abacus = make_convert_scf_abacus(
             systems_train=systems_train, systems_test=systems_test,
             no_model=no_model, workdir='.', share_folder=share_folder, 
-            group_size=group_size, model_file=model_file, 
+            sub_size=sub_size, model_file=model_file, 
             orb_files=orb_files, pp_files=pp_files, proj_file=proj_file, **scf_abacus)
     run_scf_abacus = make_run_scf_abacus(systems_train, systems_test,
         train_dump=train_dump, test_dump=test_dump, 
@@ -143,7 +148,7 @@ def convert_data(systems_train, systems_test=None, *,
             no_model=True, model_file=None, pp_files=[], 
             lattice_vector=np.eye(3, dtype=int), 
             abacus_path="/usr/local/bin/ABACUS.mpi",
-            run_cmd="mpirun", cpus_per_task=1, group_size=1, **pre_args):
+            run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
     #trace a model (if necessary)
     if not no_model:
         if model_file is not None:
@@ -169,6 +174,7 @@ def convert_data(systems_train, systems_test=None, *,
     if not os.path.isfile("./run_abacus.sh"):
         Path("./run_abacus.sh").touch()
     run_file=open("./run_abacus.sh","w")
+    run_file.write("export OMP_NUM_THREADS=1\n")
     #init sys_data (dpdata)
     for i, sset in enumerate(train_sets+test_sets):
         atom_data = np.load(f"{sys_paths[i]}/atom.npy")
@@ -206,12 +212,11 @@ def convert_data(systems_train, systems_test=None, *,
         #write the 'run_abacus.sh' script
         if os.path.exists(f"{sys_paths[i]}/ABACUS/conv.log"):
             open(f"{sys_paths[i]}/ABACUS/conv.log", 'w').close()    #clear conv.log
-        run_file.write("export OMP_NUM_THREADS=1\n")
         run_file.write(f"cd {sys_paths[i]}/ABACUS"+ "\n")
         run_file.write("i=0"+"\n")
         run_file.write(f"while (( $i < {nframes} ))"+ "\n")
         run_file.write("do"+ "\n")
-        if group_size==1:
+        if sub_size==1:
             run_file.write("\t"+"cd ${i}"+ "\n")
             run_file.write("\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+ "\n")
             run_file.write("\t"+"echo ${i}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
@@ -219,19 +224,19 @@ def convert_data(systems_train, systems_test=None, *,
             run_file.write("\t"+"cd .."+"\n")
             run_file.write("\t"+"let \"i++\""+ "\n")
         else:
-            run_file.write("\t"+f"for (( j = i ; j < i + {group_size} && j < {nframes} ; j++ ))" + "\n")
+            run_file.write("\t"+f"for (( j = i ; j < i + {sub_size} && j < {nframes} ; j++ ))" + "\n")
             run_file.write("\t"+"do"+"\n")
             run_file.write("\t"+"{"+"\n")
             run_file.write("\t\t"+"cd ${j}"+"\n")
             run_file.write("\t\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+"\n")
-            run_file.write("\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
+            run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
             run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log` >> ../conv.log"+ "\n")
             run_file.write("\t\t"+"cd .."+"\n")
             run_file.write("\t\t"+"sleep 1"+"\n")
             run_file.write("\t"+"} &"+"\n")
             run_file.write("\t"+"done"+"\n")
             run_file.write("\t"+"wait"+"\n")
-            run_file.write("\t"+f"((i=i+{group_size}))"+"\n")
+            run_file.write("\t"+f"((i=i+{sub_size}))"+"\n")
         run_file.write("done"+ "\n")
     run_file.close()
     ###end for run_file

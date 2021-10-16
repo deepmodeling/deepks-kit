@@ -14,6 +14,7 @@ from deepks.utils import load_basis, save_basis
 from deepks.task.workflow import Sequence, Iteration
 from deepks.iterate.template import make_scf, make_train
 from deepks.iterate.template_abacus import make_scf_abacus  #caoyu add 2021-07-22 
+from deepks.iterate.template_abacus import DEFAULT_SCF_ARGS_ABACUS
 
 
 # args not specified here may cause error
@@ -33,36 +34,7 @@ DEFAULT_TRN_MACHINE = {
     "resources": None, # use default 10 core defined in templete.py
     "python": "python" # use current python in path
 }
-DEFAULT_SCF_ARGS_ABACUS={
-    "orb_files": ["orb"],  #atomic number order
-    "pp_files": ["upf"],  #atomic number order
-    "proj_file": ["orb"], 
-    "ntype": 1,
-    "nbands": 1,
-    "ecutwfc": 50,
-    "dr2": 1e-7,
-    "niter": 50,
-    "dft_functional": "pbe", 
-    "basis_type": "lcao",
-    "gamma_only": 1,
-    "smearing":"gaussian",
-    "sigma":0.02,
-    "mixing_type": "pulay",
-    "mixing_beta": 0.4,
-    "force": 0,
-    "stress": 0,
-    "out_descriptor":1,
-    "lmax_descriptor":0,
-    "deepks_scf":0,
-    "lattice_constant": 1,
-    "lattice_vector": np.eye(3,dtype=int),
-    "run_cmd": "mpirun",
-    "cpus_per_task": 1,
-    "group_size": 1,
-    "abacus_path": "/usr/local/bin/ABACUS.mpi",
-    "resources": None, 
-    "dispatcher": None
-}
+
 SCF_ARGS_NAME = "scf_input.yaml"
 SCF_ARGS_NAME_ABACUS="scf_abacus.yaml"   #for abacus, caoyu add 2021-07-26
 TRN_ARGS_NAME = "train_input.yaml"
@@ -282,10 +254,12 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
     if use_abacus:  #caoyu add 2021-07-22
         scf_abacus_name = check_share_folder(scf_abacus, SCF_ARGS_NAME_ABACUS, share_folder)
         scf_abacus = check_arg_dict(scf_abacus, DEFAULT_SCF_ARGS_ABACUS, strict)
+        scf_abacus = dict(scf_abacus, **scf_machine)
         scf_step = make_scf_abacus(systems_train=systems_train, systems_test=systems_test,
             train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
             workdir=SCF_STEP_DIR, share_folder=share_folder,
             cleanup=cleanup, **scf_abacus)
+        proj_basis=None     # discussion needed
     else:
         # handle projection basis
         if proj_basis is not None:
@@ -298,8 +272,6 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
             source_arg=scf_args_name, source_model=MODEL_FILE,
             source_pbasis=proj_basis, cleanup=cleanup, **scf_machine
         )
-    if use_abacus:
-        proj_basis=None
     train_step = make_train(
         source_train=DATA_TRAIN, source_test=DATA_TEST,
         restart=True, source_model=MODEL_FILE, save_model=MODEL_FILE, 
