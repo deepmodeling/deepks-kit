@@ -43,10 +43,10 @@ ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be di
 
 There are some other important parameters for using ABACUS in `params.yaml ` and `machines.yaml`:
 - `use_abacus`: set 1 to calculate SCF by ABACUS, 0 for using PySCF
-- `cpu_per_task`: how many cpu cores are used for calculating each frame in using ABACUS
+- `cpus_per_task`: how many cpu cores are used for calculating each frame in using ABACUS
 - `sub_size`: how many frames are calculated simultaneously
 
-**Caution**: The meanings of `cpu_per_task` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an 'ABACUS task' with a unique workdir. 
+**Caution**: The meanings of `cpus_per_task` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an 'ABACUS task' with a unique workdir. 
 
 
 ## Data units
