@@ -6,7 +6,7 @@ from deepks.task.task import PythonTask
 from deepks.task.task import BatchTask
 from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
-from deepks.utils import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
+from deepks.iterate.generator_abacus import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
 
 MODEL_FILE = "model.pth"
 CMODEL_FILE = "model.ptg"
