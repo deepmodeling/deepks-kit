@@ -35,18 +35,18 @@ ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be di
     - `stress`: set 1 to calculate stress, default 0
 
 - Paras for `STRU` file:
-    - `orb_files`: paths of atom orbitals, a list of str with the order same as the order of atom types in atoms.npy
-    - `pp_files`: paths of pseudo potential files, a list of str with the order same as the order of atom types in atoms.npy
+    - `orb_files`: paths of atom orbitals, a list of str with the order same as the order of atom types in `atoms.npy`
+    - `pp_files`: paths of pseudo potential files, a list of str with the order same as the order of atom types in `atoms.npy`
     - `proj_file`: path of orbital file for descripor basis
     - `lattice_constant`: spacial period, in Bohr
     - `lattice_vector`: spacial period of x,y and z, in Bohr
 
 There are some other important parameters for using ABACUS in `params.yaml ` and `machines.yaml`:
-- `use_abacus`: set 1 to calculate SCF by ABACUS, 0 for using PySCF
+- `use_abacus`: set `true` to calculate SCF by ABACUS, `false` for using PySCF
 - `cpus_per_task`: how many cpu cores are used for calculating each frame in using ABACUS
 - `sub_size`: how many frames are calculated simultaneously
 
-**Caution**: The meanings of `cpus_per_task` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an 'ABACUS task' with a unique workdir. 
+**Caution**: The meanings of `cpus_per_task` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an "ABACUS task" with a unique workdir. 
 
 
 ## Data units
