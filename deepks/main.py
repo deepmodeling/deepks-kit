@@ -243,7 +243,7 @@ def iter_cli(args=None):
                         help='if set, allow other arguments to be passed to task')
     # allow cli specified argument files
     sub_names = ["scf-input", "scf-machine", "train-input", "train-machine",
-                 "init-model", "init-scf", "init-train"]
+                 "init-model", "init-scf", "init-train", "scf-abacus"]
     for name in sub_names:
         parser.add_argument(f"--{name}",
             help='if specified, subsitude the original arguments with given file')
