@@ -99,7 +99,7 @@ class CorrGradMixin(abc.ABC):
 
     def grad_elec(self, mo_energy=None, mo_coeff=None, mo_occ=None, atmlst=None):
         de = super().grad_elec(mo_energy, mo_coeff, mo_occ, atmlst)
-        cput0 = (time.clock(), time.time())
+        cput0 = (time.process_time(), time.perf_counter())
         dec = self.grad_corr(self.base.make_rdm1(mo_coeff, mo_occ), atmlst)
         logger.timer(self, 'gradients of NN pulay part', *cput0)
         # memeorize the result to save time in get_base
