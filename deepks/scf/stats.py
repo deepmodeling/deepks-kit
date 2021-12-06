@@ -2,7 +2,6 @@ import os
 import sys
 import glob
 import numpy as np
-import torch
 import shutil
 try:
     import deepks
@@ -127,9 +126,9 @@ def load_stat(systems, dump_dir,
             try:
                 ro = load_array(get_with_prefix(o_name, rbase, ".npy"))
                 lo = load_array(get_with_prefix("orbital", lbase, ".npy")).reshape(ro.shape)
-                [myc, myr] = ro.shape
-                ro1 = torch.tensor([myc,1])
-                lo1 = torch.tensor([myc,1])
+                [myr, myc] = ro.shape
+                ro1 = np.zeros((myr,1))
+                lo1 = np.zeros((myr,1))
                 ro1 = ro[:,1] - ro[:,0] 
                 lo1 = lo[:,1] - lo[:,0] 
                 o_err.append(lo1 - ro1)

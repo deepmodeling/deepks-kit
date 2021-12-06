@@ -43,16 +43,6 @@ def t_make_orbital_precalc(dm, ovlp_shells, mo_coeff):
                     for orbital_pdm, gvdm in zip(orbital_pdm_shells, gvdm_shells)]
     return torch.cat(ips, dim=-1)
 
-def t_batch_jacobian(f, x, noutputs):
-    nindim = len(x.shape)-1
-    x = x.unsqueeze(1) # b, 1 ,*in_dim
-    n = x.shape[0]
-    x = x.repeat(1, noutputs, *[1]*nindim) # b, out_dim, *in_dim
-    x.requires_grad_(True)
-    y = f(x)
-    input_val = torch.eye(noutputs).reshape(1,noutputs, noutputs).repeat(n, 1, 1)
-    return torch.autograd.grad(y, x, input_val)[0]
-
 def t_shell_eig(pdm):
     return torch.symeig(pdm, eigenvectors=True)[0]
 
@@ -131,7 +121,7 @@ class CorrMixin(abc.ABC):
     def nuc_grad_method0(self):
         return super().nuc_grad_method()
 
-    def orbital0(self):
+    def mo_energy0(self):
         dm = self.make_rdm1()
         ec, vc = self.get_corr(dm)
         mo_coeff = self.mo_coeff
@@ -144,7 +134,7 @@ class CorrMixin(abc.ABC):
             mol = self.mol
         if dm is None: 
             dm = self.make_rdm1()
-        tic = (time.clock(), time.perf_counter())
+        tic = (time.process_time(), time.perf_counter())
         # base method part
         v0_last = getattr(vhf_last, 'v0', 0)
         v0 = self.get_veff0(mol, dm, dm_last, v0_last, hermi)
