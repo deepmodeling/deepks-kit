@@ -111,7 +111,7 @@ def calc_optim_veig(dscf, target_dm,
         return loss
     # do the optimization
     optim = torch.optim.LBFGS([t_veig], **optim_args)
-    tic = (time.clock(), time.time())
+    tic = (time.process_time(), time.perf_counter())
     for _ in range(nstep):
         optim.step(closure)
         tic = logger.timer(dscf, 'LBFGS step', *tic)

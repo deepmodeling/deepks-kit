@@ -102,7 +102,7 @@ class DensityPenalty(AbstructPenalty):
             self.grids.build()
         if self.ao_value is None:
             self.ao_value = numint.eval_ao(mf.mol, self.grids.coords, deriv=0)
-        tic = (time.clock(), time.time())
+        tic = (time.process_time(), time.perf_counter())
         rho_diff = numint.eval_rho(mf.mol, self.ao_value, dm - self.dm_t)
         v_p = numint.eval_mat(mf.mol, self.ao_value, self.grids.weights, rho_diff, rho_diff)
         # cycle < 0 means it is just checking, we only print here
@@ -132,7 +132,7 @@ class CoulombPenalty(AbstructPenalty):
         # cycle > 0 means it is doing scf iteration
         if 0 <= cycle < self.start_cycle:
             return 0
-        tic = (time.clock(), time.time())
+        tic = (time.process_time(), time.perf_counter())
         ddm = dm - self.dm_t
         v_p = mf.get_j(dm=ddm)
         # cycle < 0 means it is just checking, we only print here

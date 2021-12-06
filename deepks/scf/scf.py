@@ -118,7 +118,7 @@ class CorrMixin(abc.ABC):
             mol = self.mol
         if dm is None: 
             dm = self.make_rdm1()
-        tic = (time.clock(), time.time())
+        tic = (time.process_time(), time.perf_counter())
         # base method part
         v0_last = getattr(vhf_last, 'v0', 0)
         v0 = self.get_veff0(mol, dm, dm_last, v0_last, hermi)
