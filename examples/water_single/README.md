@@ -24,7 +24,7 @@ Force	   | $E_h$/Bohr ($E_h$/Å if from xyz)
   e.g. for `0000.xyz`, its energy can be saved as `0000.energy.npy`, and forces as `0000.force.npy`, density matrix as `0000.dm.npy` in the same folder.
 - **grouped into folders** with same number of atoms. 
   Such folder should contain an `atom.npy` that has shape `n_frames x n_atoms x 4` and the four elements correspond to the nuclear charge of the atom and its three spacial coordinates.
-  Other properties can be provided as separate files like `energy.npy` and `force.npy`.
+  Other properties can be provided as separate files like `energy.npy`, `force.npy`, and `orbital.npy`. Note that `orbital.npy` should contain only the target HOMO and LUMO energies. 
 - **grouped with explicit `type.raw` file** with all frames have same type of elements.
   This is similar as above, only that `atom.npy` is substituted by `coord.npy` containing pure special coordinates and a `type.raw` containing the element type for all the frames of this system. This format is very similar to the one used in DeePMD-Kit, but the `type.raw` must contains real element types here.
 

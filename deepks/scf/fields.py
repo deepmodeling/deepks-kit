@@ -1,3 +1,4 @@
+import numpy as np
 from typing import List, Callable
 from dataclasses import dataclass, field
 
@@ -25,12 +26,13 @@ def select_fields(names):
 
 BOHR = 0.52917721092
 
+
+
 def isinbohr(mol):
     return mol.unit.upper().startswith(("B", "AU"))
 
 def _Lunit(mol):
     return (1. if isinbohr(mol) else BOHR)
-
 
 SCF_FIELDS = [
     Field("e_base", 
@@ -79,6 +81,22 @@ SCF_FIELDS = [
           ["mo_coeff_occ, orbital_coeff_occ"],
           lambda mf: mf.mo_coeff[:,mf.mo_occ>0].T,
           "(nframe, -1, nao)"),
+    Field("o_base", # do not support UHF
+          ["mo_energy_occ, orbital_ene_occ"],
+          lambda mf: mf.mo_energy0()[np.argmax(mf.mo_energy[mf.mo_occ>0]):np.argmax(mf.mo_energy[mf.mo_occ>0])+2],
+          "(nframe, -1)"),
+    Field("o_tot", # do not support UHF
+          ["orbital, mo_energy_occ, orbital_ene_occ"],
+          lambda mf: mf.mo_energy[np.argmax(mf.mo_energy[mf.mo_occ>0]):np.argmax(mf.mo_energy[mf.mo_occ>0])+2],
+          "(nframe, -1)"),
+    Field("dipole",
+          ["dip", "dip_moment"],
+          lambda mf: mf.dip_moment(),
+          "(nframe, 3)"),
+    Field("orbital_precalc", # do not support UHF
+          ["orbital_coef_precalc"],
+          lambda mf: mf.make_orbital_precalc(),
+          "(nframe, -1, natom, nproj)"),
     Field("mo_ene_occ", # do not support UHF
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
@@ -94,6 +112,11 @@ SCF_FIELDS = [
           lambda mf, **lbl: lbl["energy"] - mf.energy_tot0(),
           "(nframe, 1)",
           ["energy"]),
+    Field("l_o_delta",
+          ["lo_delta", "lbl_o_delta", "label_o_delta", "lbl_od"],
+          lambda mf, **lbl: lbl["orbital"] -  mf.mo_energy0()[np.argmax(mf.mo_energy[mf.mo_occ>0]):np.argmax(mf.mo_energy[mf.mo_occ>0])+2],
+          "(nframe, -1)",
+          ["orbital"]),
     Field("err_e", 
           ["e_err", "err_e_tot", "err_e_cf"],
           lambda mf, **lbl: lbl["energy"] - mf.e_tot,

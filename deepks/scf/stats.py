@@ -28,7 +28,8 @@ def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
 def print_stats(systems=None, test_sys=None, 
                dump_dir=None, test_dump=None, group=False,
                with_conv=True, with_e=True, e_name="e_tot", 
-               with_f=True, f_name="f_tot"):
+               with_f=True, f_name="f_tot",
+               with_o=True, o_name="o_tot"):
     load_func = load_stat if not group else load_stat_grouped
     if dump_dir is None:
         dump_dir = "."
@@ -36,8 +37,8 @@ def print_stats(systems=None, test_sys=None,
         test_dump = dump_dir
     shift = None
     if systems is not None:
-        tr_c, tr_e, tr_f = load_func(systems, dump_dir, with_conv, 
-                                     with_e, e_name, with_f, f_name)
+        tr_c, tr_e, tr_f, tr_o = load_func(systems, dump_dir, with_conv, 
+                                     with_e, e_name, with_f, f_name, with_o, o_name)
         print("Training:")
         if tr_c is not None:
             print_stats_conv(tr_c, indent=2)
@@ -46,9 +47,11 @@ def print_stats(systems=None, test_sys=None,
             print_stats_e(tr_e, shift=shift, indent=2)
         if tr_f is not None:
             print_stats_f(tr_f, indent=2)
+        if tr_o is not None:
+            print_stats_o(tr_o, indent=2)
     if test_sys is not None:
-        ts_c, ts_e, ts_f = load_func(test_sys, test_dump, with_conv, 
-                                     with_e, e_name, with_f, f_name)
+        ts_c, ts_e, ts_f, ts_o = load_func(test_sys, test_dump, with_conv, 
+                                     with_e, e_name, with_f, f_name, with_o, o_name)
         print("Testing:")
         if ts_c is not None:
             print_stats_conv(ts_c, indent=2)
@@ -56,6 +59,8 @@ def print_stats(systems=None, test_sys=None,
             print_stats_e(ts_e, shift=shift, indent=2)
         if ts_f is not None:
             print_stats_f(ts_f, indent=2)
+        if ts_o is not None:
+            print_stats_o(ts_o, indent=2)
     
 
 def print_stats_conv(conv, indent=0):
@@ -79,14 +84,22 @@ def print_stats_f(f_err, indent=0):
     print(ind+"Force:")
     print(ind+f'  MAE: \t {np.abs(f_err).mean()}')
 
+def print_stats_o(o_err, indent=0):
+    ind = " "*indent
+    print(ind+"Band gap:")
+    print(ind+f'  ME: \t {o_err.mean()}')
+    print(ind+f'  MAE: \t {np.abs(o_err).mean()}')
+
 
 def load_stat(systems, dump_dir,
               with_conv=True, with_e=True, e_name="e_tot", 
-              with_f=True, f_name="f_tot"):
+              with_f=True, f_name="f_tot",
+              with_o=True, o_name="o_tot"):
     systems = check_list(systems)
     c_res = []
     e_err = []
     f_err = []
+    o_err = []
     for fl in systems:
         lbase = get_sys_name(fl)
         rbase = os.path.join(dump_dir, os.path.basename(lbase))
@@ -109,17 +122,31 @@ def load_stat(systems, dump_dir,
                 f_err.append(np.abs(lf - rf).mean((-1,-2)))
             except FileNotFoundError as e:
                 print("Warning! force file not found:", e, file=sys.stderr)
+        if with_o:
+            try:
+                ro = load_array(get_with_prefix(o_name, rbase, ".npy"))
+                lo = load_array(get_with_prefix("orbital", lbase, ".npy")).reshape(ro.shape)
+                [myr, myc] = ro.shape
+                ro1 = np.zeros((myr,1))
+                lo1 = np.zeros((myr,1))
+                ro1 = ro[:,1] - ro[:,0] 
+                lo1 = lo[:,1] - lo[:,0] 
+                o_err.append(lo1 - ro1)
+            except FileNotFoundError as e:
+                print("Warning! orbital file not found:", e, file=sys.stderr)
     return np.concatenate(c_res, 0) if c_res else None, \
            np.concatenate(e_err, 0) if e_err else None, \
-           np.concatenate(f_err, 0) if f_err else None
+           np.concatenate(f_err, 0) if f_err else None, \
+           np.concatenate(o_err, 0) if o_err else None
 
 
 def load_stat_grouped(systems, dump_dir=".",
                       with_conv=True, with_e=True, e_name="e_tot", 
-                      with_f=True, f_name="f_tot"):
+                      with_f=True, f_name="f_tot",
+                      with_o=True, o_name="o_tot"):
     systems = check_list(systems)
     lbases = [get_sys_name(fl) for fl in systems]
-    c_res = e_err = f_err = None
+    c_res = e_err = f_err = o_err = None
     if with_conv:
         c_res = load_array(get_with_prefix("conv", dump_dir, ".npy"))
     if with_e:
@@ -134,7 +161,13 @@ def load_stat_grouped(systems, dump_dir=".",
             load_array(get_with_prefix("force", lb, ".npy")) for lb in lbases
         ], 0).reshape(f_res.shape)
         f_err = f_lbl - f_res
-    return c_res, e_err, f_err
+    if with_o:
+        o_res = load_array(get_with_prefix(o_name, dump_dir, ".npy"))
+        o_lbl = np.concatenate([
+            load_array(get_with_prefix("orbital", lb, ".npy")) for lb in lbases
+        ], 0).reshape(o_res.shape)
+        o_err = o_lbl - o_res
+    return c_res, e_err, f_err, o_err
 
 
 # Below are legacy tools, kept for old examples
