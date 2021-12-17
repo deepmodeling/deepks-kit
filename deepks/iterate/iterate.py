@@ -35,6 +35,7 @@ DEFAULT_TRN_MACHINE = {
 
 SCF_ARGS_NAME = "scf_input.yaml"
 SCF_ARGS_NAME_ABACUS="scf_abacus.yaml"   #for abacus, caoyu add 2021-07-26
+INIT_SCF_NAME_ABACUS="init_scf_abacus.yaml"   #for abacus init, caoyu add 2021-12-17
 TRN_ARGS_NAME = "train_input.yaml"
 INIT_SCF_NAME = "init_scf.yaml"
 INIT_TRN_NAME = "init_train.yaml"
@@ -140,7 +141,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
                  init_model=False, init_scf=True, init_train=True,
                  init_scf_machine=None, init_train_machine=None,
                  cleanup=False, strict=True, 
-                 use_abacus=False, scf_abacus=None):#caoyu add 2021-07-22
+                 use_abacus=False, scf_abacus=None, init_scf_abacus=None):#caoyu add 2021-07-22
     r"""
     Make a `Workflow` to do the iterative training procedure.
 
@@ -290,11 +291,14 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         init_scf_machine = (check_arg_dict(init_scf_machine, DEFAULT_SCF_MACHINE, strict)
             if init_scf_machine is not None else scf_machine)
         if use_abacus:  #caoyu add 2021-07-22
+            init_scf_abacus_name = check_share_folder(init_scf_abacus, INIT_SCF_NAME_ABACUS, share_folder)
+            init_scf_abacus = check_arg_dict(init_scf_abacus, DEFAULT_SCF_ARGS_ABACUS, strict)
+            init_scf_abacus = dict(init_scf_abacus, **scf_machine)
             scf_init = make_scf_abacus(
                 systems_train=systems_train, systems_test=systems_test,
                 train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=True,
                 workdir=SCF_STEP_DIR, share_folder=share_folder, model_file=None, 
-                cleanup=cleanup, **scf_abacus
+                cleanup=cleanup, **init_scf_abacus
             )
         else:
             init_scf_name = check_share_folder(init_scf, INIT_SCF_NAME, share_folder)

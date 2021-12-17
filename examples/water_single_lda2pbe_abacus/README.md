@@ -40,6 +40,7 @@ ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be di
     - `proj_file`: path of orbital file for descripor basis
     - `lattice_constant`: spacial period, in Bohr
     - `lattice_vector`: spacial period of x,y and z, in Bohr
+tips: you can set different STRU parasmeters for each data group, by adding a `stru_abacus.yaml`in systems/group.xx.
 
 There are some other important parameters for using ABACUS in `params.yaml ` and `machines.yaml`:
 - `use_abacus`: set `true` to calculate SCF by ABACUS, `false` for using PySCF

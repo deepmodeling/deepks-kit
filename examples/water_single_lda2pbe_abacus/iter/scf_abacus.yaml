@@ -8,7 +8,7 @@ scf_abacus:
   dft_functional: "lda"
   gamma_only: 1
   force: 1
-  #STRU args
+  #STRU args ( Here are default STRU args, you can set for each group in  ../systems/group.xx/stru_abacus.yaml )
   orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
   pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
   proj_file: ["jle.orb"]
@@ -18,3 +18,4 @@ scf_abacus:
   #cmd args
   run_cmd : "mpirun"
   abacus_path: "/home/fortneu49/abacus-develop/bin/ABACUS.mpi"
+
