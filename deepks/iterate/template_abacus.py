@@ -123,7 +123,7 @@ def make_scf_abacus(systems_train, systems_test=None, *,
 ### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
                 no_model=True, model_file=None, pp_files=[], 
-                lattice_vector=np.eye(3, dtype=int),
+                lattice_vector=[np.eye(3, dtype=int)],
                 abacus_path="/usr/local/bin/ABACUS.mpi",
                 run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
     #trace a model (if necessary)
@@ -164,6 +164,14 @@ def convert_data(systems_train, systems_test=None, *,
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
             os.mkdir(f"{sys_paths[i]}/ABACUS")
+        pre_args.update({"lattice_vector":lattice_vector});
+        #if "stru_abacus.yaml" exists, update STRU args in pre_args:
+        pre_args_new=dict(zip(pre_args.keys(),pre_args.values()))
+        if os.path.exists(f"{sys_paths[i]}/stru_abacus.yaml"):
+            from deepks.utils import load_yaml
+            stru_abacus = load_yaml(f"{sys_paths[i]}/stru_abacus.yaml")
+            for k,v in stru_abacus.items():
+                pre_args_new[k]=v
         for f in range(nframes):
             if not os.path.exists(f"{sys_paths[i]}/ABACUS/{f}"):
                 os.mkdir(f"{sys_paths[i]}/ABACUS/{f}")
@@ -175,10 +183,10 @@ def convert_data(systems_train, systems_test=None, *,
             #frame_sorted=frame_data[np.lexsort(frame_data[:,::-1].T)] #sort cord by type
             sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
                         #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
-                        'cells': np.array([lattice_vector]), 'coords': [frame_data[:,1:]]}
+                        'cells': np.array([pre_args_new["lattice_vector"]]), 'coords': [frame_data[:,1:]]}
             #write STRU file
             with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
-                stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args))
+                stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args_new))
             #write INPUT file
             with open(f"{sys_paths[i]}/ABACUS/{f}/INPUT", "w") as input_file:
                 input_file.write(make_abacus_scf_input(pre_args))
