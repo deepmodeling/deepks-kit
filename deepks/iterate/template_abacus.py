@@ -51,6 +51,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "dft_functional": "pbe", 
     "basis_type": "lcao",
     "gamma_only": 1,
+    "k_points": [1, 1, 1, 0, 0, 0],
     "smearing":"gaussian",
     "sigma":0.02,
     "mixing_type": "pulay",
