@@ -83,6 +83,18 @@ SCF_FIELDS = [
           ["mo_energy_occ, orbital_ene_occ"],
           lambda mf: mf.mo_energy[mf.mo_occ>0],
           "(nframe, -1)"),
+    Field("o_base", # do not support UHF
+          ["mo_energy_occ, orbital_ene_occ"],
+          lambda mf: mf.mo_energy0()[np.argmax(mf.mo_energy[mf.mo_occ>0]):np.argmax(mf.mo_energy[mf.mo_occ>0])+2],
+          "(nframe, -1)"),
+    Field("o_tot", # do not support UHF
+          ["orbital, mo_energy_occ, orbital_ene_occ"],
+          lambda mf: mf.mo_energy[np.argmax(mf.mo_energy[mf.mo_occ>0]):np.argmax(mf.mo_energy[mf.mo_occ>0])+2],
+          "(nframe, -1)"),
+    Field("orbital_precalc", # do not support UHF
+          ["orbital_coef_precalc"],
+          lambda mf: mf.make_orbital_precalc(),
+          "(nframe, -1, natom, nproj)"),
     # below are fields that requires labels
     Field("l_e_ref", 
           ["e_ref", "lbl_e_ref", "label_e_ref", "le_ref"],
@@ -99,6 +111,12 @@ SCF_FIELDS = [
           lambda mf, **lbl: lbl["energy"] - mf.e_tot,
           "(nframe, 1)",
           ["energy"]),
+    Field("l_o_delta",
+          ["lo_delta", "lbl_o_delta", "label_o_delta", "lbl_od"],
+          lambda mf, **lbl: lbl["orbital"] -  (mf.mo_energy0()[np.argmax(mf.mo_energy[mf.mo_occ>0])+1] - mf.mo_energy0()[np.argmax(mf.mo_energy[mf.mo_occ>0])]), #last two terms gives current band gap, i.e. LUMO - HOMO
+          "(nframe, -1)",
+          "(nframe, -1)",
+          ["orbital"]),
 ]
 
 GRAD_FIELDS = [
