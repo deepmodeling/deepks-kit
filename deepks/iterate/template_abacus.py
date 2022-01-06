@@ -57,6 +57,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "mixing_beta": 0.4,
     "force": 0,
     "stress": 0,
+    "deepks_bandgap": 0,
     "out_descriptor":1,
     "lmax_descriptor":0,
     "deepks_scf":0,
@@ -317,7 +318,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",
 
 
 def gather_stats_abacus(systems_train, systems_test, 
-                train_dump, test_dump, force=0, **stat_args):
+                train_dump, test_dump, force=0, deepks_bandgap=0, **stat_args):
     sys_train_paths = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     sys_test_paths = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
     sys_train_paths = [get_sys_name(s) for s in sys_train_paths]
@@ -340,8 +341,11 @@ def gather_stats_abacus(systems_train, systems_test,
         d_list=[]
         e0_list=[]
         f0_list=[]
+        o0_list=[]
         e_list=[]
         f_list=[]
+        o_list=[]
+        op_list=[]
         gvx_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/dm_eig.npy")
@@ -357,7 +361,15 @@ def gather_stats_abacus(systems_train, systems_test,
                 f_list.append(fcs/2)
                 if os.path.exists(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy"):
                     gvx=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy")
-                    gvx_list.append(gvx)            
+                    gvx_list.append(gvx)
+            if(deepks_bandgap):
+                ocs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/o_base.npy")
+                o0_list.append(ocs/2)      
+                ocs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/o_tot.npy")
+                o_list.append(ocs/2)
+                if os.path.exists(f"{sys_train_paths[i]}/ABACUS/{f}/orbital_precalc.npy"):
+                    orbital_precalc=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/orbital_precalc.npy")
+                    op_list.append(orbital_precalc)             
         with open(f"{sys_train_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
@@ -383,6 +395,15 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{train_dump}/{sys_train_names[i]}/f_tot.npy", np.array(f_list))
             if len(gvx_list) > 0:
                 np.save(f"{train_dump}/{sys_train_names[i]}/grad_vx.npy", np.array(gvx_list))
+        if(deepks_bandgap): 
+            o_base=np.array(o0_list)
+            np.save(f"{train_dump}/{sys_train_names[i]}/o_base.npy", o_base)
+            o_ref=np.load(f"{sys_train_paths[i]}/orbital.npy")
+            np.save(f"{train_dump}/{sys_train_names[i]}/orbital.npy", o_ref)
+            np.save(f"{train_dump}/{sys_train_names[i]}/l_o_delta.npy", o_ref-o_base)
+            np.save(f"{train_dump}/{sys_train_names[i]}/o_tot.npy", np.array(o_list))
+            if len(op_list) > 0:
+                np.save(f"{train_dump}/{sys_train_names[i]}/orbital_precalc.npy", np.array(op_list))
     #concatenate data (test)
     if not os.path.exists(test_dump):
             os.mkdir(test_dump)
@@ -395,8 +416,11 @@ def gather_stats_abacus(systems_train, systems_test,
         d_list=[]
         e0_list=[]
         f0_list=[]
+        o0_list=[]
         e_list=[]
         f_list=[]
+        o_list=[]
+        op_list=[]
         gvx_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/dm_eig.npy")
@@ -413,6 +437,14 @@ def gather_stats_abacus(systems_train, systems_test,
                 if os.path.exists(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy"):
                     gvx=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy")
                     gvx_list.append(gvx)
+            if(deepks_bandgap):
+                ocs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/o_base.npy")
+                o0_list.append(ocs/2)      
+                ocs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/o_tot.npy")
+                o_list.append(ocs/2)
+                if os.path.exists(f"{sys_test_paths[i]}/ABACUS/{f}/orbital_precalc.npy"):
+                    orbital_precalc=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/orbital_precalc.npy")
+                    op_list.append(orbital_precalc)
         dm_eig=np.array(d_list)   #concatenate
         np.save(f"{test_dump}/{sys_test_names[i]}/dm_eig.npy", dm_eig)
         e_base=np.array(e0_list)
@@ -430,6 +462,15 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{test_dump}/{sys_test_names[i]}/f_tot.npy", np.array(f_list))
             if len(gvx_list)>0:
                 np.save(f"{test_dump}/{sys_test_names[i]}/grad_vx.npy", np.array(gvx_list))
+        if(deepks_bandgap): 
+            o_base=np.array(o0_list)
+            np.save(f"{test_dump}/{sys_test_names[i]}/o_base.npy", o_base)
+            o_ref=np.load(f"{sys_test_paths[i]}/orbital.npy")
+            np.save(f"{test_dump}/{sys_test_names[i]}/orbital.npy", o_ref)
+            np.save(f"{test_dump}/{sys_test_names[i]}/l_o_delta.npy", o_ref-o_base)
+            np.save(f"{test_dump}/{sys_test_names[i]}/o_tot.npy", np.array(o_list))
+            if len(op_list) > 0:
+                np.save(f"{test_dump}/{sys_test_names[i]}/orbital_precalc.npy", np.array(op_list))
         with open(f"{sys_test_paths[i]}/ABACUS/conv.log","r") as conv_log:
             conv=conv_log.read().split('\n')
             for ic in conv:
@@ -448,7 +489,7 @@ def gather_stats_abacus(systems_train, systems_test,
 
 
 def make_stat_scf_abacus(systems_train, systems_test=None, *, 
-                  train_dump="data_train", test_dump="data_test", force=0, 
+                  train_dump="data_train", test_dump="data_test", force=0, deepks_bandgap=0,
                   workdir='.', outlog="log.data", **stat_args):
     # follow same convention for systems as run_scf
     systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
@@ -463,7 +504,8 @@ def make_stat_scf_abacus(systems_train, systems_test=None, *,
         systems_test=systems_test,
         train_dump=train_dump,
         test_dump=test_dump,
-        force=force)
+        force=force,
+        deepks_bandgap=deepks_bandgap)
     # make task
     return PythonTask(
         gather_stats_abacus,

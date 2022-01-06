@@ -36,7 +36,7 @@ def make_abacus_scf_input(fp_params):
     if "dft_functional" in fp_params:
         ret += "dft_functional %s\n" % fp_params["dft_functional"]
     if "gamma_only" in fp_params:
-        assert(fp_params["gamma_only"] ==1 ) , "'gamma_only' should be 1. Multi-k algorithm will be supported after the KPT generator is completed."
+        assert(fp_params["gamma_only"] ==0 or fp_params["gamma_only"] ==1 ) , "'gamma_only' should be 0 or 1."
         ret+= "gamma_only %d\n" % fp_params["gamma_only"]  
     if "mixing_type" in fp_params:
         assert(fp_params["mixing_type"] in ["plain", "kerker", "pulay", "pulay-kerker", "broyden"])
@@ -78,6 +78,9 @@ def make_abacus_scf_input(fp_params):
     if "deepks_scf" in fp_params:
         assert(fp_params["deepks_scf"] == 0  or fp_params["deepks_scf"] == 1), "'deepks_scf' should be either 0 or 1."
         ret += "deepks_scf %d\n" % fp_params["deepks_scf"]
+    if "deepks_bandgap" in fp_params:
+        assert(fp_params["deepks_bandgap"] == 0  or fp_params["deepks_bandgap"] == 1), "'deepks_scf' should be either 0 or 1."
+        ret += "deepks_bandgap %d\n" % fp_params["deepks_bandgap"]
     if "model_file" in fp_params:
         ret += "model_file %s\n" % fp_params["model_file"]
     return ret
