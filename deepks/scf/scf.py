@@ -33,6 +33,15 @@ def t_make_pdm(dm, ovlp_shells):
                     for po in ovlp_shells]
     return pdm_shells
 
+def t_make_orbital_precalc(dm, ovlp_shells, mo_coeff):
+    """return projected density matrix by shell"""
+    # v stands for eigen values
+    pdm_shells = [dm.requires_grad_(True) for dm in t_make_pdm(dm, ovlp_shells)]
+    gvdm_shells = [t_batch_jacobian(t_shell_eig, dm, dm.shape[-1]) for dm in pdm_shells]
+    orbital_pdm_shells = [torch.einsum('rap,saq,ri,si->iapq', po, po, mo_coeff, mo_coeff) for po in ovlp_shells]
+    ips = [torch.einsum('iapq,avpq->iav', orbital_pdm, gvdm)
+                    for orbital_pdm, gvdm in zip(orbital_pdm_shells, gvdm_shells)]
+    return torch.cat(ips, dim=-1)
 
 def t_shell_eig(pdm):
     return torch.symeig(pdm, eigenvectors=True)[0]
@@ -111,6 +120,13 @@ class CorrMixin(abc.ABC):
 
     def nuc_grad_method0(self):
         return super().nuc_grad_method()
+
+    def mo_energy0(self):
+        dm = self.make_rdm1()
+        ec, vc = self.get_corr(dm)
+        mo_coeff = self.mo_coeff
+        orbital_delta = np.einsum('ri,rs,si->i', mo_coeff, vc, mo_coeff)
+        return self.mo_energy - orbital_delta
 
     def get_veff(self, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1):
         """original mean field potential + correction potential"""
@@ -222,6 +238,17 @@ class NetMixin(CorrMixin):
         else:
             return torch.cat([s.flatten(-2) for s in t_pdm_shells], 
                              dim=-1).detach().cpu().numpy()
+
+    def make_orbital_precalc(self, dm=None):
+        if dm is None:
+            dm = self.make_rdm1()
+        dm = np.asanyarray(dm)
+        if dm.ndim >= 3 and isinstance(self, scf.uhf.UHF):
+            dm = dm.sum(0)
+        t_dm = torch.from_numpy(dm).double()
+        t_mo_coeff = torch.from_numpy((self.mo_coeff[:,self.mol.nelectron//2] - self.mo_coeff[:,self.mol.nelectron//2-1])).double()
+        t_prec = t_make_orbital_precalc(t_dm, self._t_ovlp_shells, t_mo_coeff)
+        return t_prec.detach().cpu().numpy()
 
     def make_eig(self, dm=None):
         """return eigenvalues of projected density matrix"""
