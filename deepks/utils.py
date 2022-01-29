@@ -52,7 +52,8 @@ def get_shell_sec(basis):
         basis = load_basis(basis)
     shell_sec = []
     for l, c0, *cr in basis:
-        shell_sec.extend([2*l+1] * (len(c0)-1))
+        nb = c0 if isinstance(c0, int) else (len(c0)-1)
+        shell_sec.extend([2*l+1] * nb)
     return shell_sec
     
 
