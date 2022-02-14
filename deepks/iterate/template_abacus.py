@@ -44,7 +44,6 @@ DEFAULT_SCF_ARGS_ABACUS={
     "pp_files": ["upf"],  #atomic number order
     "proj_file": ["orb"], 
     "ntype": 1,
-    "nbands": 1,
     "ecutwfc": 50,
     "dr2": 1e-7,
     "niter": 50,
@@ -162,11 +161,13 @@ def convert_data(systems_train, systems_test=None, *,
         #atoms.sort() # type order
         types = np.unique(atoms) #index in type list
         ntype = types.size
+        pre_args.update({"ntype":ntype})
+        pre_args.update({"natoms":natoms})
         from collections import Counter
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
             os.mkdir(f"{sys_paths[i]}/ABACUS")
-        pre_args.update({"lattice_vector":lattice_vector});
+        pre_args.update({"lattice_vector":lattice_vector})
         #if "stru_abacus.yaml" exists, update STRU args in pre_args:
         pre_args_new=dict(zip(pre_args.keys(),pre_args.values()))
         if os.path.exists(f"{sys_paths[i]}/stru_abacus.yaml"):
@@ -187,6 +188,9 @@ def convert_data(systems_train, systems_test=None, *,
                         #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
                         'cells': np.array([pre_args_new["lattice_vector"]]), 'coords': [frame_data[:,1:]]}
             #write STRU file
+            pp_files = pre_args_new["pp_files"]
+            orb_files = pre_args_new["orb_files"]
+            
             with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
                 stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args_new))
             #write INPUT file
