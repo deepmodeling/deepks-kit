@@ -1,5 +1,6 @@
 import math
 import inspect
+import numpy as np
 import torch
 import torch.nn as nn 
 from torch.nn import functional as F
@@ -213,7 +214,7 @@ class CorrNet(nn.Module):
     @log_args('_init_args')
     def __init__(self, input_dim, hidden_sizes=(100,100,100), 
                  actv_fn='gelu', use_resnet=True, 
-                 embedding=None, proj_basis=None,
+                 embedding=None, proj_basis=None, elem_table=None,
                  input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
@@ -222,6 +223,9 @@ class CorrNet(nn.Module):
         self._pbas = load_basis(proj_basis)
         self._init_args["proj_basis"] = self._pbas
         self.shell_sec = None
+        # elem const
+        self.elem_table = elem_table
+        self.elem_dict = None if elem_table is None else dict(zip(*elem_table))
         # linear fitting
         self.linear = nn.Linear(input_dim, 1).double()
         # embedding net
@@ -264,6 +268,11 @@ class CorrNet(nn.Module):
         y = y / self.output_scale + l
         e = y.sum(-2) + self.energy_const
         return e
+    
+    def get_elem_const(self, elems):
+        if self.elem_dict is None:
+            return 0.
+        return sum(self.elem_dict[ee] for ee in elems)
 
     def set_normalization(self, shift=None, scale=None):
         dtype = self.input_scale.dtype
@@ -306,6 +315,9 @@ class CorrNet(nn.Module):
 
     def compile_save(self, filename, **kwargs):
         torch.jit.save(self.compile(**kwargs), filename)
+        if self.elem_table is not None:
+            np.savetxt(filename+".elemtab", 
+                np.stack(self.elem_table).T, fmt=["%i", "%.16f"])
     
     @staticmethod
     def load_dict(checkpoint, strict=False):

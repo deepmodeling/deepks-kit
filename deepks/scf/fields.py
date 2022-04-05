@@ -1,3 +1,4 @@
+import numpy as np
 from typing import List, Callable
 from dataclasses import dataclass, field
 
@@ -31,8 +32,17 @@ def isinbohr(mol):
 def _Lunit(mol):
     return (1. if isinbohr(mol) else BOHR)
 
+def atom_data(mol):
+    return np.concatenate(
+        [mol.atom_charges().reshape(-1,1), mol.atom_coords(unit='Bohr')], 
+        axis=1)
+
 
 SCF_FIELDS = [
+    Field("atom",
+          ["atoms", "mol", "molecule"],
+          lambda mf: atom_data(mf.mol),
+          "(nframe, natom, 4)"),
     Field("e_base", 
           ["ebase", "ene_base", "e0",
            "e_hf", "ehf", "ene_hf", 

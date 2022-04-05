@@ -199,8 +199,10 @@ class NetMixin(CorrMixin):
             dm = dm.sum(0)
         t_dm = torch.from_numpy(dm).double()
         t_ec, t_vc = t_get_corr(self.net, t_dm, self._t_ovlp_shells, with_vc=True)
-        return (t_ec.item() if t_ec.nelement()==1 else t_ec.detach().cpu().numpy(), 
-                t_vc.detach().cpu().numpy())
+        ec = t_ec.item() if t_ec.nelement()==1 else t_ec.detach().cpu().numpy()
+        vc = t_vc.detach().cpu().numpy()
+        ec = ec + self.net.get_elem_const(self.mol.atom_charges())
+        return ec, vc
 
     def nuc_grad_method(self):
         from deepks.scf.grad import build_grad

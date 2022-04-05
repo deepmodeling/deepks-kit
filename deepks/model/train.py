@@ -19,6 +19,18 @@ from deepks.utils import load_dirs
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+def fit_elem_const(g_reader, test_reader=None, elem_table=None, ridge_alpha=0.):
+    if elem_table is None:
+        elem_table = g_reader.compute_elem_const(ridge_alpha)
+    elem_list, elem_const = elem_table
+    g_reader.collect_elems(elem_list)
+    g_reader.subtract_elem_const(elem_const)
+    if test_reader is not None:
+        test_reader.collect_elems(elem_list)
+        test_reader.subtract_elem_const(elem_const)
+    return elem_table
+
+
 def preprocess(model, g_reader, 
                 preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
                 prefit=True, prefit_ridge=10, prefit_trainable=False):
@@ -201,7 +213,8 @@ def main(train_paths, test_paths=None,
          restart=None, ckpt_file=None, 
          model_args=None, data_args=None, 
          preprocess_args=None, train_args=None, 
-         proj_basis=None, seed=None, device=None):
+         proj_basis=None, fit_elem=False, 
+         seed=None, device=None):
    
     if seed is None: 
         seed = np.random.randint(0, 2**32)
@@ -233,12 +246,17 @@ def main(train_paths, test_paths=None,
 
     if restart is not None:
         model = CorrNet.load(restart)
+        if model.elem_table is not None:
+            fit_elem_const(g_reader, test_reader, model.elem_table)
     else:
         input_dim = g_reader.ndesc
         if model_args.get("input_dim", input_dim) != input_dim:
             print(f"# `input_dim` in `model_args` does not match data",
                   "({input_dim}).", "Use the one in data.", file=sys.stderr)
         model_args["input_dim"] = input_dim
+        if fit_elem:
+            elem_table = fit_elem_const(g_reader, test_reader)
+            model_args["elem_table"] = elem_table
         model = CorrNet(**model_args).double()
         
     preprocess(model, g_reader, **preprocess_args)
