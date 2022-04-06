@@ -13,7 +13,7 @@ except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepks.model.model import CorrNet
 from deepks.model.reader import GroupReader
-from deepks.utils import load_dirs
+from deepks.utils import load_dirs, load_elem_table
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -252,10 +252,13 @@ def main(train_paths, test_paths=None,
         input_dim = g_reader.ndesc
         if model_args.get("input_dim", input_dim) != input_dim:
             print(f"# `input_dim` in `model_args` does not match data",
-                  "({input_dim}).", "Use the one in data.", file=sys.stderr)
+                  f"({input_dim}).", "Use the one in data.", file=sys.stderr)
         model_args["input_dim"] = input_dim
         if fit_elem:
-            elem_table = fit_elem_const(g_reader, test_reader)
+            elem_table = model_args.get("elem_table", None)
+            if isinstance(elem_table, str):
+                elem_table = load_elem_table(elem_table)
+            elem_table = fit_elem_const(g_reader, test_reader, elem_table)
             model_args["elem_table"] = elem_table
         model = CorrNet(**model_args).double()
         

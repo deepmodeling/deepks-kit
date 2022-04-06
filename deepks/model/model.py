@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn 
 from torch.nn import functional as F
 from deepks.utils import load_basis, get_shell_sec
+from deepks.utils import load_elem_table, save_elem_table
 
 SCALE_EPS = 1e-8
 
@@ -224,6 +225,9 @@ class CorrNet(nn.Module):
         self._init_args["proj_basis"] = self._pbas
         self.shell_sec = None
         # elem const
+        if isinstance(elem_table, str):
+            elem_table = load_elem_table(elem_table)
+            self._init_args["elem_table"] = elem_table
         self.elem_table = elem_table
         self.elem_dict = None if elem_table is None else dict(zip(*elem_table))
         # linear fitting
@@ -316,8 +320,7 @@ class CorrNet(nn.Module):
     def compile_save(self, filename, **kwargs):
         torch.jit.save(self.compile(**kwargs), filename)
         if self.elem_table is not None:
-            np.savetxt(filename+".elemtab", 
-                np.stack(self.elem_table).T, fmt=["%i", "%.16f"])
+            save_elem_table(filename+".elemtab", self.elem_table)
     
     @staticmethod
     def load_dict(checkpoint, strict=False):
