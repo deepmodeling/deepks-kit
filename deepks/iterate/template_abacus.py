@@ -155,6 +155,8 @@ def convert_data(systems_train, systems_test=None, *,
     #init sys_data (dpdata)
     for i, sset in enumerate(train_sets+test_sets):
         atom_data = np.load(f"{sys_paths[i]}/atom.npy")
+        if os.path.isfile(f"{sys_paths[i]}/cell.npy"):
+            cell_data = np.load(f"{sys_paths[i]}/cell.npy")
         nframes = atom_data.shape[0]
         natoms = atom_data.shape[1]
         atoms = atom_data[1,:,0]
@@ -187,6 +189,9 @@ def convert_data(systems_train, systems_test=None, *,
             sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
                         #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
                         'cells': np.array([pre_args_new["lattice_vector"]]), 'coords': [frame_data[:,1:]]}
+            if os.path.isfile(f"{sys_paths[i]}/cell.npy"):
+                sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()),
+                        'cells': [cell_data[f]], 'coords': [frame_data[:,1:]]}
             #write STRU file
             pp_files = pre_args_new["pp_files"]
             orb_files = pre_args_new["orb_files"]
