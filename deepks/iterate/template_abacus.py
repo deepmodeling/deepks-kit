@@ -163,8 +163,6 @@ def convert_data(systems_train, systems_test=None, *,
         #atoms.sort() # type order
         types = np.unique(atoms) #index in type list
         ntype = types.size
-        pre_args.update({"ntype":ntype})
-        pre_args.update({"natoms":natoms})
         from collections import Counter
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
@@ -193,9 +191,6 @@ def convert_data(systems_train, systems_test=None, *,
                 sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()),
                         'cells': [cell_data[f]], 'coords': [frame_data[:,1:]]}
             #write STRU file
-            pp_files = pre_args_new["pp_files"]
-            orb_files = pre_args_new["orb_files"]
-            
             with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
                 stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args_new))
             #write INPUT file
