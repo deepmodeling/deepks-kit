@@ -44,7 +44,6 @@ DEFAULT_SCF_ARGS_ABACUS={
     "pp_files": ["upf"],  #atomic number order
     "proj_file": ["orb"], 
     "ntype": 1,
-    "nbands": 1,
     "ecutwfc": 50,
     "dr2": 1e-7,
     "niter": 50,
@@ -156,6 +155,8 @@ def convert_data(systems_train, systems_test=None, *,
     #init sys_data (dpdata)
     for i, sset in enumerate(train_sets+test_sets):
         atom_data = np.load(f"{sys_paths[i]}/atom.npy")
+        if os.path.isfile(f"{sys_paths[i]}/box.npy"):
+            cell_data = np.load(f"{sys_paths[i]}/box.npy")
         nframes = atom_data.shape[0]
         natoms = atom_data.shape[1]
         atoms = atom_data[1,:,0]
@@ -166,7 +167,7 @@ def convert_data(systems_train, systems_test=None, *,
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
             os.mkdir(f"{sys_paths[i]}/ABACUS")
-        pre_args.update({"lattice_vector":lattice_vector});
+        pre_args.update({"lattice_vector":lattice_vector})
         #if "stru_abacus.yaml" exists, update STRU args in pre_args:
         pre_args_new=dict(zip(pre_args.keys(),pre_args.values()))
         if os.path.exists(f"{sys_paths[i]}/stru_abacus.yaml"):
@@ -186,6 +187,9 @@ def convert_data(systems_train, systems_test=None, *,
             sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
                         #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
                         'cells': np.array([pre_args_new["lattice_vector"]]), 'coords': [frame_data[:,1:]]}
+            if os.path.isfile(f"{sys_paths[i]}/box.npy"):
+                sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()),
+                        'cells': [cell_data[f]], 'coords': [frame_data[:,1:]]}
             #write STRU file
             with open(f"{sys_paths[i]}/ABACUS/{f}/STRU", "w") as stru_file:
                 stru_file.write(make_abacus_scf_stru(sys_data, pp_files, pre_args_new))
