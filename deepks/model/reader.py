@@ -319,8 +319,10 @@ class GroupReader(object) :
         all_nelem = all_nelem[lexidx]
         all_ec = all_ec[lexidx]
         # group by nelem
-        grp_nelem, sidx = np.unique(all_nelem, return_index=True, axis=0)
-        grp_ec = np.array(list(map(np.mean, np.split(all_ec, np.sort(sidx)[1:]))))
+        _, sidx = np.unique(all_nelem, return_index=True, axis=0)
+        sidx = np.sort(sidx)
+        grp_nelem = all_nelem[sidx]
+        grp_ec = np.array(list(map(np.mean, np.split(all_ec, sidx[1:]))))
         if ridge_alpha <= 0:
             elem_const, _res, _rank, _sing = np.linalg.lstsq(grp_nelem, grp_ec, None)
         else:
