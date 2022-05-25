@@ -74,6 +74,7 @@ def t_make_grad_eig_x(mol, dm, ovlp_shells, ipov_shells):
 def t_grad_corr(mol, model, dm, ovlp_shells, ipov_shells, atmlst=None):
     if atmlst is None:
         atmlst = list(range(mol.natm))
+    ralst = [ii for ii in range(mol.natm) if not mol.elements[ii].startswith("X")]
     dec = torch.zeros([len(atmlst), 3], dtype=float)
     # \partial E / \partial (D^I_rl)_mm' by shells
     gedm_shells = t_make_grad_e_pdm(model, dm, ovlp_shells)
@@ -83,9 +84,12 @@ def t_grad_corr(mol, model, dm, ovlp_shells, ipov_shells, atmlst=None):
         # contribution of atomic orbitals for all atom
         gouter = -torch.einsum('xrap,apq,saq->xrs', govx, gedm, ovlp) * 2
         for k, ia in enumerate(atmlst):
+            if ia not in ralst:
+                continue
             bg, ed = mol.aoslice_by_atom()[ia, 2:]
+            ira = ralst.index(ia)
             # contribution of | \nabla alpha^I_rlm > and < \nabla alpha^I_rlm |
-            dec[k] += torch.einsum('xpq,pq->x', ginner[:,ia], gedm[ia])
+            dec[k] += torch.einsum('xpq,pq->x', ginner[:,ira], gedm[ira])
             # contribution of < \nabla mol_ao | and | \nabla mol_ao >
             dec[k] += torch.einsum('xrs,rs->x', gouter[:,bg:ed], dm[bg:ed])
     return dec
@@ -135,7 +139,7 @@ class NetGradMixin(CorrGradMixin):
         t_proj_ipovlp = torch.from_numpy(mf.proj_intor("int1e_ipovlp")).double()
         # < \nabla mol_ao | alpha^I_rlm > by shells
         self._t_ipov_shells = torch.split(
-            t_proj_ipovlp.reshape(3, self.mol.nao, self.mol.natm, -1), 
+            t_proj_ipovlp.reshape(3, self.mol.nao, self.base._pmol.natm, -1), 
             self.base._shell_sec, -1)
 
     def grad_corr(self, dm=None, atmlst=None):

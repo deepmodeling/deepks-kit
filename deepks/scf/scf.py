@@ -87,8 +87,10 @@ def t_make_grad_eig_dm(dm, ovlp_shells):
 
 def gen_proj_mol(mol, basis) :
     mole_coords = mol.atom_coords(unit="Ang")
+    mole_ele = mol.elements
     test_mol = gto.Mole()
-    test_mol.atom = [["Ne", coord] for coord in mole_coords]
+    test_mol.atom = [["X", coord] for coord, ele in zip(mole_coords, mole_ele)
+                     if not ele.startswith("X")]
     test_mol.basis = basis
     test_mol.build(0,0,unit="Ang")
     return test_mol
@@ -205,7 +207,7 @@ class NetMixin(CorrMixin):
         t_ec, t_vc = t_get_corr(self.net, t_dm, self._t_ovlp_shells, with_vc=True)
         ec = t_ec.item() if t_ec.nelement()==1 else t_ec.detach().cpu().numpy()
         vc = t_vc.detach().cpu().numpy()
-        ec = ec + self.net.get_elem_const(self.mol.atom_charges())
+        ec = ec + self.net.get_elem_const(filter(None, self.mol.atom_charges()))
         return ec, vc
 
     def nuc_grad_method(self):
@@ -248,7 +250,7 @@ class NetMixin(CorrMixin):
     def proj_ovlp(self):
         """overlap between origin and projected basis, reshaped"""
         nao = self.mol.nao
-        natm = self.mol.natm
+        natm = self._pmol.natm
         pnao = self._pmol.nao
         proj = self.proj_intor("int1e_ovlp")
         # return shape [nao x natom x nproj]
