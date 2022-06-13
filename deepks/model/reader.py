@@ -25,6 +25,7 @@ class Reader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
                  f_name="l_f_delta", gvx_name="grad_vx", 
+                 s_name="l_s_delta", gvepsl_name="grad_vepsl", 
                  o_name="l_o_delta", op_name="orbital_precalc",
                  eg_name="eg_base", gveg_name="grad_veg", 
                  gldv_name="grad_ldv", conv_name="conv", **kwargs):
@@ -32,9 +33,11 @@ class Reader(object):
         self.batch_size = batch_size
         self.e_path = self.check_exist(e_name+".npy")
         self.f_path = self.check_exist(f_name+".npy")
+        self.s_path = self.check_exist(s_name+".npy")
         self.o_path = self.check_exist(o_name+".npy")
         self.d_path = self.check_exist(d_name+".npy")
         self.gvx_path = self.check_exist(gvx_name+".npy")
+        self.gvepsl_path = self.check_exist(gvepsl_name+".npy")
         self.op_path = self.check_exist(op_name+".npy")
         self.eg_path = self.check_exist(eg_name+".npy")
         self.gveg_path = self.check_exist(gveg_name+".npy")
@@ -95,6 +98,13 @@ class Reader(object):
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
                   .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
+        if self.s_path is not None and self.gvepsl_path is not None:
+            self.t_data["lb_s"] = torch.tensor(
+                np.load(self.s_path)\
+                  .reshape(raw_nframes, 6)[conv])
+            self.t_data["gvepsl"] = torch.tensor(
+                np.load(self.gvepsl_path)\
+                  .reshape(raw_nframes, 6, self.natm, self.ndesc)[conv])
         if self.o_path is not None and self.op_path is not None:
             self.t_data["lb_o"] = torch.tensor(
                 np.load(self.o_path)\

@@ -46,21 +46,21 @@ DEFAULT_SCF_ARGS_ABACUS={
     "ntype": 1,
     "nbands": 1,
     "ecutwfc": 50,
-    "dr2": 1e-7,
-    "niter": 50,
+    "scf_thr": 1e-7,
+    "scf_nmax": 50,
     "dft_functional": "pbe", 
     "basis_type": "lcao",
     "gamma_only": 1,
     "k_points": [1, 1, 1, 0, 0, 0],
-    "smearing":"gaussian",
-    "sigma":0.02,
+    "smearing_method":"gaussian",
+    "smearing_sigma":0.02,
     "mixing_type": "pulay",
     "mixing_beta": 0.4,
-    "force": 0,
-    "stress": 0,
+    "cal_force": 0,
+    "cal_stress": 0,
     "deepks_bandgap": 0,
-    "out_descriptor":1,
-    "lmax_descriptor":0,
+    "deepks_out_labels":1,
+    "deepks_descriptor_lmax":0,
     "deepks_scf":0,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
@@ -319,7 +319,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",
 
 
 def gather_stats_abacus(systems_train, systems_test, 
-                train_dump, test_dump, force=0, deepks_bandgap=0, **stat_args):
+                train_dump, test_dump, cal_force=0, cal_stress=0, deepks_bandgap=0, **stat_args):
     sys_train_paths = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
     sys_test_paths = [os.path.abspath(s) for s in load_sys_paths(systems_test)]
     sys_train_paths = [get_sys_name(s) for s in sys_train_paths]
@@ -342,12 +342,15 @@ def gather_stats_abacus(systems_train, systems_test,
         d_list=[]
         e0_list=[]
         f0_list=[]
+        s0_list=[]
         o0_list=[]
         e_list=[]
         f_list=[]
+        s_list=[]
         o_list=[]
         op_list=[]
         gvx_list=[]
+        gvepsl_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/dm_eig.npy")
             d_list.append(des)
@@ -355,7 +358,7 @@ def gather_stats_abacus(systems_train, systems_test,
             e0_list.append(ene/2)    #Ry to Hartree
             ene = np.load(f"{sys_train_paths[i]}/ABACUS/{f}/e_tot.npy")
             e_list.append(ene/2)
-            if(force):
+            if(cal_force):
                 fcs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/f_base.npy")
                 f0_list.append(fcs/2)    #Ry to Hartree
                 fcs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/f_tot.npy")
@@ -363,6 +366,14 @@ def gather_stats_abacus(systems_train, systems_test,
                 if os.path.exists(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy"):
                     gvx=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vx.npy")
                     gvx_list.append(gvx)
+            if(cal_stress):
+                scs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/s_base.npy")
+                s0_list.append(scs/2)    #Ry to Hartree
+                scs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/s_tot.npy")
+                s_list.append(scs/2)
+                if os.path.exists(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vepsl.npy"):
+                    gvepsl=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/grad_vepsl.npy")
+                    gvepsl_list.append(gvepsl)
             if(deepks_bandgap):
                 ocs=np.load(f"{sys_train_paths[i]}/ABACUS/{f}/o_base.npy")
                 o0_list.append(ocs/2)      
@@ -387,7 +398,7 @@ def gather_stats_abacus(systems_train, systems_test,
         np.save(f"{train_dump}/{sys_train_names[i]}/energy.npy", e_ref)
         np.save(f"{train_dump}/{sys_train_names[i]}/l_e_delta.npy", e_ref-e_base)
         np.save(f"{train_dump}/{sys_train_names[i]}/e_tot.npy", np.array(e_list))
-        if(force): 
+        if(cal_force): 
             f_base=np.array(f0_list)
             np.save(f"{train_dump}/{sys_train_names[i]}/f_base.npy", f_base)
             f_ref=np.load(f"{sys_train_paths[i]}/force.npy")
@@ -396,6 +407,15 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{train_dump}/{sys_train_names[i]}/f_tot.npy", np.array(f_list))
             if len(gvx_list) > 0:
                 np.save(f"{train_dump}/{sys_train_names[i]}/grad_vx.npy", np.array(gvx_list))
+        if(cal_stress): 
+            s_base=np.array(s0_list)
+            np.save(f"{train_dump}/{sys_train_names[i]}/s_base.npy", s_base)
+            s_ref=np.load(f"{sys_train_paths[i]}/stress.npy")
+            np.save(f"{train_dump}/{sys_train_names[i]}/stress.npy", s_ref)
+            np.save(f"{train_dump}/{sys_train_names[i]}/l_s_delta.npy", s_ref-s_base)
+            np.save(f"{train_dump}/{sys_train_names[i]}/s_tot.npy", np.array(s_list))
+            if len(gvepsl_list) > 0:
+                np.save(f"{train_dump}/{sys_train_names[i]}/grad_vepsl.npy", np.array(gvepsl_list))
         if(deepks_bandgap): 
             o_base=np.array(o0_list)
             np.save(f"{train_dump}/{sys_train_names[i]}/o_base.npy", o_base)
@@ -417,12 +437,15 @@ def gather_stats_abacus(systems_train, systems_test,
         d_list=[]
         e0_list=[]
         f0_list=[]
+        s0_list=[]
         o0_list=[]
         e_list=[]
         f_list=[]
+        s_list=[]
         o_list=[]
         op_list=[]
         gvx_list=[]
+        gvepsl_list=[]
         for f in range(nframes):
             des = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/dm_eig.npy")
             d_list.append(des)
@@ -430,7 +453,7 @@ def gather_stats_abacus(systems_train, systems_test,
             e0_list.append(ene/2)    #Ry to Hartree
             ene = np.load(f"{sys_test_paths[i]}/ABACUS/{f}/e_tot.npy")
             e_list.append(ene/2)
-            if(force):
+            if(cal_force):
                 fcs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/f_base.npy")
                 f0_list.append(fcs/2)    #Ry to Hartree
                 fcs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/f_tot.npy")
@@ -438,6 +461,14 @@ def gather_stats_abacus(systems_train, systems_test,
                 if os.path.exists(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy"):
                     gvx=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vx.npy")
                     gvx_list.append(gvx)
+            if(cal_stress):
+                scs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/s_base.npy")
+                s0_list.append(scs/2)    #Ry to Hartree
+                scs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/s_tot.npy")
+                s_list.append(scs/2)
+                if os.path.exists(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vepsl.npy"):
+                    gvepsl=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/grad_vepsl.npy")
+                    gvepsl_list.append(gvepsl)
             if(deepks_bandgap):
                 ocs=np.load(f"{sys_test_paths[i]}/ABACUS/{f}/o_base.npy")
                 o0_list.append(ocs/2)      
@@ -454,7 +485,7 @@ def gather_stats_abacus(systems_train, systems_test,
         np.save(f"{test_dump}/{sys_test_names[i]}/energy.npy", e_ref)
         np.save(f"{test_dump}/{sys_test_names[i]}/l_e_delta.npy", e_ref-e_base)
         np.save(f"{test_dump}/{sys_test_names[i]}/e_tot.npy", np.array(e_list))
-        if(force): 
+        if(cal_force): 
             f_base=np.array(f0_list)
             np.save(f"{test_dump}/{sys_test_names[i]}/f_base.npy", f_base)
             f_ref=np.load(f"{sys_test_paths[i]}/force.npy")
@@ -463,6 +494,15 @@ def gather_stats_abacus(systems_train, systems_test,
             np.save(f"{test_dump}/{sys_test_names[i]}/f_tot.npy", np.array(f_list))
             if len(gvx_list)>0:
                 np.save(f"{test_dump}/{sys_test_names[i]}/grad_vx.npy", np.array(gvx_list))
+        if(cal_stress): 
+            s_base=np.array(s0_list)
+            np.save(f"{test_dump}/{sys_test_names[i]}/s_base.npy", s_base)
+            s_ref=np.load(f"{sys_test_paths[i]}/stress.npy")
+            np.save(f"{test_dump}/{sys_test_names[i]}/stress.npy", s_ref)
+            np.save(f"{test_dump}/{sys_test_names[i]}/l_s_delta.npy", s_ref-s_base)
+            np.save(f"{test_dump}/{sys_test_names[i]}/s_tot.npy", np.array(s_list))
+            if len(gvepsl_list)>0:
+                np.save(f"{test_dump}/{sys_test_names[i]}/grad_vepsl.npy", np.array(gvepsl_list))
         if(deepks_bandgap): 
             o_base=np.array(o0_list)
             np.save(f"{test_dump}/{sys_test_names[i]}/o_base.npy", o_base)
@@ -490,7 +530,7 @@ def gather_stats_abacus(systems_train, systems_test,
 
 
 def make_stat_scf_abacus(systems_train, systems_test=None, *, 
-                  train_dump="data_train", test_dump="data_test", force=0, deepks_bandgap=0,
+                  train_dump="data_train", test_dump="data_test", cal_force=0, cal_stress=0, deepks_bandgap=0,
                   workdir='.', outlog="log.data", **stat_args):
     # follow same convention for systems as run_scf
     systems_train = [os.path.abspath(s) for s in load_sys_paths(systems_train)]
@@ -505,7 +545,8 @@ def make_stat_scf_abacus(systems_train, systems_test=None, *,
         systems_test=systems_test,
         train_dump=train_dump,
         test_dump=test_dump,
-        force=force,
+        cal_force=cal_force,
+        cal_stress=cal_stress,
         deepks_bandgap=deepks_bandgap)
     # make task
     return PythonTask(
