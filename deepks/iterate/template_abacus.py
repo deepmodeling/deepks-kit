@@ -44,6 +44,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "pp_files": ["upf"],  #atomic number order
     "proj_file": ["orb"], 
     "ntype": 1,
+    "nbands": 1,
     "ecutwfc": 50,
     "scf_thr": 1e-7,
     "scf_nmax": 50,
@@ -124,7 +125,7 @@ def make_scf_abacus(systems_train, systems_test=None, *,
 ### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
                 no_model=True, model_file=None, pp_files=[], 
-                lattice_vector=[np.eye(3, dtype=int)],
+                lattice_vector=np.eye(3, dtype=int),
                 abacus_path="/usr/local/bin/ABACUS.mpi",
                 run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
     #trace a model (if necessary)
@@ -167,7 +168,7 @@ def convert_data(systems_train, systems_test=None, *,
         nta = Counter(atoms) #dict {itype: nta}, natom in each type
         if not os.path.exists(f"{sys_paths[i]}/ABACUS"):
             os.mkdir(f"{sys_paths[i]}/ABACUS")
-        pre_args.update({"lattice_vector":lattice_vector})
+        #pre_args.update({"lattice_vector":lattice_vector})
         #if "stru_abacus.yaml" exists, update STRU args in pre_args:
         pre_args_new=dict(zip(pre_args.keys(),pre_args.values()))
         if os.path.exists(f"{sys_paths[i]}/stru_abacus.yaml"):
@@ -186,7 +187,7 @@ def convert_data(systems_train, systems_test=None, *,
             #frame_sorted=frame_data[np.lexsort(frame_data[:,::-1].T)] #sort cord by type
             sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()), 
                         #'cells': np.array([lattice_vector]), 'coords': [frame_sorted[:,1:]]}
-                        'cells': np.array([pre_args_new["lattice_vector"]]), 'coords': [frame_data[:,1:]]}
+                        'cells': np.array([lattice_vector]), 'coords': [frame_data[:,1:]]}
             if os.path.isfile(f"{sys_paths[i]}/box.npy"):
                 sys_data={'atom_names':[TYPE_NAME[it] for it in nta.keys()], 'atom_numbs': list(nta.values()),
                         'cells': [cell_data[f]], 'coords': [frame_data[:,1:]]}
@@ -415,6 +416,7 @@ def gather_stats_abacus(systems_train, systems_test,
             s_base=np.array(s0_list)
             np.save(f"{train_dump}/{sys_train_names[i]}/s_base.npy", s_base)
             s_ref=np.load(f"{sys_train_paths[i]}/stress.npy")
+            s_ref=s_ref[:,[0,1,2,4,5,8]] #only train the upper-triangle part
             np.save(f"{train_dump}/{sys_train_names[i]}/stress.npy", s_ref)
             np.save(f"{train_dump}/{sys_train_names[i]}/l_s_delta.npy", s_ref-s_base)
             np.save(f"{train_dump}/{sys_train_names[i]}/s_tot.npy", np.array(s_list))
@@ -502,6 +504,7 @@ def gather_stats_abacus(systems_train, systems_test,
             s_base=np.array(s0_list)
             np.save(f"{test_dump}/{sys_test_names[i]}/s_base.npy", s_base)
             s_ref=np.load(f"{sys_test_paths[i]}/stress.npy")
+            s_ref=s_ref[:,[0,1,2,4,5,8]] #only train the upper-triangle part
             np.save(f"{test_dump}/{sys_test_names[i]}/stress.npy", s_ref)
             np.save(f"{test_dump}/{sys_test_names[i]}/l_s_delta.npy", s_ref-s_base)
             np.save(f"{test_dump}/{sys_test_names[i]}/s_tot.npy", np.array(s_list))

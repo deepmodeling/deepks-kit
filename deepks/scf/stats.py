@@ -135,7 +135,8 @@ def load_stat(systems, dump_dir,
         if with_s:
             try:
                 rs = load_array(get_with_prefix(s_name, rbase, ".npy"))
-                ls = load_array(get_with_prefix("stress", lbase, ".npy")).reshape(rs.shape)
+                ls = load_array(get_with_prefix("stress", lbase, ".npy"))[:,[0,1,2,4,5,8]] #extract the upper-triangle part
+                ls = ls.reshape(rs.shape)
                 s_err.append(np.abs(ls - rs))
             except FileNotFoundError as e:
                 print("Warning! stress file not found:", e, file=sys.stderr)
@@ -178,8 +179,8 @@ def load_stat_grouped(systems, dump_dir=".",
     if with_s:
         s_res = load_array(get_with_prefix(s_name, dump_dir, ".npy"))
         s_lbl = np.concatenate([
-            load_array(get_with_prefix("stress", lb, ".npy")) for lb in lbases
-        ], 0).reshape(s_res.shape)
+            load_array(get_with_prefix("stress", lb, ".npy"))[:,[0,1,2,4,5,8]] for lb in lbases
+        ], 0).reshape(s_res.shape) #extract the upper-triangle part
         s_err = s_lbl - s_res
     if with_o:
         o_res = load_array(get_with_prefix(o_name, dump_dir, ".npy"))
