@@ -25,11 +25,11 @@ def make_abacus_scf_input(fp_params):
     if "ecutwfc" in fp_params:
         assert(fp_params["ecutwfc"] >= 0) ,  "'ntype' should be non-negative."
         ret += "ecutwfc %f\n" % fp_params["ecutwfc"]
-    if "dr2" in fp_params:
-        ret += "dr2 %e\n" % fp_params["dr2"]
-    if "niter" in fp_params:
-        assert(fp_params['niter'] >= 0 and type(fp_params["niter"])== int), "'niter' should be a positive integer."
-        ret += "niter %d\n" % fp_params["niter"]    
+    if "scf_thr" in fp_params:
+        ret += "scf_thr %e\n" % fp_params["scf_thr"]
+    if "scf_nmax" in fp_params:
+        assert(fp_params['scf_nmax'] >= 0 and type(fp_params["scf_nmax"])== int), "'scf_nmax' should be a positive integer."
+        ret += "scf_nmax %d\n" % fp_params["scf_nmax"]    
     if "basis_type" in fp_params:
         assert(fp_params["basis_type"] in ["pw", "lcao", "lcao_in_pw"]) , "'basis_type' must in 'pw', 'lcao' or 'lcao_in_pw'."
         ret+= "basis_type %s\n" % fp_params["basis_type"]
@@ -56,25 +56,25 @@ def make_abacus_scf_input(fp_params):
     if "ks_solver" in fp_params:
         assert(fp_params["ks_solver"] in ["cg", "dav", "lapack", "genelpa", "hpseps", "scalapack_gvx"]), "'ks_sover' should in 'cgx', 'dav', 'lapack', 'genelpa', 'hpseps', 'scalapack_gvx'."
         ret += "ks_solver %s\n" % fp_params["ks_solver"]
-    if "smearing" in fp_params:
-        assert(fp_params["smearing"] in ["gaussian", "fd", "fixed", "mp", "mp2", "mv"]), "'smearing' should in 'gaussian', 'fd', 'fixed', 'mp', 'mp2', 'mv'. "
-        ret += "smearing %s\n" % fp_params["smearing"]
-    if "sigma" in fp_params:
-        assert(fp_params["sigma"] >= 0), "'sigma' should be non-negative."
-        ret += "sigma %f\n" % fp_params["sigma"]
-    if "force" in fp_params:
-        assert(fp_params["force"] == 0  or fp_params["force"] == 1), "'force' should be either 0 or 1."
-        ret += "force %d\n" % fp_params["force"]
-    if "stress" in fp_params:
-        assert(fp_params["stress"] == 0  or fp_params["stress"] == 1), "'stress' should be either 0 or 1."
-        ret += "stress %d\n" % fp_params["stress"]    
+    if "smearing_method" in fp_params:
+        assert(fp_params["smearing_method"] in ["gaussian", "fd", "fixed", "mp", "mp2", "mv"]), "'smearing' should in 'gaussian', 'fd', 'fixed', 'mp', 'mp2', 'mv'. "
+        ret += "smearing_method %s\n" % fp_params["smearing_method"]
+    if "smearing_sigma" in fp_params:
+        assert(fp_params["smearing_sigma"] >= 0), "'smearing_sigma' should be non-negative."
+        ret += "smearing_sigma %f\n" % fp_params["smearing_sigma"]
+    if "cal_force" in fp_params:
+        assert(fp_params["cal_force"] == 0  or fp_params["cal_force"] == 1), "'cal_force' should be either 0 or 1."
+        ret += "cal_force %d\n" % fp_params["cal_force"]
+    if "cal_stress" in fp_params:
+        assert(fp_params["cal_stress"] == 0  or fp_params["cal_stress"] == 1), "'cal_stress' should be either 0 or 1."
+        ret += "cal_stress %d\n" % fp_params["cal_stress"]    
     #paras for deepks
-    if "out_descriptor" in fp_params:
-        assert(fp_params["out_descriptor"] == 0 or fp_params["out_descriptor"] == 1), "'out_descriptor' should be either 0 or 1."
-        ret += "out_descriptor %d\n" % fp_params["out_descriptor"]
-    if "lmax_descriptor" in fp_params:
-        assert(fp_params["lmax_descriptor"] >= 0),  "'lmax_descriptor' should be  a positive integer."
-        ret += "lmax_descriptor %d\n" % fp_params["lmax_descriptor"]
+    if "deepks_out_labels" in fp_params:
+        assert(fp_params["deepks_out_labels"] == 0 or fp_params["deepks_out_labels"] == 1), "'deepks_out_labels' should be either 0 or 1."
+        ret += "deepks_out_labels %d\n" % fp_params["deepks_out_labels"]
+    if "deepks_descriptor_lmax" in fp_params:
+        assert(fp_params["deepks_descriptor_lmax"] >= 0),  "'deepks_descriptor_lmax' should be  a positive integer."
+        ret += "deepks_descriptor_lmax %d\n" % fp_params["deepks_descriptor_lmax"]
     if "deepks_scf" in fp_params:
         assert(fp_params["deepks_scf"] == 0  or fp_params["deepks_scf"] == 1), "'deepks_scf' should be either 0 or 1."
         ret += "deepks_scf %d\n" % fp_params["deepks_scf"]
@@ -82,7 +82,7 @@ def make_abacus_scf_input(fp_params):
         assert(fp_params["deepks_bandgap"] == 0  or fp_params["deepks_bandgap"] == 1), "'deepks_scf' should be either 0 or 1."
         ret += "deepks_bandgap %d\n" % fp_params["deepks_bandgap"]
     if "model_file" in fp_params:
-        ret += "model_file %s\n" % fp_params["model_file"]
+        ret += "deepks_model %s\n" % fp_params["model_file"]
     return ret
 
 def make_abacus_scf_stru(sys_data, fp_pp_files, fp_params):
@@ -127,7 +127,7 @@ def make_abacus_scf_stru(sys_data, fp_pp_files, fp_params):
         assert(len(fp_params["orb_files"])==len(atom_names))
         for iatom in range(len(atom_names)):
             ret += fp_params["orb_files"][iatom] +"\n"
-    if "deepks_scf" in fp_params and fp_params["out_descriptor"]==1:
+    if "deepks_scf" in fp_params and fp_params["deepks_out_labels"]==1:
         ret +="\nNUMERICAL_DESCRIPTOR\n"
         ret +=fp_params["proj_file"][0]+"\n"
     return ret
