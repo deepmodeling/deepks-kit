@@ -20,19 +20,19 @@ or directly
 ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be divided into 3 categories:
 
 - Paras for running ABACUS:
-   - `abacus_path`: the path of ABACUS binary executable file (ABACUS.mpi)
+   - `abacus_path`: the path of ABACUS binary executable file (ABACUS) 
    - `run_cmd`: command to run ABACUS, usually `mpirun`
 
 - Paras for `INPUT` file:
     - `ntype`: number of atom types
     - `nbands`: total number of bands to calculate
     - `ecutwfc`: energy cutoff for plane wave functions
-    - `dr2`: the charge density error threshold between two sequential density from electronic iterations to judge convergence
-    - `niter`: max scf steps
+    - `scf_thr`: the charge density error threshold between two sequential density from electronic iterations to judge convergence
+    - `scf_nmax`: max scf steps
     - `dft_functional`: Exchange-Correlation functional, which can be 'lda', 'gga', 'pbe', etc
     - `gamma_only`: 1 for gamma-point, 0 for multi-kpoints
-    - `force`: set 1 to calculate force, default 0
-    - `stress`: set 1 to calculate stress, default 0
+    - `cal_force`: set 1 to calculate force, default 0
+    - `cal_stress`: set 1 to calculate stress, default 0
 
 - Paras for `STRU` file:
     - `orb_files`: paths of atom orbitals, a list of str with the order same as the order of atom types in `atoms.npy`
@@ -70,7 +70,7 @@ After SCF calculation, the following result files will be saved in `iter.init/00
 
 - descriptor (`dm_eig`) 
 - energy labels (`l_e_delta`)
-- force labels (`l_f_delta`) , only when `force = 1 `
+- force labels (`l_f_delta`) , only when `cal_force = 1 `
 
 Set `n_iter` to a positive integer to train a self consistent model, following the iterative approach described in [DeePKS paper](https://arxiv.org/pdf/2008.00167.pdf). In scf calculation , a trained model file `model.pth` will be loaded into ABACUS. And beside above result files, a `grad_vx` file will appear in `iter.xx/00.scf/data_train(test)` when force label is used in training.
 
@@ -90,3 +90,5 @@ For each iteration, each sub-step would correspond to a row in `RECORD` file, us
 ### log file
 
 One can check `iter.*/00.scf/log.data` for stats of SCF results, `iter*/01.train/log.train` for training curve and `iter*/01.train/log.test` for model prediction of $E_\delta$ (e_delta).
+
+ 
