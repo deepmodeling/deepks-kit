@@ -18,4 +18,21 @@ scf_abacus:
   #cmd args
   run_cmd : "mpirun"
   abacus_path: "/home/fortneu49/abacus-develop/bin/ABACUS.mpi"
-
+init_scf_abacus:
+  orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
+  pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
+  proj_file: ["jle.orb"]
+  ntype: 2
+  nbands: 8
+  ecutwfc: 50
+  dr2: 1e-7
+  niter: 50
+  dft_functional: "lda"
+  gamma_only: 1
+  force: 0
+  lmax_descriptor: 2
+  lattice_constant: 1
+  lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+  #cmd args
+  run_cmd : "mpirun"
+  abacus_path: "/home/fortneu49/abacus-develop/bin/ABACUS.mpi"
