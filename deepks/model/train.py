@@ -205,6 +205,8 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
             if ckpt_file:
                 model.save(ckpt_file)
 
+    if ckpt_file:
+        model.save(ckpt_file)
     if graph_file:
         model.compile_save(graph_file)
     

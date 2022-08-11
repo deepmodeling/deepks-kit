@@ -95,10 +95,10 @@ class Reader(object):
         if self.f_path is not None and self.gvx_path is not None:
             self.t_data["lb_f"] = torch.tensor(
                 np.load(self.f_path)\
-                  .reshape(raw_nframes, self.natm, 3)[conv])
+                  .reshape(raw_nframes, -1, 3)[conv])
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
-                  .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
+                  .reshape(raw_nframes, -1, 3, self.natm, self.ndesc)[conv])
         if self.eg_path is not None and self.gveg_path is not None:
             self.t_data['eg0'] = torch.tensor(
                 np.load(self.eg_path)\

@@ -41,19 +41,21 @@ def t_make_grad_e_pdm(model, dm, ovlp_shells):
 def t_make_grad_pdm_x(mol, dm, ovlp_shells, ipov_shells):
     """return jacobian of projected density matrix w.r.t atomic coordinates"""
     natm = mol.natm
+    ralst = [ii for ii in range(mol.natm) if not mol.elements[ii].startswith("X")]
+    nratm = len(ralst)
     shell_sec = [ov.shape[-1] for ov in ovlp_shells]
-    # [natm (deriv atom) x 3 (xyz) x natm (proj atom) x nsph (1|3|5) x nsph] list
-    gdmx_shells = [torch.zeros([natm, 3, natm, ss, ss], dtype=float) 
+    # [natm (deriv atom) x 3 (xyz) x nratm (proj atom) x nsph (1|3|5) x nsph] list
+    gdmx_shells = [torch.zeros([natm, 3, nratm, ss, ss], dtype=float) 
                         for ss in shell_sec]
     for gdmx, govx, ovlp in zip(gdmx_shells, ipov_shells, ovlp_shells):
         # contribution of projection for all I
         gproj = torch.einsum('xrap,rs,saq->xapq', govx, dm, ovlp)
-        for ia in range(natm):
+        for ira, ia in enumerate(ralst):
             bg, ed = mol.aoslice_by_atom()[ia, 2:]
             # contribution of < \nabla mol_ao |
             gdmx[ia] -= torch.einsum('xrap,rs,saq->xapq', govx[:,bg:ed], dm[bg:ed], ovlp)
             # contribution of | \nabla alpha^I_rlm >
-            gdmx[ia,:,ia] += gproj[:, ia]
+            gdmx[ia,:,ira] += gproj[:, ira]
         # symmetrize p and q
         gdmx += gdmx.clone().transpose(-1,-2)
     return gdmx_shells
