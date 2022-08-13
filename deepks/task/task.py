@@ -148,7 +148,8 @@ class BatchTask(AbstructTask):
     def __init__(self, cmds, 
                  dispatcher=None, resources=None, 
                  outlog='log', errlog='err', 
-                 forward_files=None, backward_files=None,
+                 forward_files=None, backward_files=None, task_list=None, 
+                 dpdispatcher_machine=None, dpdispatcher_resources=None,
                  **task_args):
         super().__init__(**task_args)
         self.cmds = check_list(cmds)
@@ -156,7 +157,13 @@ class BatchTask(AbstructTask):
             dispatcher = Dispatcher()
         elif isinstance(dispatcher, dict):
             dispatcher = Dispatcher(**dispatcher)
-        assert isinstance(dispatcher, Dispatcher)
+        self.task_list=task_list
+        self.dpdispatcher_machine=dpdispatcher_machine
+        self.dpdispatcher_resources=dpdispatcher_resources
+        if dispatcher=="dpdispatcher":
+            assert self.dpdispatcher_machine is not None
+        else:
+            assert isinstance(dispatcher, Dispatcher)
         self.dispatcher = dispatcher
         self.resources = resources
         self.outlog = outlog
@@ -165,10 +172,21 @@ class BatchTask(AbstructTask):
         self.backward_files = check_list(backward_files)
     
     def execute(self):
-        tdict = self.make_dict(base=self.workdir)
-        self.dispatcher.run_jobs([tdict], group_size=1, work_path='.', 
-                                 resources=self.resources, forward_task_deref=True,
-                                 outlog=self.outlog, errlog=self.errlog)
+        if self.dispatcher=="dpdispatcher":
+            from dpdispatcher import Machine, Resources, Submission
+            submission=Submission(
+                work_base="systems/",
+                machine=Machine.load_from_dict(self.dpdispatcher_machine),
+                resources=Resources.load_from_dict(self.dpdispatcher_resources),
+                task_list=self.task_list,
+                forward_common_files=self.forward_files,
+                backward_common_files=self.backward_files)
+            submission.run_submission()
+        else: 
+            tdict = self.make_dict(base=self.workdir)
+            self.dispatcher.run_jobs([tdict], group_size=1, work_path='.', 
+                resources=self.resources, forward_task_deref=True,
+                outlog=self.outlog, errlog=self.errlog)
 
     def make_dict(self, base='.'):
         return {'dir': str(self.workdir.relative_to(base)),

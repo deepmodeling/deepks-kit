@@ -3,3 +3,4 @@ paramiko
 ruamel.yaml
 torch
 pyscf
+dpdispatcher
