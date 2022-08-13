@@ -1,0 +1,45 @@
+# this is only part of input settings. 
+# should be used together with systems.yaml and params.yaml
+scf_machine: 
+  resources: 
+    cpus_per_task: 4
+  dispatcher: dpdispatcher 
+  dpdispatcher_resources:
+    number_node: 1
+    cpu_per_node: 4
+    group_size: 10
+    source_list: [/opt/intel/oneapi/setvars.sh]
+  sub_size: 1 
+  dpdispatcher_machine: 
+    context_type: lebesguecontext
+    batch_type: lebesgue
+    local_root: ./
+    remote_profile:
+      email: (your-account-email)
+      password: (your-passward)
+      program_id: 10308
+      input_data:
+        log_file: log.scf 
+        err_file: err.scf
+        job_type: indicate
+        grouped: true
+        job_name: deepks-scf
+        disk_size: 100
+        scass_type: c8_m8_cpu
+        platform: ali
+        image_name: abacus-hybrid
+        on_demand: 0
+train_machine: 
+  dispatcher: 
+    context: local
+    batch: shell # same as above, use shell to run on local machine
+    remote_profile: null # use lazy local
+  python: "python" # use python in path
+  # resources are no longer needed, and the task will use gpu automatically if there is one
+
+# other settings (these are default, can be omitted)
+cleanup: false # whether to delete slurm and err files
+strict: true # do not allow undefined machine parameters
+
+#paras for abacus
+use_abacus: true # use abacus in scf calculation

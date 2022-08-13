@@ -7,13 +7,24 @@ The sub-folders are grouped as following:
 - `systems` contains atom data with PBE energy and force.
 - `iter` contains input files used to train a self consistent model iteratively (DeePKS).
 
-## Running this example
+## Running this example locally
 
 To train a self-consistant model with ABACUS, you can `cd iter` and run:
 
 `python -u -m deepks iterate machines.yaml params.yaml systems.yaml scf_abacus.yaml >> log.iter 2> err.iter`
 
 or directly
+
+`cd iter && bash run.sh`
+
+## Running this example with DPDispatcher
+
+If you want the jobs submitted to supercomputer platforms by **[DPDispatcher](https://github.com/deepmodeling/dpdispatcher)** , you need to set `dispatcher` as `"dpdispatcher"`and set `dpdispatcher_machines` and `dpdispatcher_resources` according to [DPDispatcher docs](https://dpdispatcher.readthedocs.io/) (see `machines_bohrium.yaml`). Remember to set the remote `abacus_path` (see `scf_abacus_bohrium.yaml`). Taking **[Bohrium](https://bohrium.dp.tech/)** as an example, `cd iter` and run:
+
+`python -u -m deepks iterate machines_bohrium.yaml params.yaml systems.yaml scf_abacus_bohrium.yaml >> log.iter 2> err.iter`
+
+or directly
+
 `cd iter && bash run.sh`
 
 ## Prameters for ABACUS 
@@ -27,12 +38,12 @@ ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be di
     - `ntype`: number of atom types
     - `nbands`: total number of bands to calculate
     - `ecutwfc`: energy cutoff for plane wave functions
-    - `dr2`: the charge density error threshold between two sequential density from electronic iterations to judge convergence
-    - `niter`: max scf steps
+    - `scf_thr`: the charge density error threshold between two sequential density from electronic iterations to judge convergence
+    - `scf_nmax`: max scf steps
     - `dft_functional`: Exchange-Correlation functional, which can be 'lda', 'gga', 'pbe', etc
     - `gamma_only`: 1 for gamma-point, 0 for multi-kpoints
-    - `force`: set 1 to calculate force, default 0
-    - `stress`: set 1 to calculate stress, default 0
+    - `cal_force`: set 1 to calculate force, default 0
+    - `cal_stress`: set 1 to calculate stress, default 0
 
 - Paras for `STRU` file:
     - `orb_files`: paths of atom orbitals, a list of str with the order same as the order of atom types in `atoms.npy`
