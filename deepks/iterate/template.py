@@ -47,6 +47,13 @@ DEFAULT_TRN_RES = {
     "mem_limit": 8
 }
 
+DEFAULT_DPDISPATCHER_RES = {
+    "time_limit": "24:00:00",
+    "cpus_per_task": 8,
+    # "numb_gpu": 1, # do not use gpu by default
+    "mem_limit": 8,
+    "group_size": 1
+}
 
 def check_system_names(systems):
     sys_names = [get_sys_name(os.path.basename(s)) for s in systems]
@@ -250,6 +257,7 @@ def make_scf(systems_train, systems_test=None, *,
              no_model=False, workdir='00.scf', share_folder='share',
              source_arg="scf_input.yaml", source_model="model.pth",
              source_pbasis=None, dispatcher=None, resources=None, 
+             dpdispatcher_machine=None, dpdispatcher_resources=None, 
              sub_size=1, group_size=1, ingroup_parallel=1, 
              sub_res=None, python='python', 
              cleanup=False, **task_args):
@@ -260,6 +268,8 @@ def make_scf(systems_train, systems_test=None, *,
         workdir=".", outlog="log.scf", share_folder=share_folder, 
         source_arg=source_arg, source_model=source_model, source_pbasis=source_pbasis,
         dispatcher=dispatcher, resources=resources, 
+        dpdispatcher_machine=dpdispatcher_machine, 
+        dpdispatcher_resources=dpdispatcher_resources,
         group_size=group_size, ingroup_parallel=ingroup_parallel,
         sub_size=sub_size, sub_res=sub_res, python=python, **task_args
     )
@@ -291,6 +301,8 @@ def make_train_task(*, workdir=".",
                     data_test="data_test", source_test=None,
                     share_folder="share", outlog="log.train",
                     dispatcher=None, resources=None, 
+                    dpdispatcher_machine=None, 
+                    dpdispatcher_resources=None,
                     python="python", **task_args):
     # set up basic args
     command = TRN_CMD.format(python=python)
@@ -331,10 +343,23 @@ def make_train_task(*, workdir=".",
         resources = {}
     resources = {**DEFAULT_TRN_RES, **resources}
     # make task
+    task_list=[]
+    if dispatcher=="dpdispatcher":
+        from dpdispatcher import Task
+        task_list.append(Task(command=command, task_work_path='./', 
+                        forward_files=[], backward_files=[], 
+                        outlog=outlog, errlog="err.train"))
+        if dpdispatcher_resources is None:
+            dpdispatcher_resources = {}
+        dpdispatcher_resources = {**DEFAULT_DPDISPATCHER_RES, **resources}
     return BatchTask(
         command,
         workdir=workdir,
         dispatcher=dispatcher,
+        task_list=task_list,
+        dpdispatcher_machine=dpdispatcher_machine, 
+        dpdispatcher_resources=dpdispatcher_resources, 
+        dpdispatcher_work_base=workdir,
         resources=resources,
         outlog=outlog,
         errlog='err',
@@ -352,6 +377,8 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
                    source_pbasis=None, source_arg="train_input.yaml", 
                    workdir=".", share_folder="share", outlog="log.train",
                    dispatcher=None, resources=None, 
+                   dpdispatcher_machine=None, 
+                   dpdispatcher_resources=None,
                    python="python", **task_args):
     # just add some presetted arguments of make_train_task
     # have not implement parrallel training for multiple models
@@ -367,6 +394,8 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
         data_test="data_test", source_test=source_test,
         share_folder=share_folder, outlog=outlog,
         dispatcher=dispatcher, resources=resources,
+        dpdispatcher_machine=dpdispatcher_machine, 
+        dpdispatcher_resources=dpdispatcher_resources,
         python=python, **task_args
     )
 
@@ -395,6 +424,7 @@ def make_train(source_train="data_train", source_test="data_test", *,
                source_pbasis=None, source_arg="train_input.yaml", 
                workdir="01.train", share_folder="share",
                dispatcher=None, resources=None, 
+               dpdispatcher_machine=None, dpdispatcher_resources=None, 
                python="python", cleanup=False, **task_args):
     run_train = make_run_train(
         source_train=source_train, source_test=source_test,
@@ -402,6 +432,8 @@ def make_train(source_train="data_train", source_test="data_test", *,
         source_pbasis=source_pbasis, source_arg=source_arg, 
         workdir=".", share_folder=share_folder,
         outlog="log.train", dispatcher=dispatcher, resources=resources,
+        dpdispatcher_machine=dpdispatcher_machine, 
+        dpdispatcher_resources=dpdispatcher_resources,
         python=python, **task_args
     )
     post_train = make_test_train(

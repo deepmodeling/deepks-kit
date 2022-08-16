@@ -237,7 +237,7 @@ def convert_data(systems_train, systems_test=None, *,
             run_file.write("\t\t"+"cd ${j}"+"\n")
             run_file.write("\t\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+"\n")
             run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
-            run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log` >> conv"+ "\n")
+            run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log` > conv"+ "\n")
             run_file.write("\t\t"+"cd .."+"\n")
             run_file.write("\t\t"+"sleep 1"+"\n")
             run_file.write("\t"+"} &"+"\n")
@@ -351,7 +351,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  er
                 singletask["command"]=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
                     {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
                     echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`  &&  \
-                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`>> conv")
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`> conv")
                 singletask["task_work_path"]="."
                 singletask["forward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
                 singletask["backward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
@@ -368,6 +368,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  er
         link_abs_files=link_abs,
         dpdispatcher_machine=dpdispatcher_machine,
         dpdispatcher_resources=dpdispatcher_resources,
+        dpdispatcher_work_base="systems",
         forward_files=forward_files,
         backward_files=backward_files,
         task_list=task_list

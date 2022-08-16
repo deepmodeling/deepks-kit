@@ -150,7 +150,7 @@ class BatchTask(AbstructTask):
                  outlog='log', errlog='err', 
                  forward_files=None, backward_files=None, task_list=None, 
                  dpdispatcher_machine=None, dpdispatcher_resources=None,
-                 **task_args):
+                 dpdispatcher_work_base=None, **task_args):
         super().__init__(**task_args)
         self.cmds = check_list(cmds)
         if dispatcher is None:
@@ -160,8 +160,11 @@ class BatchTask(AbstructTask):
         self.task_list=task_list
         self.dpdispatcher_machine=dpdispatcher_machine
         self.dpdispatcher_resources=dpdispatcher_resources
+        self.dpdispatcher_work_base=dpdispatcher_work_base
         if dispatcher=="dpdispatcher":
             assert self.dpdispatcher_machine is not None
+            if self.dpdispatcher_resources is None:
+                self.dpdispatcher_resources = resources
         else:
             assert isinstance(dispatcher, Dispatcher)
         self.dispatcher = dispatcher
@@ -175,7 +178,7 @@ class BatchTask(AbstructTask):
         if self.dispatcher=="dpdispatcher":
             from dpdispatcher import Machine, Resources, Submission
             submission=Submission(
-                work_base="systems/",
+                work_base=self.dpdispatcher_work_base,
                 machine=Machine.load_from_dict(self.dpdispatcher_machine),
                 resources=Resources.load_from_dict(self.dpdispatcher_resources),
                 task_list=self.task_list,

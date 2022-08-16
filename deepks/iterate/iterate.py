@@ -32,7 +32,9 @@ DEFAULT_SCF_MACHINE = {
 DEFAULT_TRN_MACHINE = {
     "dispatcher": None, # use default lazy-local slurm defined in task.py
     "resources": None, # use default 10 core defined in templete.py
-    "python": "python" # use current python in path
+    "python": "python", # use current python in path
+    "dpdispatcher_machine": None, # (only need for dispatcher=="dpdispatcher")
+    "dpdispatcher_resources": None # (only need for dispatcher=="dpdispatcher")
 }
 
 SCF_ARGS_NAME = "scf_input.yaml"
