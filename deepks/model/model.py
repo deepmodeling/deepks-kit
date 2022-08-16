@@ -213,7 +213,7 @@ class CorrNet(nn.Module):
     @log_args('_init_args')
     def __init__(self, input_dim, hidden_sizes=(100,100,100), 
                  actv_fn='gelu', use_resnet=True, 
-                 embedding=None, proj_basis=None,
+                 embedding=None, proj_basis=None, elem_table=None, 
                  input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
@@ -224,6 +224,7 @@ class CorrNet(nn.Module):
         self.shell_sec = None
         # linear fitting
         self.linear = nn.Linear(input_dim, 1).double()
+        self.elem_table=elem_table
         # embedding net
         ndesc = input_dim
         self.embedder = None
