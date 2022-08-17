@@ -4,7 +4,7 @@ from glob import glob
 from deepks.utils import flat_file_list, load_dirs
 from deepks.utils import get_sys_name, load_sys_paths
 from deepks.task.task import PythonTask
-from deepks.task.task import BatchTask
+from deepks.task.task import BatchTask, GroupBatchTask
 from deepks.task.workflow import Sequence
 from deepks.iterate.template import check_system_names, make_cleanup
 from deepks.iterate.generator_abacus import make_abacus_scf_kpt, make_abacus_scf_input, make_abacus_scf_stru
@@ -356,23 +356,35 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  er
                 singletask["forward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
                 singletask["backward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
                 task_list.append(Task.load_from_dict(singletask))
-    return BatchTask(
-        command, 
-        workdir=workdir,
-        dispatcher=dispatcher,
-        #resources=resources,
-        outlog=outlog,
-        share_folder=share_folder,
-        link_share_files=link_share,
-        link_prev_files=link_prev,
-        link_abs_files=link_abs,
-        dpdispatcher_machine=dpdispatcher_machine,
-        dpdispatcher_resources=dpdispatcher_resources,
-        dpdispatcher_work_base="systems",
-        forward_files=forward_files,
-        backward_files=backward_files,
-        task_list=task_list
-    )
+        return GroupBatchTask(
+            batch_tasks=[],
+            workdir=workdir,
+            dispatcher=dispatcher,
+            #resources=resources,
+            outlog=outlog,
+            share_folder=share_folder,
+            link_share_files=link_share,
+            link_prev_files=link_prev,
+            link_abs_files=link_abs,
+            dpdispatcher_task_list=task_list,
+            dpdispatcher_machine=dpdispatcher_machine,
+            dpdispatcher_resources=dpdispatcher_resources,
+            dpdispatcher_work_base="systems",
+            forward_files=forward_files,
+            backward_files=backward_files
+        )
+    else:
+        return BatchTask(
+            command, 
+            workdir=workdir,
+            dispatcher=dispatcher,
+            #resources=resources,
+            outlog=outlog,
+            share_folder=share_folder,
+            link_share_files=link_share,
+            link_prev_files=link_prev,
+            link_abs_files=link_abs,
+        )
 
 
 def gather_stats_abacus(systems_train, systems_test, 

@@ -352,24 +352,39 @@ def make_train_task(*, workdir=".",
         if dpdispatcher_resources is None:
             dpdispatcher_resources = {}
         dpdispatcher_resources = {**DEFAULT_DPDISPATCHER_RES, **resources}
-    return BatchTask(
-        command,
-        workdir=workdir,
-        dispatcher=dispatcher,
-        task_list=task_list,
-        dpdispatcher_machine=dpdispatcher_machine, 
-        dpdispatcher_resources=dpdispatcher_resources, 
-        dpdispatcher_work_base=workdir,
-        resources=resources,
-        outlog=outlog,
-        errlog='err',
-        share_folder=share_folder,
-        link_share_files=link_share,
-        link_prev_files=link_prev,
-        forward_files=forward_files,
-        backward_files=backward_files,
-        **task_args
-    )
+        return GroupBatchTask(
+            batch_tasks=[],
+            workdir=workdir,
+            dispatcher=dispatcher,
+            dpdispatcher_task_list=task_list,
+            dpdispatcher_machine=dpdispatcher_machine, 
+            dpdispatcher_resources=dpdispatcher_resources, 
+            dpdispatcher_work_base=workdir,
+            resources=resources,
+            outlog=outlog,
+            errlog='err',
+            share_folder=share_folder,
+            link_share_files=link_share,
+            link_prev_files=link_prev,
+            forward_files=forward_files,
+            backward_files=backward_files,
+            **task_args
+        )
+    else:
+        return BatchTask(
+            command,
+            workdir=workdir,
+            dispatcher=dispatcher,
+            resources=resources,
+            outlog=outlog,
+            errlog='err',
+            share_folder=share_folder,
+            link_share_files=link_share,
+            link_prev_files=link_prev,
+            forward_files=forward_files,
+            backward_files=backward_files,
+            **task_args
+        )
 
 
 def make_run_train(source_train="data_train", source_test="data_test", *,
