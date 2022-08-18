@@ -48,10 +48,8 @@ DEFAULT_TRN_RES = {
 }
 
 DEFAULT_DPDISPATCHER_RES = {
-    "time_limit": "24:00:00",
-    "cpus_per_task": 8,
-    # "numb_gpu": 1, # do not use gpu by default
-    "mem_limit": 8,
+    "number_node": 1,
+    "cpus_per_node": 8,
     "group_size": 1
 }
 
@@ -351,7 +349,7 @@ def make_train_task(*, workdir=".",
                         outlog=outlog, errlog="err.train"))
         if dpdispatcher_resources is None:
             dpdispatcher_resources = {}
-        dpdispatcher_resources = {**DEFAULT_DPDISPATCHER_RES, **resources}
+        dpdispatcher_resources = {**DEFAULT_DPDISPATCHER_RES, **dpdispatcher_resources}
         return GroupBatchTask(
             batch_tasks=[],
             workdir=workdir,
