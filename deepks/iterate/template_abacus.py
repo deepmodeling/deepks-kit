@@ -311,8 +311,8 @@ def make_run_scf_abacus(systems_train, systems_test=None,
             for f in range(nframes):
                 singletask["command"]=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
                     {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
-                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`  &&  \
-                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`> conv")
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log` > conv  &&  \
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`")
                 singletask["task_work_path"]="."
                 singletask["forward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
                 singletask["backward_files"]=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
@@ -343,8 +343,8 @@ def make_run_scf_abacus(systems_train, systems_test=None,
                 batch_tasks.append(BatchTask(
                     cmds=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
                     {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
-                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`  &&  \
-                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`> conv"),
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log` > conv  &&  \
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`"),
                     workdir="systems",
                     forward_files=[str(f"./{sys_name[i]}/ABACUS/{f}/")],
                     backward_files=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
