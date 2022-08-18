@@ -23,7 +23,7 @@ init_scf_abacus:
   pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
   proj_file: ["jle.orb"]
   ntype: 2
-  nbands: 1
+  nbands: 8
   ecutwfc: 50
   scf_thr: 1e-7
   scf_nmax: 50

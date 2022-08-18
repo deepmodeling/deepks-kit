@@ -1,6 +1,7 @@
 # this is only part of input settings. 
 # should be used together with systems.yaml and params.yaml
-scf_machine: 
+scf_machine:
+  group_size: 125 
   resources:
     cpus_per_task: 1 
   sub_size: 4

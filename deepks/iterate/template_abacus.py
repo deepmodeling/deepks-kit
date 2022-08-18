@@ -73,10 +73,9 @@ DEFAULT_SCF_ARGS_ABACUS={
 
 def make_scf_abacus(systems_train, systems_test=None, *,
              train_dump="data_train", test_dump="data_test", cleanup=None, 
-             dispatcher=None, resources =None, sub_size=1, 
-             no_model=True, workdir='00.scf', share_folder='share', model_file=None,
-             orb_files=[], pp_files=[], proj_file=[], 
-             **scf_abacus):
+             dispatcher=None, resources =None, no_model=True, group_size=1,
+             workdir='00.scf', share_folder='share', model_file=None,
+             orb_files=[], pp_files=[], proj_file=[],  **scf_abacus):
     #share orb_files and pp_files
     from deepks.iterate.iterate import check_share_folder
     for i in range (len(orb_files)):
@@ -96,13 +95,13 @@ def make_scf_abacus(systems_train, systems_test=None, *,
     pre_scf_abacus = make_convert_scf_abacus(
         systems_train=systems_train, systems_test=systems_test,
         no_model=no_model, workdir='.', share_folder=share_folder, 
-        sub_size=sub_size, model_file=model_file, resources=resources,
+        model_file=model_file, resources=resources,
         dispatcher=dispatcher, orb_files=orb_files, pp_files=pp_files, 
         proj_file=proj_file, **scf_abacus)
     run_scf_abacus = make_run_scf_abacus(systems_train, systems_test,
         no_model=no_model, model_file=model_file, group_data=False,
         workdir='.', outlog="log.scf", share_folder=share_folder, 
-        dispatcher=dispatcher, resources=resources, 
+        dispatcher=dispatcher, resources=resources, group_size=group_size,
         forward_files=forward_files, 
         **scf_abacus)
     post_scf_abacus = make_stat_scf_abacus(
@@ -128,9 +127,7 @@ def make_scf_abacus(systems_train, systems_test=None, *,
 ### need parameters: orb_files, pp_files, proj_file
 def convert_data(systems_train, systems_test=None, *, 
                 no_model=True, model_file=None, pp_files=[], 
-                lattice_vector=np.eye(3, dtype=int), dispatcher=None,
-                abacus_path="/usr/local/bin/ABACUS.mpi",
-                run_cmd="mpirun", cpus_per_task=1, sub_size=1, **pre_args):
+                lattice_vector=np.eye(3, dtype=int), dispatcher=None,**pre_args):
     #trace a model (if necessary)
     if not no_model:
         if model_file is not None:
@@ -150,13 +147,7 @@ def convert_data(systems_train, systems_test=None, *,
     test_sets = [systems_test[i::nsys_tst] for i in range(nsys_tst)]
     systems=systems_train+systems_test
     sys_paths = [os.path.abspath(s) for s in load_sys_paths(systems)]
-    #create a shell script to run ABACUS
     from pathlib import Path
-    if not os.path.isfile("./run_abacus.sh"):
-        Path("./run_abacus.sh").touch()
-    run_file=open("./run_abacus.sh","w")
-    run_file.write("export OMP_NUM_THREADS=1\n")
-    
     if dispatcher=="dpdispatcher" and \
         pre_args["dpdispatcher_machine"]["context_type"].upper().find("LOCAL")==-1:
         #write relative path into INPUT and STRU
@@ -216,37 +207,6 @@ def convert_data(systems_train, systems_test=None, *,
             #write KPT file (gamma_only)
             with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
                 kpt_file.write(make_abacus_scf_kpt(pre_args))
-        #write the 'run_abacus.sh' script
-        if os.path.exists(f"{sys_paths[i]}/ABACUS/conv.log"):
-            open(f"{sys_paths[i]}/ABACUS/conv.log", 'w').close()    #clear conv.log
-        run_file.write(f"cd {sys_paths[i]}/ABACUS"+ "\n")
-        run_file.write("i=0"+"\n")
-        run_file.write(f"while (( $i < {nframes} ))"+ "\n")
-        run_file.write("do"+ "\n")
-        if sub_size==1:
-            run_file.write("\t"+"cd ${i}"+ "\n")
-            run_file.write("\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+ "\n")
-            run_file.write("\t"+"echo ${i}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
-            run_file.write("\t"+"echo ${i}`grep convergence ./OUT.ABACUS/running_scf.log` >> .conv"+ "\n")
-            run_file.write("\t"+"cd .."+"\n")
-            run_file.write("\t"+"let \"i++\""+ "\n")
-        else:
-            run_file.write("\t"+f"for (( j = i ; j < i + {sub_size} && j < {nframes} ; j++ ))" + "\n")
-            run_file.write("\t"+"do"+"\n")
-            run_file.write("\t"+"{"+"\n")
-            run_file.write("\t\t"+"cd ${j}"+"\n")
-            run_file.write("\t\t"+f"{run_cmd} -n {cpus_per_task} {abacus_path} > log.scf"+"\n")
-            run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log`"+ "\n")
-            run_file.write("\t\t"+"echo ${j}`grep convergence ./OUT.ABACUS/running_scf.log` > conv"+ "\n")
-            run_file.write("\t\t"+"cd .."+"\n")
-            run_file.write("\t\t"+"sleep 1"+"\n")
-            run_file.write("\t"+"} &"+"\n")
-            run_file.write("\t"+"done"+"\n")
-            run_file.write("\t"+"wait"+"\n")
-            run_file.write("\t"+f"((i=i+{sub_size}))"+"\n")
-        run_file.write("done"+ "\n")
-    run_file.close()
-    ###end for run_file
 
 
 def make_convert_scf_abacus(systems_train, systems_test=None,
@@ -285,11 +245,12 @@ def make_convert_scf_abacus(systems_train, systems_test=None,
     )
 
 
-def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  errlog="err.log",
-                resources=None, dispatcher=None, share_folder="share", workdir=".", link_systems=True, 
-                dpdispatcher_machine=None, dpdispatcher_resources=None, no_model=True, **task_args):
-    #cmd
-    command = ABACUS_CMD
+def make_run_scf_abacus(systems_train, systems_test=None,  
+                outlog="out.log",  errlog="err.log", group_size=1,
+                resources=None, dispatcher=None, 
+                share_folder="share", workdir=".", link_systems=True, 
+                dpdispatcher_machine=None, dpdispatcher_resources=None,
+                no_model=True, **task_args):
     #basic args
     link_share = task_args.pop("link_share_files", [])
     link_prev = task_args.pop("link_prev_files", [])
@@ -322,18 +283,18 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  er
         src_files = sum((glob(f"{base}*") for base in sys_base), [])
         for fl in src_files:
             dst = os.path.join(target_dir, os.path.basename(fl))
-            link_abs.append((fl, dst))
+            link_abs.append((fl, dst)) 
+    #set parameters
+    if resources is not None and "cpus_per_task" in resources:
+        cpus_per_task = resources["cpus_per_task"]
+    run_cmd = task_args.pop("run_cmd", "mpirun")
+    abacus_path = task_args.pop("abacus_path", None)
+    assert abacus_path is not None
     #make task
     task_list=[]
     if dispatcher=="dpdispatcher":
-        #set parameters
-        if resources is not None and "cpus_per_task" in resources:
-            cpus_per_task = resources["cpus_per_task"]
         if dpdispatcher_resources is not None and "cpus_per_nodes" in dpdispatcher_resources:
             assert cpus_per_task <= dpdispatcher_resources["cpus_per_node"]
-        run_cmd = task_args.pop("run_cmd", "mpirun")
-        abacus_path = task_args.pop("abacus_path", None)
-        assert abacus_path is not None
         #make task_list
         from dpdispatcher import Task
         singletask={
@@ -374,17 +335,36 @@ def make_run_scf_abacus(systems_train, systems_test=None,  outlog="out.log",  er
             backward_files=backward_files
         )
     else:
-        return BatchTask(
-            command, 
-            workdir=workdir,
+        batch_tasks=[]
+        for i, pth in enumerate(sys_paths):
+            atom_data = np.load(f"{str(pth)}/atom.npy")
+            nframes = atom_data.shape[0]
+            for f in range(nframes):
+                batch_tasks.append(BatchTask(
+                    cmds=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
+                    {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`  &&  \
+                    echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`> conv"),
+                    workdir="systems",
+                    forward_files=[str(f"./{sys_name[i]}/ABACUS/{f}/")],
+                    backward_files=[str(f"./{sys_name[i]}/ABACUS/{f}/")]
+                )) 
+        return GroupBatchTask(
+            batch_tasks,
+            group_size=group_size, 
+            workdir="./",
             dispatcher=dispatcher,
-            #resources=resources,
+            resources=resources,
             outlog=outlog,
             share_folder=share_folder,
             link_share_files=link_share,
             link_prev_files=link_prev,
             link_abs_files=link_abs,
+            forward_files=forward_files,
+            backward_files=backward_files
         )
+    
+
 
 
 def gather_stats_abacus(systems_train, systems_test, 
