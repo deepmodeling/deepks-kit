@@ -52,7 +52,8 @@ def get_shell_sec(basis):
         basis = load_basis(basis)
     shell_sec = []
     for l, c0, *cr in basis:
-        shell_sec.extend([2*l+1] * (len(c0)-1))
+        nb = c0 if isinstance(c0, int) else (len(c0)-1)
+        shell_sec.extend([2*l+1] * nb)
     return shell_sec
     
 
@@ -176,6 +177,16 @@ def parse_xyz(filename):
     coords = np.array([a[1:] for a in atom_list], dtype=float)
     return natom, comments, elements, coords
 
+
+def load_elem_table(filename):
+    elem_list, elem_const = np.loadtxt(filename).T
+    elem_list = elem_list.round().astype(int)
+    return elem_list, elem_const
+
+
+def save_elem_table(filename, elem_table):
+    np.savetxt(filename, np.stack(elem_table).T, fmt=["%i", "%.16f"])
+    
 
 # below are path related utils
 

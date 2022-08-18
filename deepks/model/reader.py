@@ -28,7 +28,8 @@ class Reader(object):
                  s_name="l_s_delta", gvepsl_name="grad_vepsl", 
                  o_name="l_o_delta", op_name="orbital_precalc",
                  eg_name="eg_base", gveg_name="grad_veg", 
-                 gldv_name="grad_ldv", conv_name="conv", **kwargs):
+                 gldv_name="grad_ldv", conv_name="conv", 
+                 atom_name="atom", **kwargs):
         self.data_path = data_path
         self.batch_size = batch_size
         self.e_path = self.check_exist(e_name+".npy")
@@ -43,6 +44,7 @@ class Reader(object):
         self.gveg_path = self.check_exist(gveg_name+".npy")
         self.gldv_path = self.check_exist(gldv_name+".npy")
         self.c_path = self.check_exist(conv_name+".npy")
+        self.a_path = self.check_exist(atom_name+".npy")
         # load data
         self.load_meta()
         self.prepare()
@@ -72,10 +74,9 @@ class Reader(object):
 
     def prepare(self):
         # load energy and check nframes
-        data_ec = np.load(self.e_path).reshape([-1, 1])
+        data_ec = np.load(self.e_path).reshape(-1, 1)
         raw_nframes = data_ec.shape[0]
-        data_dm = np.load(self.d_path)\
-                    .reshape([raw_nframes, self.natm, self.ndesc])
+        data_dm = np.load(self.d_path).reshape(raw_nframes, self.natm, self.ndesc)
         if self.c_path is not None:
             conv = np.load(self.c_path).reshape(raw_nframes)
         else:
@@ -87,6 +88,12 @@ class Reader(object):
             self.batch_size = self.nframes
             print('#', self.data_path, 
                  f"reset batch size to {self.batch_size}", file=sys.stderr)
+        # handle atom and element data
+        self.atom_info = {}
+        if self.a_path is not None:
+            atoms = np.load(self.a_path).reshape(raw_nframes, self.natm, 4)
+            self.atom_info["elems"] = atoms[:, :, 0][conv].round().astype(int)
+            self.atom_info["coords"] = atoms[:, :, 1:][conv]
         # load data in torch
         self.t_data = {}
         self.t_data["lb_e"] = torch.tensor(self.data_ec)
@@ -94,7 +101,7 @@ class Reader(object):
         if self.f_path is not None and self.gvx_path is not None:
             self.t_data["lb_f"] = torch.tensor(
                 np.load(self.f_path)\
-                  .reshape(raw_nframes, self.natm, 3)[conv])
+                  .reshape(raw_nframes, -1, 3)[conv])
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
                   .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
@@ -145,7 +152,39 @@ class Reader(object):
 
     def get_nframes(self):
         return self.nframes
-
+    
+    def collect_elems(self, elem_list):
+        if "elem_list" in self.atom_info:
+            assert list(elem_list) == list(self.atom_info["elem_list"])
+            return self.atom_info["nelem"]
+        elem_to_idx = np.zeros(200, dtype=int) + 200
+        for ii, ee in enumerate(elem_list):
+            elem_to_idx[ee] = ii
+        idxs = elem_to_idx[self.atom_info["elems"]]
+        nelem = np.zeros((self.nframes, len(elem_list)), int)
+        np.add.at(nelem, (np.arange(nelem.shape[0]).reshape(-1,1), idxs), 1)
+        self.atom_info["nelem"] = nelem
+        self.atom_info["elem_list"] = elem_list
+        return nelem
+    
+    def subtract_elem_const(self, elem_const):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec -= econst
+        self.t_data["lb_e"] -= econst
+        self.atom_info["elem_const"] = elem_const
+    
+    def revert_elem_const(self):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        if "elem_const" not in self.atom_info:
+            return
+        elem_const = self.atom_info.pop("elem_const")
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec += econst
+        self.t_data["lb_e"] += econst
+        
 
 class GroupReader(object) :
     def __init__ (self, path_list, batch_size=1, group_batch=1, extra_label=True, **kwargs):
@@ -281,6 +320,44 @@ class GroupReader(object) :
         if symm_sections is not None:
             weight = np.concatenate([w.repeat(s) for w, s in zip(weight, symm_sections)], axis=-1)
         return weight, bias
+    
+    def collect_elems(self, elem_list=None):
+        if elem_list is None:
+            elem_list = np.array(sorted(set.union(*[
+                set(r.atom_info["elems"].flatten()) for r in self.readers
+            ])))
+        for rd in self.readers:
+            rd.collect_elems(elem_list)
+        return elem_list
+
+    def compute_elem_const(self, ridge_alpha=0.):
+        elem_list = self.collect_elems()
+        all_nelem = np.concatenate([r.atom_info["nelem"] for r in self.readers])
+        all_ec = np.concatenate([r.data_ec for r in self.readers])
+        # lex sort by nelem
+        lexidx = np.lexsort(all_nelem.T)
+        all_nelem = all_nelem[lexidx]
+        all_ec = all_ec[lexidx]
+        # group by nelem
+        _, sidx = np.unique(all_nelem, return_index=True, axis=0)
+        sidx = np.sort(sidx)
+        grp_nelem = all_nelem[sidx]
+        grp_ec = np.array(list(map(np.mean, np.split(all_ec, sidx[1:]))))
+        if ridge_alpha <= 0:
+            elem_const, _res, _rank, _sing = np.linalg.lstsq(grp_nelem, grp_ec, None)
+        else:
+            I = np.identity(grp_nelem.shape[1])
+            elem_const = np.linalg.solve(
+                grp_nelem.T @ grp_nelem + ridge_alpha * I, grp_nelem.T @ grp_ec)
+        return elem_list.reshape(-1), elem_const.reshape(-1)
+    
+    def subtract_elem_const(self, elem_const):
+        for rd in self.readers:
+            rd.subtract_elem_const(elem_const)
+    
+    def revert_elem_const(self):
+        for rd in self.readers:
+            rd.revert_elem_const()
 
 
 class SimpleReader(object):

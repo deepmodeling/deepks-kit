@@ -7,13 +7,24 @@ The sub-folders are grouped as following:
 - `systems` contains atom data with PBE energy and force.
 - `iter` contains input files used to train a self consistent model iteratively (DeePKS).
 
-## Running this example
+## Running this example locally
 
 To train a self-consistant model with ABACUS, you can `cd iter` and run:
 
 `python -u -m deepks iterate machines.yaml params.yaml systems.yaml scf_abacus.yaml >> log.iter 2> err.iter`
 
 or directly
+
+`cd iter && bash run.sh`
+
+## Running this example with DPDispatcher
+
+If you want the jobs submitted to supercomputer platforms by **[DPDispatcher](https://github.com/deepmodeling/dpdispatcher)** , you need to set `dispatcher` as `"dpdispatcher"`and set `dpdispatcher_machine` and `dpdispatcher_resources` according to [DPDispatcher docs](https://dpdispatcher.readthedocs.io/) (see `machines_bohrium.yaml`). Remember to set the remote `abacus_path` (see `scf_abacus_bohrium.yaml`). Taking **[Bohrium](https://bohrium.dp.tech/)** as an example, `cd iter` and run:
+
+`python -u -m deepks iterate machines_bohrium.yaml params.yaml systems.yaml scf_abacus_bohrium.yaml >> log.iter 2> err.iter`
+
+or directly
+
 `cd iter && bash run.sh`
 
 ## Prameters for ABACUS 

@@ -19,7 +19,7 @@ scf_input: # can also be specified by a separete file
   # this is for force training
   # the following properties will be dumped in data folder
   # please refer to https://arxiv.org/abs/2012.14615 for detailed explaination of each fields
-  dump_fields: [e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
+  dump_fields: [atom, e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
   verbose: 1
   # parameters that will be passed directly to pyscf Mol class
   mol_args:
@@ -131,7 +131,7 @@ init_model: false # do not use existing model in share_folder/init/model.pth
 # possible settings are same as scf_input
 init_scf: 
   basis: ccpvdz
-  dump_fields: [e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
+  dump_fields: [atom, e_base, e_tot, dm_eig, conv, f_base, f_tot, grad_vx, l_f_delta, l_e_delta]
   verbose: 1
   mol_args:
     incore_anyway: True
@@ -142,6 +142,9 @@ init_scf:
 # the first scf iteration, needed if init_model is false
 # most settings are same as scf_input but model_args will be specified here
 init_train: 
+  # whether to fit element-wise energy constant from the training data
+  # will require `dump_fields` contain `atom` if set to true
+  fit_elem: false # this is the default
   # necessary as this is init training
   model_args: 
     # the number of *hidden* neurons
@@ -160,6 +163,12 @@ init_train:
     # for water we do not use it, if you encounter convergence problem, set it to
     # embedding: thermal
     embedding: null
+    # if `fit_elem` is true, set this will use user defined 
+    # element energy constant, instead of fitting from data.
+    # can be an absolute path to the file, or a length 2 list
+    # containing element charges and constants, like
+    # [[1, 8], [-0.08, -0.04]]
+    elem_table: null
   # the rest are the same as abpve
   data_args: 
     batch_size: 16

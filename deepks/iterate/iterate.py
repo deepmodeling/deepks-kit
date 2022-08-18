@@ -23,14 +23,18 @@ DEFAULT_SCF_MACHINE = {
     "ingroup_parallel": 1, #how many tasks can run at same time in one job
     "dispatcher": None, # use default lazy-local slurm defined in task.py
     "resources": None, # use default 10 core defined in templete.py
-    "python": "python" # use current python in path
+    "python": "python", # use current python in path
+    "dpdispatcher_machine": None, # (only need for dispatcher=="dpdispatcher")
+    "dpdispatcher_resources": None # (only need for dispatcher=="dpdispatcher")
 }
 
 # args not specified here may cause error
 DEFAULT_TRN_MACHINE = {
     "dispatcher": None, # use default lazy-local slurm defined in task.py
     "resources": None, # use default 10 core defined in templete.py
-    "python": "python" # use current python in path
+    "python": "python", # use current python in path
+    "dpdispatcher_machine": None, # (only need for dispatcher=="dpdispatcher")
+    "dpdispatcher_resources": None # (only need for dispatcher=="dpdispatcher")
 }
 
 SCF_ARGS_NAME = "scf_input.yaml"
@@ -215,7 +219,10 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
     strict: bool, optional 
         Whether to allow additional arguments to be passed to task constructor,
         through `scf_machine` and `train_machine`. Defaults to True.
-
+    use_abacus: bool, optional
+        If set to`True`,  do SCF calculation with ABACUS.
+        If set to `False`,  do SCF calculation with PySCF.
+        Defaults to `False`.
     Returns
     -------
     iterate: Iteration (subclass of Workflow)
@@ -256,7 +263,7 @@ def make_iterate(systems_train=None, systems_test=None, n_iter=0,
         scf_abacus = dict(scf_abacus, **scf_machine)
         scf_step = make_scf_abacus(systems_train=systems_train, systems_test=systems_test,
             train_dump=DATA_TRAIN, test_dump=DATA_TEST, no_model=False,
-            workdir=SCF_STEP_DIR, share_folder=share_folder,
+            model_file=MODEL_FILE, workdir=SCF_STEP_DIR, share_folder=share_folder,
             cleanup=cleanup, **scf_abacus)
         proj_basis=None     # discussion needed
     else:
