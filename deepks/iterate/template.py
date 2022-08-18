@@ -49,7 +49,7 @@ DEFAULT_TRN_RES = {
 
 DEFAULT_DPDISPATCHER_RES = {
     "number_node": 1,
-    "cpus_per_node": 8,
+    "cpu_per_node": 8,
     "group_size": 1
 }
 
