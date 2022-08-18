@@ -186,35 +186,22 @@ class GroupBatchTask(AbstructTask):
                  dispatcher=None, resources=None, 
                  outlog='log', errlog='err', 
                  forward_files=None, backward_files=None,
-                 dpdispatcher_task_list=None,
-                 dpdispatcher_machine=None, dpdispatcher_resources=None,
-                 dpdispatcher_work_base=None, **task_args):
+                 **task_args):
         super().__init__(**task_args)            
+        self.batch_tasks = [deepcopy(task) for task in batch_tasks]
+        for task in self.batch_tasks:
+            assert isinstance(task, BatchTask), f'given task is instance of {task.__class__}'
+            assert not task.workdir.is_absolute()
+            task.prepend_workdir(self.workdir)
+            if task.prev_folder is None:
+                task.prev_folder = self.prev_folder
         self.group_size = group_size
         self.para_deg = ingroup_parallel
-        self.batch_tasks = batch_tasks
-        self.dpdispatcher_task_list = dpdispatcher_task_list
-        self.dpdispatcher_machine = dpdispatcher_machine
-        self.dpdispatcher_resources = dpdispatcher_resources
-        self.dpdispatcher_work_base = dpdispatcher_work_base
-        if dispatcher=="dpdispatcher":
-            self.dpdispatcher_task_list=dpdispatcher_task_list
-            assert self.dpdispatcher_machine is not None
-            if self.dpdispatcher_resources is None:
-                self.dpdispatcher_resources = resources
-        else:
-            if dispatcher is None:
-                dispatcher = Dispatcher()
-            elif isinstance(dispatcher, dict):
-                dispatcher = Dispatcher(**dispatcher)
-            assert isinstance(dispatcher, Dispatcher)
-            self.batch_tasks = [deepcopy(task) for task in batch_tasks]
-            for task in self.batch_tasks:
-                assert isinstance(task, BatchTask), f'given task is instance of {task.__class__}'
-                assert not task.workdir.is_absolute()
-                task.prepend_workdir(self.workdir)
-                if task.prev_folder is None:
-                    task.prev_folder = self.prev_folder
+        if dispatcher is None:
+            dispatcher = Dispatcher()
+        elif isinstance(dispatcher, dict):
+            dispatcher = Dispatcher(**dispatcher)
+        assert isinstance(dispatcher, Dispatcher)
         self.dispatcher = dispatcher
         self.resources = resources
         self.outlog = outlog
@@ -223,19 +210,8 @@ class GroupBatchTask(AbstructTask):
         self.backward_files = check_list(backward_files)
 
     def execute(self):
-        if self.dispatcher=="dpdispatcher":
-            from dpdispatcher import Machine, Resources, Submission
-            submission=Submission(
-                work_base=self.dpdispatcher_work_base,
-                machine=Machine.load_from_dict(self.dpdispatcher_machine),
-                resources=Resources.load_from_dict(self.dpdispatcher_resources),
-                task_list=self.dpdispatcher_task_list,
-                forward_common_files=self.forward_files,
-                backward_common_files=self.backward_files)
-            submission.run_submission()
-        else: 
-            tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]
-            self.dispatcher.run_jobs(tdicts, group_size=self.group_size, para_deg=self.para_deg,
+        tdicts = [t.make_dict(base=self.workdir) for t in self.batch_tasks]
+        self.dispatcher.run_jobs(tdicts, group_size=self.group_size, para_deg=self.para_deg,
                                  work_path='.', resources=self.resources, 
                                  forward_task_deref=False,
                                  forward_common_files=self.forward_files,
@@ -263,3 +239,35 @@ class GroupBatchTask(AbstructTask):
         super().set_prev_folder(path)
         for t in self.batch_tasks:
             t.set_prev_folder(path)
+            
+class DPDispatcherTask(AbstructTask):
+    # after grouping up, the following individual setting would be ignored:
+    # dispatcher, outlog, errlog
+    # only grouped one setting in this task would be effective
+    def __init__(self, task_list, work_base, 
+                 group_size=1, 
+                 resources=None, machine=None,
+                 outlog='log', errlog='err', 
+                 forward_files=None, backward_files=None,
+                 **task_args):
+        super().__init__(**task_args)            
+        self.group_size = group_size
+        self.task_list = task_list
+        self.machine = machine
+        self.resources = resources
+        self.work_base = work_base
+        self.outlog = outlog
+        self.errlog = errlog
+        self.forward_files = check_list(forward_files)
+        self.backward_files = check_list(backward_files)
+
+    def execute(self):
+        from dpdispatcher import Machine, Resources, Submission
+        submission=Submission(
+            work_base=self.work_base,
+            machine=Machine.load_from_dict(self.machine),
+            resources=Resources.load_from_dict(self.resources),
+            task_list=self.task_list,
+            forward_common_files=self.forward_files,
+            backward_common_files=self.backward_files)
+        submission.run_submission()

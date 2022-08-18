@@ -6,7 +6,7 @@ from deepks.utils import check_list
 from deepks.utils import flat_file_list
 from deepks.utils import get_sys_name, load_sys_paths
 from deepks.task.task import PythonTask, ShellTask
-from deepks.task.task import BatchTask, GroupBatchTask
+from deepks.task.task import BatchTask, GroupBatchTask, DPDispatcherTask
 from deepks.task.workflow import Sequence
 from deepks.utils import QCDIR
 
@@ -350,15 +350,11 @@ def make_train_task(*, workdir=".",
         if dpdispatcher_resources is None:
             dpdispatcher_resources = {}
         dpdispatcher_resources = {**DEFAULT_DPDISPATCHER_RES, **dpdispatcher_resources}
-        return GroupBatchTask(
-            batch_tasks=[],
-            workdir=workdir,
-            dispatcher=dispatcher,
-            dpdispatcher_task_list=task_list,
-            dpdispatcher_machine=dpdispatcher_machine, 
-            dpdispatcher_resources=dpdispatcher_resources, 
-            dpdispatcher_work_base=workdir,
-            resources=resources,
+        return DPDispatcherTask(
+            task_list, 
+            work_base=workdir,
+            machine=dpdispatcher_machine, 
+            resources=dpdispatcher_resources, 
             outlog=outlog,
             errlog='err',
             share_folder=share_folder,
@@ -391,7 +387,6 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
                    workdir=".", share_folder="share", outlog="log.train",
                    dispatcher=None, resources=None, 
                    dpdispatcher_machine=None, 
-                   dpdispatcher_resources=None,
                    python="python", **task_args):
     # just add some presetted arguments of make_train_task
     # have not implement parrallel training for multiple models
@@ -408,7 +403,6 @@ def make_run_train(source_train="data_train", source_test="data_test", *,
         share_folder=share_folder, outlog=outlog,
         dispatcher=dispatcher, resources=resources,
         dpdispatcher_machine=dpdispatcher_machine, 
-        dpdispatcher_resources=dpdispatcher_resources,
         python=python, **task_args
     )
 
@@ -437,7 +431,7 @@ def make_train(source_train="data_train", source_test="data_test", *,
                source_pbasis=None, source_arg="train_input.yaml", 
                workdir="01.train", share_folder="share",
                dispatcher=None, resources=None, 
-               dpdispatcher_machine=None, dpdispatcher_resources=None, 
+               dpdispatcher_machine=None, 
                python="python", cleanup=False, **task_args):
     run_train = make_run_train(
         source_train=source_train, source_test=source_test,
@@ -446,7 +440,6 @@ def make_train(source_train="data_train", source_test="data_test", *,
         workdir=".", share_folder=share_folder,
         outlog="log.train", dispatcher=dispatcher, resources=resources,
         dpdispatcher_machine=dpdispatcher_machine, 
-        dpdispatcher_resources=dpdispatcher_resources,
         python=python, **task_args
     )
     post_train = make_test_train(
