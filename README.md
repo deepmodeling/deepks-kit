@@ -29,8 +29,7 @@ conda install pytorch cudatoolkit=10.2 -c pytorch
 ```
 and [PySCF](https://github.com/pyscf/pyscf).
 ```bash
-# the conda package does not support python >= 3.8 so we use pip
-pip install pyscf
+conda install -c conda-forge pyscf
 ```
 
 Once the environment has been setup properly, using pip to install DeePKS-kit:
