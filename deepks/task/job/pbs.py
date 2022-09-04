@@ -150,10 +150,10 @@ class PBS(Batch) :
                     ("status command qstat fails to execute\nerror message:%s\nreturn code %d\n" % (err_str, ret))
         status_line = stdout.read().decode('utf-8').split ('\n')[-2]
         status_word = status_line.split ()[-2]
-        if not (len(status_line.split()) == 2 and status_word.isupper()): 
-            raise RuntimeError("Error in getting job status, " +
-                              f"status_line = {status_line}, " + 
-                              f"parsed status_word = {status_word}")
+        #if not (len(status_line.split()) == 2 and status_word.isupper()): 
+        #    raise RuntimeError("Error in getting job status, " +
+        #                      f"status_line = {status_line}, " + 
+        #                      f"parsed status_word = {status_word}")
         if status_word in ["Q","H"] :
             return JobStatus.waiting
         elif status_word in ["R"] :
