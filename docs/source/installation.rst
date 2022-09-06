@@ -11,6 +11,7 @@ DeePKS-kit is a pure python library so it can be installed following the standar
 We use `conda` here as an example. So first you may need to install [Anaconda](https://docs.anaconda.com/anaconda/install/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 To reduce the possibility of library conflicts, we suggest create a new environment (named `deepks`) with basic dependencies installed (optional):
+
 .. code-block:: console
 
   conda create -n deepks numpy scipy h5py ruamel.yaml paramiko
@@ -18,6 +19,7 @@ To reduce the possibility of library conflicts, we suggest create a new environm
 
 Now you are in the new environment called `deepks`.
 Next, install [PyTorch](https://pytorch.org/get-started/locally/) 
+
 .. code-block:: console
 
   # assuming a GPU with cudatoolkit 10.2 support
@@ -25,6 +27,7 @@ Next, install [PyTorch](https://pytorch.org/get-started/locally/)
   
 
 Once the environment has been setup properly, using pip to install DeePKS-kit:
+
 .. code-block:: console
 
   pip install git+https://github.com/deepmodeling/deepks-kit/
