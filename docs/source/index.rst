@@ -25,6 +25,6 @@ Contents
 
 .. toctree::
 
-   usage
-   api
    installation
+   getting-started
+   
