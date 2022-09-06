@@ -27,5 +27,5 @@ Contents
 
    installation
    label-preperation
-   input-preperation
+   inputs-preperation
    
