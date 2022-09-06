@@ -1,4 +1,4 @@
-DeePKS-kit Documentation!
+DeePKS-kit Documentation
 ===================================
 
 DeePKS-kit is a program to generate accurate energy functionals for quantum chemistry systems (in connection with PySCF) 
@@ -27,3 +27,4 @@ Contents
 
    usage
    api
+   installation
