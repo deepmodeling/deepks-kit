@@ -37,13 +37,22 @@ Once the environment has been setup properly, using pip to install DeePKS-kit:
 ABACUS with DeePKS enabled
 ------------
 
-To run DeePKS-kit in connection with ABACUS, the user first needs to install ABACUS with DeePKS enabled. 
+To run DeePKS-kit in connection with ABACUS, users first need to install ABACUS with DeePKS enabled. 
 Details of such installation guide can be found at `installation with DeePKS <https://github.com/deepmodeling/abacus-develop/blob/develop/docs/install.md#installation-with-deepks>`_. 
 
 
 
 DPDispatcher (optional)
 ----------------
+
+While DeePKS-kit has its built-in job dispacther, users are welcome to use DPDispatcher for automatic job submission. 
+The usage of these two types of dispatchers is given in xxx. DPDispacther can simply be installed via 
+
+.. code-block:: console
+
+  $ pip install dpdispatcher
+
+More details about DPDispacther can be found via `DPDispatcher's documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_. 
 
 To retrieve a list of random ingredients,
 you can use the ``lumache.get_random_ingredients()`` function:
