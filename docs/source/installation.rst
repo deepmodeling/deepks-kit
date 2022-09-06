@@ -26,7 +26,7 @@ Next, install `PyTorch <https://pytorch.org/get-started/locally/>`_
   conda install pytorch cudatoolkit=10.2 -c pytorch
   
 
-Once the environment has been setup properly, using pip to install DeePKS-kit:
+Once the environment has been setup properly, using `pip` to install DeePKS-kit:
 
 .. code-block:: console
 
