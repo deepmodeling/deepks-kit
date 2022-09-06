@@ -26,5 +26,5 @@ Contents
 .. toctree::
 
    installation
-   getting-started
+   label-preperation
    
