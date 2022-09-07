@@ -7,7 +7,46 @@ As can be seen in this example, 1000 structures of the single water molecules wi
 
 scf_abacus.yaml
 ----------------
+.. code-block:: yaml
 
+  scf_abacus:
+    #INPUT args
+    ntype: 2
+    nbands: 8
+    ecutwfc: 50
+    scf_thr: 1e-7
+    scf_nmax: 50
+    dft_functional: "lda"
+    gamma_only: 1
+    cal_force: 1
+    deepks_descriptor_lmax: 2
+    #STRU args ( Here are default STRU args, you can set for each group in  ../systems/group.xx/stru_abacus.yaml )
+    orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
+    pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
+    proj_file: ["jle.orb"]
+    lattice_constant: 1
+    lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+    #cmd args
+    run_cmd : "mpirun"
+    abacus_path: "/usr/local/bin/abacus"
+  init_scf_abacus:
+    orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
+    pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
+    proj_file: ["jle.orb"]
+    ntype: 2
+    nbands: 8
+    ecutwfc: 50
+    scf_thr: 1e-7
+    scf_nmax: 50
+    dft_functional: "lda"
+    gamma_only: 1
+    cal_force: 0
+    deepks_descriptor_lmax: 2
+    lattice_constant: 1
+    lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+    #cmd args
+    run_cmd : "mpirun"
+    abacus_path: "/usr/local/bin/abacus"
 
 scf_abacus_dpdispatcher.yaml
 -----------------------------
