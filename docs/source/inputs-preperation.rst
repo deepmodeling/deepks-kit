@@ -5,7 +5,8 @@ To run DeePKS-kit in connection with ABACUS, a bunch of input files are required
 
 As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` and be found under the folder ``systems``: ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
 The prepared file structure of a ready-to-run DeePKS iterative traning process should basically look like
-.. image:: ./deeks_tree.jpeg
+
+.. image:: ./deepks_tree.jpg
   :width: 400
 
 scf_abacus.yaml
