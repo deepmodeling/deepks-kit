@@ -7,28 +7,43 @@ As can be seen in this example, 1000 structures of the single water molecules wi
 
 scf_abacus.yaml
 ----------------
+
+This file controls the SCF jobs performed in ABACUS. The ``scf_abacus`` block controls the SCF jobs after the init iteration, i.e., with DeePKS model loaded, while the ``init_scf_abacus`` controls the initial SCF jobs, i.e., bare LDA or PBE SCF calculaiton. The reason to divide this file into two blocks is that after the init iteration, the SCF calculaitons with DeePKS model loaded are sometimes found hard to converge to a tight threshold, e.g., ``scf_thr = 1e-7``. Therefore we might want to slightly loose that threshold after the init iteration.
+
+Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the explanation of each keyword. Please refer to xxx for a more detailed explanation of the input parameters in ABACUS.
+
 .. code-block:: yaml
 
   scf_abacus:
-    #INPUT args
-    ntype: 2
-    nbands: 8
-    ecutwfc: 50
-    scf_thr: 1e-7
-    scf_nmax: 50
-    dft_functional: "lda"
-    gamma_only: 1
-    cal_force: 1
-    deepks_descriptor_lmax: 2
-    #STRU args ( Here are default STRU args, you can set for each group in  ../systems/group.xx/stru_abacus.yaml )
-    orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
-    pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
-    proj_file: ["jle.orb"]
-    lattice_constant: 1
-    lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
-    #cmd args
-    run_cmd : "mpirun"
-    abacus_path: "/usr/local/bin/abacus"
+    # INPUT args; keywords that related to INPUT file in ABACUS
+    ntype: 2                    # int; number of different atom species in this calculations, e.g., 2 for H2O
+    nbands: 8                   # int; number of bands to be calculated; optional
+    ecutwfc: 50                 # real; energy cutoff, unit: Ry
+    scf_thr: 1e-7               # real; SCF convergence threshold for density error; 5e-7 and below is acceptable
+    scf_nmax: 50                # int; maximum SCF iteration steps
+    dft_functional: "lda"       # string; name of the baseline density functional
+    gamma_only: 1               # bool; 1 for gamma-only calculation
+    cal_force: 1                # bool; 1 for force calculation
+    cal_stress: 0               # bool; 1 for stress calculation
+    deepks_descriptor_lmax: 2   # int; maximum angular momentum of the descriptor basis; 2 is recommended
+    
+    # STRU args; keywords that related to INPUT file in ABACUS
+    # below are default STRU args, users can also set them for each group in  
+    # ../systems/group.xx/stru_abacus.yaml
+    orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"] # atomic orbital file list for each element; 
+                                                                        # order should be consistent with that in atom.npy
+    pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]              # pseudopotential file list for each element; 
+                                                                        # order should be consistent with that in atom.npy             
+    proj_file: ["jle.orb"]                                              # projector file; generated in ABACUS; see file desriptions for more details
+    lattice_constant: 1                                                 # real; lattice constant
+    lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]                # [3, 3] matrix; lattice vectors
+    
+    # cmd args; keywords that related to running ABACUS
+    run_cmd : "mpirun"                                                  # run command
+    abacus_path: "/usr/local/bin/abacus"                                # ABACUS executable path
+  
+  # below is the init_scf_abacus block, which is basically same as above
+  # the only thing is that the recommended value for scf_thr is 1e-7
   init_scf_abacus:
     orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
     pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
