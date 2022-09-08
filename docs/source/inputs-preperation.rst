@@ -70,14 +70,14 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     run_cmd : "mpirun"
     abacus_path: "/usr/local/bin/abacus"
 
-
+.. _machine.yaml:
 
 machine.yaml
 --------------
 
 .. note::
 
-   This file is *not* required when running jobs on Bohrium via DPDispachter. In such case, users need to prepare machine_bohrium.yaml instead.
+   This file is *not* required when running jobs on Bohrium via DPDispachter. In such case, users need to prepare `machine_bohrium.yaml`_ instead.
 
 To run ABACUS-DeePKS training process on a local machine or on a cluster via slurm or PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
 
@@ -110,12 +110,14 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
   use_abacus: true         # use abacus in scf calculation
 
 
+.. _machine_bohrium.yaml:
+
 machine_bohrium.yaml
 -------------------------
 
 .. note::
 
-   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare machine.yaml instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to DPDispatcher documentation for more details on slurm/PBS job submission. 
+   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to DPDispatcher documentation for more details on slurm/PBS job submission. 
 
 To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher and prepare ``machine_bohrium.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. 
 
