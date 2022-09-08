@@ -190,6 +190,77 @@ To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher
 params.yaml
 ------------
 
+This file controls the init and iterative training processes performed in DeePKS-kit. Default values for hyperparameters set for the training process (as given below) are recommended for users who are not very experienced in machine-learning, while machine-learning gurus are welcome to play with them.  
+
+.. code-block:: yaml
+
+  # this is only part of input settings. 
+  # should be used together with systems.yaml and machines.yaml
+
+  # number of iterations to do, can be set to zero for DeePHF training
+  n_iter: 1
+  
+  # directory setting (these are default choices, can be omitted)
+  workdir: "."
+  share_folder: "share" # folder that stores all other settings
+
+  # scf settings, set to false when n_iter = 0 to skip checking
+  scf_input: false
+
+
+  # train settings for training after init iteration, 
+  # set to false when n_iter = 0 to skip checking
+  train_input:
+    # model_args is omitted, which will inherit from init_train
+    data_args: 
+      batch_size: 16          # training batch size; 16 is recommended
+      group_batch: 1          # number of batches to be grouped; set to 1 for ABACUS-related training
+      extra_label: true       # set to true to train the model with force, stress, or bandgap labels 
+      conv_filter: true       # if set to true (recommended), will read the convergence data from conv_name 
+                              # and only use converged datapoints to train; including any unconverged 
+                              # datapoints may screw up the training!
+      conv_name: conv         # npy file that records the converged datapoints
+    preprocess_args:
+      preshift: false         # restarting model already shifted. Will not recompute shift value
+      prescale: false         # same as above
+      prefit_ridge: 1e1       # the ridge factor used in linear regression
+      prefit_trainable: false # make the linear regression fixed during the training
+    train_args: 
+      # start learning rate (lr) will decay a factor of `decay_rate` every `decay_steps` epoches
+      decay_rate: 0.5         
+      decay_steps: 1000       
+      display_epoch: 100      # show training results every n epoch
+      force_factor: 1         # the prefactor multiplied infront of the force part of the loss
+      n_epoch: 5000           # total number of epoch needed in training
+      start_lr: 0.0001        # the start learning rate, will decay later
+
+  # init training settings, these are for DeePHF task 
+  init_model: false           # do not use existing model to restart from
+
+  init_scf: True              # whether to perform init SCF; 
+
+  init_train:                 # parameters for init nn training; basically the same as those listed in train_input
+    model_args:
+      hidden_sizes: [100, 100, 100] # neurons in hidden layers
+      output_scale: 100             # the output will be divided by 100 before compare with label
+      use_resnet: true              # skip connection
+      actv_fn: mygelu               # same as gelu, support force calculation
+    data_args: 
+      batch_size: 16
+      group_batch: 1 
+    preprocess_args:
+      preshift: true                # shift the descriptor by its mean
+      prescale: false               # scale the descriptor by its variance (can cause convergence problem)
+      prefit_ridge: 1e1             # do a ridge regression as prefitting
+      prefit_trainable: false
+    train_args: 
+      decay_rate: 0.96            
+      decay_steps: 500 
+      display_epoch: 100
+      n_epoch: 5000
+      start_lr: 0.0003
+
+
 projector file
 --------------
 
