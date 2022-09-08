@@ -136,9 +136,9 @@ To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher
       batch_type: lebesgue
       local_root: ./
       remote_profile:
-        email: (your-account-email)
-        password: (your-passward)
-        program_id: (your-program-id)
+        email: (your-account-email)         # email address registered on Bohrium
+        password: (your-passward)           # password on Bohrium
+        program_id: (your-program-id)       # program ID on Bohrium 
         input_data:
           log_file: log.scf 
           err_file: err.scf
@@ -146,9 +146,9 @@ To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher
           grouped: true
           job_name: deepks-scf
           disk_size: 100
-          scass_type: c8_m8_cpu
+          scass_type: c8_m8_cpu             # machine type 
           platform: ali
-          image_name: abacus-workshop
+          image_name: abacus-workshop       # image name
           on_demand: 0
   train_machine: 
     dispatcher: dpdispatcher 
@@ -179,7 +179,7 @@ To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher
     python: "/usr/bin/python3" # use python in path
     # resources are no longer needed, and the task will use gpu automatically if there is one
 
-  # other settings (these are default, can be omitted)
+  # other settings (these are default; can be omitted)
   cleanup: false # whether to delete slurm and err files
   strict: true # do not allow undefined machine parameters
 
@@ -264,7 +264,28 @@ This file controls the init and iterative training processes performed in DeePKS
 projector file
 --------------
 
+The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a specific sample job in ABACUS. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 Bohr and ``ecutwfc`` set in scf_abacus.yaml are recommeded, respectively. Related parameters can be set in ``INPUTs``:
+
+.. code-block:: c++
+
+  INPUT_ORBITAL_INFORMATION
+  <SPHERICAL_BESSEL>
+  1           // smooth or not; use the default
+  0.1         // smearing_sigma; use the default
+  100          // energy cutoff for spherical bessel functions(Ry)
+  5           // cutoff of wavefunctions(a.u.)
+  1.0e-12     // tolerence; use the default
+  </SPHERICAL_BESSEL>
+
+The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``scf_abacus.yaml``. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder. For the current DeePKS framework, all elements share the same projector file. 
+
+
 orbital files and pseudopotential files
 ---------------------------------------
+
+The DeePKS-related calculations are implemented with **lcao** basis set in ABACUS, therefore the orbital and pseudopotential files for each elements are required. Since the numerical atomic orbitals in ABACUS are generated based on SG15 optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials, users are required to use this set of pseudopotentials. Atomic orbitals with 100Ry energy cutoff are recommended, and ``ewfcut`` **is recommended to set to 100 Ry, i.e., consistent with the one applied in atomic orbital generation.** 
+
+Both the pseudopotential and the atomic orbital files can be downloaded from ABACUS official website.
+
 
 
