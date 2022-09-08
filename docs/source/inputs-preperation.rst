@@ -191,6 +191,7 @@ To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher
   #paras for abacus
   use_abacus: true # use abacus in scf calculation
 
+.. _params.yaml:
 
 params.yaml
 ------------
