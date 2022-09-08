@@ -72,257 +72,40 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
 
 machine.yaml
 --------------
+To run ABACUS-DeePKS training process on a local machine or on a cluster via slurm or PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
 
 .. code-block:: yaml
 
   # this is only part of input settings. 
   # should be used together with systems.yaml and params.yaml
   scf_machine:
-    group_size: 125 
+    group_size: 125        # number of SCF jobs that are grouped and submitted together; these jobs will be run sequentially
     resources:
-      cpus_per_task: 1 
-    sub_size: 4
+      cpus_per_task: 1     # number of CPUs for one SCF job
+    sub_size: 1            # keyword for PySCF; set to 1 for ABACUS SCF jobs
     dispatcher: 
-      context: local
-      batch: shell # set to shell to run on local machine, you can also use `slurm` or `pbs`
+      context: local       # "local" to run on local machine, or "ssh" to run on a remote machine
+      batch: shell         # set to shell to run on local machine, you can also use `slurm` or `pbs`
 
   train_machine: 
     dispatcher: 
-      context: local
-      batch: shell # same as above, use shell to run on local machine, you can also use `slurm` or `pbs`
+      context: local       # "local" to run on local machine, or "ssh" to run on a remote machine
+      batch: shell         # set to shell to run on local machine, you can also use `slurm` or `pbs`
       remote_profile: null # use lazy local
-    python: "python" # use python in path
+    python: "python"       # use python in path
     # resources are no longer needed, and the task will use gpu automatically if there is one
 
-  # other settings (these are default, can be omitted)
-  cleanup: false # whether to delete slurm and err files
-  strict: true # do not allow undefined machine parameters
+  # other settings (these are default; can be omitted)
+  cleanup: false           # whether to delete slurm and err files
+  strict: true             # do not allow undefined machine parameters
 
   #paras for abacus
-  use_abacus: true # use abacus in scf calculation
+  use_abacus: true         # use abacus in scf calculation
 
 
-machine_dpdispatcher.yaml
+machine_bohrium.yaml
 -------------------------
-scf_machine: 
-    | type: ``dict``
-    | argument path: ``machine``
 
-    resources: 
-        | type: ``dict``
-        | argument path: ``scf_machine/resources``
-        
-        cpus_per_task:
-            | type: ``int``
-            | argument path: ``scf_machine/resources/cpu_per_task``
-            
-            The number of CPUs running for a single SCF job. 
-            
-    dispatcher:
-        | tpye: ``string``
-        | argument path: ``scf_machine/dispatcher``
-        
-        The type of dispatcher chosen for job submission, which should be set as ``dpdispatcher`` here.
-        
-        The batch job system type. Option: Slurm, PBS, Lebesgue, Shell
-        
-    dpdispatcher_resources:
-        | tpye: ``dict``
-        | argument path: ``scf_machine/dpdispatcher_resources``
-        
-        number_node:
-            | type: ``int``
-            | argument path: ``scf_machine/resources/cpu_per_task``
-
-    local_root: 
-        | type: ``str`` | ``NoneType``
-        | argument path: ``machine/local_root``
-
-        The dir where the tasks and relating files locate. Typically the project dir.
-
-    remote_root: 
-        | type: ``str`` | ``NoneType``, optional
-        | argument path: ``machine/remote_root``
-
-        The dir where the tasks are executed on the remote machine. Only needed when context is not lazy-local.
-
-    clean_asynchronously: 
-        | type: ``bool``, optional, default: ``False``
-        | argument path: ``machine/clean_asynchronously``
-
-        Clean the remote directory asynchronously after the job finishes.
-
-
-    Depending on the value of *context_type*, different sub args are accepted. 
-
-    context_type:
-        | type: ``str`` (flag key)
-        | argument path: ``machine/context_type`` 
-        | possible choices: LocalContext, LazyLocalContext, LebesgueContext, SSHContext, HDFSContext, DpCloudServerContext
-
-        The connection used to remote machine. Option: LocalContext, SSHContext, HDFSContext, DpCloudServerContext, LazyLocalContext, LebesgueContext
-
-
-    When *context_type* is set to ``LocalContext`` (or its aliases ``localcontext``, ``Local``, ``local``): 
-
-    remote_profile: 
-        | type: ``dict``, optional
-        | argument path: ``machine[LocalContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine. This field is empty for this context.
-
-
-    When *context_type* is set to ``LazyLocalContext`` (or its aliases ``lazylocalcontext``, ``LazyLocal``, ``lazylocal``): 
-
-    remote_profile: 
-        | type: ``dict``, optional
-        | argument path: ``machine[LazyLocalContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine. This field is empty for this context.
-
-
-    When *context_type* is set to ``LebesgueContext`` (or its aliases ``lebesguecontext``, ``Lebesgue``, ``lebesgue``): 
-
-    remote_profile: 
-        | type: ``dict``
-        | argument path: ``machine[LebesgueContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine.
-
-        email: 
-            | type: ``str``
-            | argument path: ``machine[LebesgueContext]/remote_profile/email``
-
-            Email
-
-        password: 
-            | type: ``str``
-            | argument path: ``machine[LebesgueContext]/remote_profile/password``
-
-            Password
-
-        program_id: 
-            | type: ``int``
-            | argument path: ``machine[LebesgueContext]/remote_profile/program_id``
-
-            Program ID
-
-        keep_backup: 
-            | type: ``bool``, optional
-            | argument path: ``machine[LebesgueContext]/remote_profile/keep_backup``
-
-            keep download and upload zip
-
-        input_data: 
-            | type: ``dict``
-            | argument path: ``machine[LebesgueContext]/remote_profile/input_data``
-
-            Configuration of job
-
-
-    When *context_type* is set to ``SSHContext`` (or its aliases ``sshcontext``, ``SSH``, ``ssh``): 
-
-    remote_profile: 
-        | type: ``dict``
-        | argument path: ``machine[SSHContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine.
-
-        hostname: 
-            | type: ``str``
-            | argument path: ``machine[SSHContext]/remote_profile/hostname``
-
-            hostname or ip of ssh connection.
-
-        username: 
-            | type: ``str``
-            | argument path: ``machine[SSHContext]/remote_profile/username``
-
-            username of target linux system
-
-        password: 
-            | type: ``str``, optional
-            | argument path: ``machine[SSHContext]/remote_profile/password``
-
-            (deprecated) password of linux system. Please use `SSH keys <https://www.ssh.com/academy/ssh/key>`_ instead to improve security.
-
-        port: 
-            | type: ``int``, optional, default: ``22``
-            | argument path: ``machine[SSHContext]/remote_profile/port``
-
-            ssh connection port.
-
-        key_filename: 
-            | type: ``str`` | ``NoneType``, optional, default: ``None``
-            | argument path: ``machine[SSHContext]/remote_profile/key_filename``
-
-            key filename used by ssh connection. If left None, find key in ~/.ssh or use password for login
-
-        passphrase: 
-            | type: ``str`` | ``NoneType``, optional, default: ``None``
-            | argument path: ``machine[SSHContext]/remote_profile/passphrase``
-
-            passphrase of key used by ssh connection
-
-        timeout: 
-            | type: ``int``, optional, default: ``10``
-            | argument path: ``machine[SSHContext]/remote_profile/timeout``
-
-            timeout of ssh connection
-
-        totp_secret: 
-            | type: ``str`` | ``NoneType``, optional, default: ``None``
-            | argument path: ``machine[SSHContext]/remote_profile/totp_secret``
-
-            Time-based one time password secret. It should be a base32-encoded string extracted from the 2D code.
-
-
-    When *context_type* is set to ``HDFSContext`` (or its aliases ``hdfscontext``, ``HDFS``, ``hdfs``): 
-
-    remote_profile: 
-        | type: ``dict``, optional
-        | argument path: ``machine[HDFSContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine. This field is empty for this context.
-
-
-    When *context_type* is set to ``DpCloudServerContext`` (or its aliases ``dpcloudservercontext``, ``DpCloudServer``, ``dpcloudserver``): 
-
-    remote_profile: 
-        | type: ``dict``
-        | argument path: ``machine[DpCloudServerContext]/remote_profile``
-
-        The information used to maintain the connection with remote machine.
-
-        email: 
-            | type: ``str``
-            | argument path: ``machine[DpCloudServerContext]/remote_profile/email``
-
-            Email
-
-        password: 
-            | type: ``str``
-            | argument path: ``machine[DpCloudServerContext]/remote_profile/password``
-
-            Password
-
-        program_id: 
-            | type: ``int``
-            | argument path: ``machine[DpCloudServerContext]/remote_profile/program_id``
-
-            Program ID
-
-        keep_backup: 
-            | type: ``bool``, optional
-            | argument path: ``machine[DpCloudServerContext]/remote_profile/keep_backup``
-
-            keep download and upload zip
-
-        input_data: 
-            | type: ``dict``
-            | argument path: ``machine[DpCloudServerContext]/remote_profile/input_data``
-
-            Configuration of job
 
 
 params.yaml
