@@ -28,4 +28,5 @@ Contents
    installation
    label-preperation
    inputs-preperation
+   important-outputs-explanation
    
