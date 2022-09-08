@@ -2,7 +2,7 @@
 # should be used together with systems.yaml and machines.yaml
 
 # number of iterations to do, can be set to zero for DeePHF training
-n_iter: 2
+n_iter: 1
   
 # directory setting (these are default choices, can be omitted)
 workdir: "."

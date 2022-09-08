@@ -48,8 +48,10 @@ def make_abacus_scf_input(fp_params):
         assert(fp_params["symmetry"] == 0 or fp_params["symmetry"] == 1), "'symmetry' should be either 0 or 1."
         ret += "symmetry %d\n" % fp_params["symmetry"]
     if "nbands" in fp_params:
-        assert(fp_params["nbands"] > 0 and type(fp_params["nbands"]) == int), "'nbands' should be a positive integer."
-        ret += "nbands %d\n" % fp_params["nbands"]
+        if(type(fp_params["nbands"]) == int and fp_params["nbands"] > 0):
+            ret += "nbands %d\n" % fp_params["nbands"]
+        else:
+            print("warnning: Parameter [nbands] given is not a positive integer, the default value of [nbands] in ABACUS will be used. ")
     if "nspin" in fp_params:
         assert(fp_params["nspin"] == 1 or fp_params["nspin"] == 2 or fp_params["nspin"] == 4), "'nspin' can anly take 1, 2 or 4"
         ret += "nspin %d\n" % fp_params["nspin"]
