@@ -129,7 +129,7 @@ def load_stat(systems, dump_dir,
             try:
                 rf = load_array(get_with_prefix(f_name, rbase, ".npy"))
                 lf = load_array(get_with_prefix("force", lbase, ".npy")).reshape(rf.shape)
-                f_err.append(np.abs(lf - rf))
+                f_err.append(np.abs(lf - rf).mean((-1,-2)))
             except FileNotFoundError as e:
                 print("Warning! force file not found:", e, file=sys.stderr)
         if with_s:
