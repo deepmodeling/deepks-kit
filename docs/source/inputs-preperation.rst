@@ -72,6 +72,11 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
 
 machine.yaml
 --------------
+
+.. note::
+
+   This file is *not* required when running jobs on Bohrium via DPDispachter. In such case, users need to prepare machine_bohrium.yaml instead.
+
 To run ABACUS-DeePKS training process on a local machine or on a cluster via slurm or PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
 
 .. code-block:: yaml
@@ -106,6 +111,80 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
 machine_bohrium.yaml
 -------------------------
 
+.. note::
+
+   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare machine.yaml instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to DPDispatcher documentation for more details on slurm/PBS job submission. 
+
+To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher and prepare ``machine_bohrium.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. 
+
+.. code-block:: yaml
+
+  # this is only part of input settings. 
+  # should be used together with systems.yaml and params.yaml
+  scf_machine: 
+    resources: 
+      cpus_per_task: 4
+    dispatcher: dpdispatcher 
+    dpdispatcher_resources:
+      number_node: 1
+      cpu_per_node: 8
+      group_size: 125
+      source_list: [/opt/intel/oneapi/setvars.sh]
+    sub_size: 1 
+    dpdispatcher_machine: 
+      context_type: lebesguecontext
+      batch_type: lebesgue
+      local_root: ./
+      remote_profile:
+        email: (your-account-email)
+        password: (your-passward)
+        program_id: (your-program-id)
+        input_data:
+          log_file: log.scf 
+          err_file: err.scf
+          job_type: indicate
+          grouped: true
+          job_name: deepks-scf
+          disk_size: 100
+          scass_type: c8_m8_cpu
+          platform: ali
+          image_name: abacus-workshop
+          on_demand: 0
+  train_machine: 
+    dispatcher: dpdispatcher 
+    dpdispatcher_machine: 
+      context_type: lebesguecontext
+      batch_type: lebesgue
+      local_root: ./
+      remote_profile:
+        email: (your-account-email)
+        password: (your-passward)
+        program_id: (your-program-id)
+        input_data:
+          log_file: log.train 
+          err_file: err.train
+          job_type: indicate
+          grouped: true
+          job_name: deepks-train
+          disk_size: 100
+          scass_type: c8_m8_cpu
+          platform: ali
+          image_name: abacus-workshop
+          on_demand: 0
+    dpdispatcher_resources:
+      number_node: 1
+      cpu_per_node: 8
+      group_size: 1
+      source_list: [~/.bashrc]
+    python: "/usr/bin/python3" # use python in path
+    # resources are no longer needed, and the task will use gpu automatically if there is one
+
+  # other settings (these are default, can be omitted)
+  cleanup: false # whether to delete slurm and err files
+  strict: true # do not allow undefined machine parameters
+
+  #paras for abacus
+  use_abacus: true # use abacus in scf calculation
 
 
 params.yaml
