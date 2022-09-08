@@ -17,7 +17,7 @@ scf_machine:
     remote_profile:
       email: {your-bohrium-email}
       password: {your-bohrium-password}
-      program_id: {your-borhium-program-id}
+      program_id: {your-bohrium-program-id}
       input_data:
         log_file: log.scf 
         err_file: err.scf
@@ -38,7 +38,7 @@ train_machine:
     remote_profile:
       email: {your-bohrium-email}
       password: {your-bohrium-password}
-      program_id: {your-borhium-program-id}
+      program_id: {your-bohrium-program-id}
       input_data:
         log_file: log.train 
         err_file: err.train
