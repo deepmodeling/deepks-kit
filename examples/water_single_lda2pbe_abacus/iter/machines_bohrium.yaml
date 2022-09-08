@@ -7,7 +7,7 @@ scf_machine:
   dpdispatcher_resources:
     number_node: 1
     cpu_per_node: 8
-    group_size: 100
+    group_size: 125
     source_list: [/opt/intel/oneapi/setvars.sh]
   sub_size: 1 
   dpdispatcher_machine: 
@@ -15,9 +15,9 @@ scf_machine:
     batch_type: lebesgue
     local_root: ./
     remote_profile:
-      email: ou_qi@163.com
-      password: Quio_7401
-      program_id: 10007
+      email: (your-account-email)
+      password: (your-passward)
+      program_id: (your-program-id)
       input_data:
         log_file: log.scf 
         err_file: err.scf
@@ -36,9 +36,9 @@ train_machine:
     batch_type: lebesgue
     local_root: ./
     remote_profile:
-      email: ou_qi@163.com
-      password: Quio_7401
-      program_id: 10007
+      email: (your-account-email)
+      password: (your-passward)
+      program_id: (your-program-id)
       input_data:
         log_file: log.train 
         err_file: err.train

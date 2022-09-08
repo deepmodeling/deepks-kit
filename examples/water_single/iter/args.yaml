@@ -1,10 +1,10 @@
 # all arguments are flatten into this file
 # they can also be splitted into separate files and referenced here
-n_iter: 1
+n_iter: 5
 
 # training and testing systems
 systems_train: # can also be files that containing system paths
-  - ../systems/group.00 # support glob
+  - ../systems/group.0[0-2] # support glob
 
 systems_test: # if empty, use the last system of training set
   - ../systems/group.03
