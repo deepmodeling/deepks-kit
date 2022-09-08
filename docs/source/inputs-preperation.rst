@@ -68,13 +68,38 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     run_cmd : "mpirun"
     abacus_path: "/usr/local/bin/abacus"
 
-scf_abacus_dpdispatcher.yaml
------------------------------
 
 
 machine.yaml
 --------------
 
+.. code-block:: yaml
+
+  # this is only part of input settings. 
+  # should be used together with systems.yaml and params.yaml
+  scf_machine:
+    group_size: 125 
+    resources:
+      cpus_per_task: 1 
+    sub_size: 4
+    dispatcher: 
+      context: local
+      batch: shell # set to shell to run on local machine, you can also use `slurm` or `pbs`
+
+  train_machine: 
+    dispatcher: 
+      context: local
+      batch: shell # same as above, use shell to run on local machine, you can also use `slurm` or `pbs`
+      remote_profile: null # use lazy local
+    python: "python" # use python in path
+    # resources are no longer needed, and the task will use gpu automatically if there is one
+
+  # other settings (these are default, can be omitted)
+  cleanup: false # whether to delete slurm and err files
+  strict: true # do not allow undefined machine parameters
+
+  #paras for abacus
+  use_abacus: true # use abacus in scf calculation
 
 
 machine_dpdispatcher.yaml
