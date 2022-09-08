@@ -6,7 +6,7 @@ To run DeePKS-kit in connection with ABACUS, a bunch of input files are required
 As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` and be found under the folder ``systems``: ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
 The prepared file structure of a ready-to-run DeePKS iterative traning process should basically look like
 
-.. _filestructure:
+.. _file structure:
 
 .. image:: 
   ./deepks_tree.jpg
@@ -289,7 +289,7 @@ orbital files and pseudopotential files
 
 The DeePKS-related calculations are implemented with **lcao** basis set in ABACUS, therefore the orbital and pseudopotential files for each elements are required. Since the numerical atomic orbitals in ABACUS are generated based on SG15 optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials, users are required to use this set of pseudopotentials. Atomic orbitals with 100Ry energy cutoff are recommended, and ``ewfcut`` **is recommended to set to 100 Ry, i.e., consistent with the one applied in atomic orbital generation.** 
 
-Both the pseudopotential and the atomic orbital files can be downloaded from `ABACUS official website <https://abacus.ustc.edu.cn/pseudo/list.htm>`_. The required files are recommended to be placed on ``iter`` folder, as shown in the `filestructure`_. 
+Both the pseudopotential and the atomic orbital files can be downloaded from `ABACUS official website <https://abacus.ustc.edu.cn/pseudo/list.htm>`_. The required files are recommended to be placed on ``iter`` folder, as shown in the :ref:`file structure` . 
 
 
 
