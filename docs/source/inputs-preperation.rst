@@ -6,7 +6,7 @@ To run DeePKS-kit in connection with ABACUS, a bunch of input files are required
 As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` and be found under the folder ``systems``: ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
 The prepared file structure of a ready-to-run DeePKS iterative traning process should basically look like
 
-.. _file structure:
+.. _filestructure:
 
 .. image:: 
   ./deepks_tree.jpg
@@ -50,7 +50,8 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     abacus_path: "/usr/local/bin/abacus"                                # ABACUS executable path
   
   # below is the init_scf_abacus block, which is basically same as above
-  # the only thing is that the recommended value for scf_thr is 1e-7
+  # just note that the recommended value for scf_thr is 1e-7, 
+  # and force calculation can be omitted since the init training includes energy label only.
   init_scf_abacus:
     orb_files: ["O_gga_6au_60Ry_2s2p1d.orb", "H_gga_6au_60Ry_2s1p.orb"]
     pp_files: ["O_ONCV_PBE-1.0.upf", "H_ONCV_PBE-1.0.upf"]
@@ -219,7 +220,9 @@ This file controls the init and iterative training processes performed in DeePKS
     data_args: 
       batch_size: 16          # training batch size; 16 is recommended
       group_batch: 1          # number of batches to be grouped; set to 1 for ABACUS-related training
-      extra_label: true       # set to true to train the model with force, stress, or bandgap labels 
+      extra_label: true       # set to true to train the model with force, stress, or bandgap labels. 
+                              # note that these extra labels will only be included after the init iteration
+                              # only energy label will be included for the init training
       conv_filter: true       # if set to true (recommended), will read the convergence data from conv_name 
                               # and only use converged datapoints to train; including any unconverged 
                               # datapoints may screw up the training!
@@ -289,7 +292,7 @@ orbital files and pseudopotential files
 
 The DeePKS-related calculations are implemented with **lcao** basis set in ABACUS, therefore the orbital and pseudopotential files for each elements are required. Since the numerical atomic orbitals in ABACUS are generated based on SG15 optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials, users are required to use this set of pseudopotentials. Atomic orbitals with 100Ry energy cutoff are recommended, and ``ewfcut`` **is recommended to set to 100 Ry, i.e., consistent with the one applied in atomic orbital generation.** 
 
-Both the pseudopotential and the atomic orbital files can be downloaded from `ABACUS official website <https://abacus.ustc.edu.cn/pseudo/list.htm>`_. The required files are recommended to be placed on ``iter`` folder, as shown in the :ref:`file structure` . 
+Both the pseudopotential and the atomic orbital files can be downloaded from `ABACUS official website <https://abacus.ustc.edu.cn/pseudo/list.htm>`_. The required files are recommended to be placed on ``iter`` folder, as shown in the :ref:`file structure <filestructure>` . 
 
 
 
