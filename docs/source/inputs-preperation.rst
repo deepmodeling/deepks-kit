@@ -285,7 +285,7 @@ orbital files and pseudopotential files
 
 The DeePKS-related calculations are implemented with **lcao** basis set in ABACUS, therefore the orbital and pseudopotential files for each elements are required. Since the numerical atomic orbitals in ABACUS are generated based on SG15 optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials, users are required to use this set of pseudopotentials. Atomic orbitals with 100Ry energy cutoff are recommended, and ``ewfcut`` **is recommended to set to 100 Ry, i.e., consistent with the one applied in atomic orbital generation.** 
 
-Both the pseudopotential and the atomic orbital files can be downloaded from ABACUS official website.
+Both the pseudopotential and the atomic orbital files can be downloaded from `ABACUS official website <https://abacus.ustc.edu.cn/pseudo/list.htm>`_. The required files are recommended to be placed on ``iter`` folder, as shown in the file structure. 
 
 
 
