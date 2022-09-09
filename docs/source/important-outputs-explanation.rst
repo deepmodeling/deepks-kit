@@ -61,6 +61,15 @@ To judge whether the DeePKS model has converged, users may compare error statist
 log.train
 ------------
 
+path: ``iter/iter.xx/01.train/log.train``
+
+This file records the learning curve of the training process at each iteration. It should be noted that for iterations *after* the initial one, *train error (trn err)* recorded in this file corresponds to the **total error** of the training set, i.e., energy error plus the error from extra labels, while *test error (tst err)* corresponds to only the **energy error** of the testing set. For init training, both the train error and the test error correspond to the energy error since no extra label is included. 
+
+For a successful training process, users would expect a remarkable decrease in both the train and the test error, especially during the first one or two iterations. As the iterative training goes on, the decrease in errors will gradually become subtle. 
 
 RECORD
 --------
+
+path: ``iter/RECORD``
+
+
