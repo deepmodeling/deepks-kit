@@ -3,9 +3,9 @@ Important outputs explanation
 
 During the training process, a bunch of outputs will be generated. First, ``ABACUS`` folder will be generated under each training/testing group (``group.xx`` under ``systems``), which further includes *N=nframes* subfolders, ``0``, ``1``, ..., ``${nframes}``. For example, for ``water_single_lda2pbe_abacus``, ``ABACUS`` in folder ``systems/group.00`` contains 300 subfolders, while ``ABACUS`` in folder ``systems/group.03`` contains 100 subfolders. Each subfolder contains the input and output file of the ABACUS SCF job of corresponding frame at current iteration, and will be overwritten on the next iteration.
 
-Error statistics and training outputs are generated in ``iter`` folder. For example, if ``niter`` is set to 1, i.e., performing one additional iteration after the init iteration, the file structure of ``iter`` will basically look like:
+For each iteration, error statistics and training outputs are generated in ``iter.xx`` folder. For example, the file structure of ``iter.init`` basically looks like:
 
-Important output files are explained as below.
+If ``niter`` is larger than 0, then ``iter.00``, ``iter.01``, ..., will be generated at corresponding iteration. These folders share similar file structures as ``iter.init`` does. Important output files during the training processes are explained as below.
 
 log.data
 ----------
