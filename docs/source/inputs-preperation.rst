@@ -34,7 +34,8 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     gamma_only: 1               # bool; 1 for gamma-only calculation
     cal_force: 1                # bool; 1 for force calculation
     cal_stress: 0               # bool; 1 for stress calculation
-    deepks_descriptor_lmax: 2   # int; maximum angular momentum of the descriptor basis; 2 is recommended
+    deepks_descriptor_lmax: 2   # int; maximum angular momentum of the descriptor basis; 
+                                # should be consistent with the one applied in generating descriptors; 2 is recommended
     
     # STRU args; keywords that related to INPUT file in ABACUS
     # below are default STRU args, users can also set them for each group in  
@@ -274,7 +275,7 @@ This file controls the init and iterative training processes performed in DeePKS
 projector file
 --------------
 
-The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/H2O-deepks-pw>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in scf_abacus.yaml are recommeded, respectively. 
+The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/H2O-deepks-pw>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in :ref:`scf_abacus.yaml` are recommeded, respectively. 
 
 **Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. Related parameters can be set in ``INPUTs``:
 
@@ -289,7 +290,7 @@ The descriptors applied in DeePKS model is generated from the projected density 
   1.0e-12     // tolerence; use the default
   </SPHERICAL_BESSEL>
 
-The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``scf_abacus.yaml``. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder. For the current DeePKS framework, all elements share the same projector file. 
+The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``INPUT`` (**not INPUTs**) and the default value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder. For the current DeePKS framework, all elements share the same projector file. 
 
 
 orbital files and pseudopotential files
