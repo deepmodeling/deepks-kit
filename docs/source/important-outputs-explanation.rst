@@ -7,6 +7,8 @@ For each iteration, error statistics and training outputs are generated in ``ite
 
 If ``niter`` is larger than 0, then ``iter.00``, ``iter.01``, ..., will be generated at corresponding iteration. These folders share similar file structures as ``iter.init`` does. Important output files during the training processes are explained as below.
 
+.. log.data:
+
 log.data
 ----------
 
@@ -71,5 +73,16 @@ RECORD
 --------
 
 path: ``iter/RECORD``
+
+This file records every step taken in the iterative training process and is **crucial** when resubmitting the job. Each row of this ``RECORD`` file corresponds to a unique step, and details are given as follows:
+
+- ``(X 0 0)``: at iteration #``X ``(``X=0`` corresponds to ``iter.init``; ``X=1`` corresponds to ``iter.00``; ``X=2`` corresponds to ``iter.01``; etc), pre process of SCF, generate ABACUS work directory and input files in each group of systems
+- ``(X 0 1)``: run SCF calculations in ABACUS 
+- ``(X 0 2)``: concatenate and check the SCF result and print convergence and accuracy in :ref:`log.data` in ``iter.xx/00.scf``.
+- (X 0): current SCF job done 
+- (X 1 0): train a new model using the old one (if any) as starting point 
+- (X 1 1): current training done 
+- (X 1): test the model on all data to see the pure fitting error --> log.train in iter.xx/01.train（Section III.4）
+- (X): current iteration done 
 
 
