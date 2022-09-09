@@ -15,6 +15,10 @@ The structures of the system can be provided via three formats as follows
     - **nframes** refers to the number of frames (structures) of the interested system; 
     - **natoms** refers to the number of atoms of the interested system, e.g., for single water system, **natoms = 3**; 
     - the last dimension **4** corresponds to the nuclear charge of the given atom and its *xyz* coordinates.
+    
+.. Note:
+
+  If coordinates saved in ``atom.npy`` are in unit of Bohr, then ``lattice_constant`` should be set to 1 in :ref:'scf_abacus.yaml. If coordinates saved in ``atom.npy`` are in unit of Angstrom, then ``lattice_constant`` should be set to 1.8897259886 in :ref:'scf_abacus.yaml. 
 
 - **grouped into** ``coord.npy`` **and** ``type.raw``
 
