@@ -274,7 +274,7 @@ projector file
 
 The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a specific sample job in ABACUS. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in scf_abacus.yaml are recommeded, respectively. 
 
-**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Users only need to adjust the energy cutoff and the radial cutoff of the wavefunctions. Related parameters can be set in ``INPUTs``:
+**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. Related parameters can be set in ``INPUTs``:
 
 .. code-block:: c++
 
