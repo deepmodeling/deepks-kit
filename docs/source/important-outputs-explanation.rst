@@ -78,7 +78,7 @@ path: ``iter/RECORD``
 
 This file records every step taken in the iterative training process and is **crucial** when resubmitting the job. Each row of this ``RECORD`` file corresponds to a unique step, and details are given as follows:
 
-- ``(X 0 0)``: at iteration #``X ``(``X=0`` corresponds to ``iter.init``; ``X=1`` corresponds to ``iter.00``; ``X=2`` corresponds to ``iter.01``; etc), pre process of SCF, generate ABACUS work directory and input files in each group of systems
+- ``(X 0 0)``: at iteration number ``X`` (``X=0`` corresponds to ``iter.init``; ``X=1`` corresponds to ``iter.00``; ``X=2`` corresponds to ``iter.01``; etc), pre process of SCF, generate ABACUS work directory and input files in each group of systems
 - ``(X 0 1)``: run SCF calculations in ABACUS 
 - ``(X 0 2)``: concatenate and check the SCF result and print convergence and accuracy in :ref:`log.data` in ``iter.xx/00.scf``.
 - ``(X 0)``: current SCF job done; prepare for training 
