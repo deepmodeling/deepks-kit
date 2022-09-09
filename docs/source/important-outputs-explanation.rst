@@ -16,7 +16,7 @@ This file contains error statistics as well as SCF convergence ratio of each ite
 
 where ME = mean error, MAE = mean absolute error, MARE = mean relative absolute error. MARE is calculated via removing any constant energy shift between the target and base energy. Note that only energy error is included here since only energy label is trained in the init iteration.
 
-In this example, force label is triggered on by setting ``extra_label`` to be ``true`` and ``force_factor`` to be 1 in :ref:`params.yaml`
+In this example, force label is triggered on after the init iteration by setting ``extra_label`` to be ``true`` and ``force_factor`` to be 1 in :ref:`params.yaml`. 
 
 
 
