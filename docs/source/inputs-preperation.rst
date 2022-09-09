@@ -290,8 +290,7 @@ The descriptors applied in DeePKS model is generated from the projected density 
   1.0e-12     // tolerence; use the default
   </SPHERICAL_BESSEL>
 
-The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``INPUT`` (**not INPUTs**) and the default value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder. For the current DeePKS framework, all elements share the same projector file. 
-
+The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``INPUT`` (**not INPUTs**) and the default value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder.
 
 orbital files and pseudopotential files
 ---------------------------------------
