@@ -11,6 +11,8 @@ The prepared file structure of a ready-to-run DeePKS iterative traning process s
 .. image:: 
   ./deepks_tree.jpg
   :width: 300
+  
+.. _scf_abacus.yaml:
 
 scf_abacus.yaml
 ----------------
