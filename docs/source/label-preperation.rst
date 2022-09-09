@@ -18,7 +18,7 @@ The structures of the system can be provided via three formats as follows
     
 .. Note::
 
-  If coordinates saved in ``atom.npy`` are in unit of *Bohr*, then ``lattice_constant`` should be set to 1 in :ref:'scf_abacus.yaml. If coordinates saved in ``atom.npy`` are in unit of *Angstrom*, then ``lattice_constant`` should be set to 1.8897259886 in :ref:'scf_abacus.yaml. 
+  If coordinates saved in ``atom.npy`` are in unit of *Bohr*, then ``lattice_constant`` should be set to 1 in :ref:`scf_abacus.yaml`. If coordinates saved in ``atom.npy`` are in unit of *Angstrom*, then ``lattice_constant`` should be set to 1.8897259886 in :ref:`scf_abacus.yaml`. 
 
 - **grouped into** ``coord.npy`` **and** ``type.raw``
 
