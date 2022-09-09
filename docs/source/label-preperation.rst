@@ -25,7 +25,7 @@ The structures of the system can be provided via three formats as follows
   Save the xyz coordinate of each frame as single xyz file, e.g., ``0000.xyz``, ``0001.xyz``,... **Note that this format has not been fully tested for periodic systems.**
 
 It should be noted that if the lattice vectors of each frame are *not* the same, users should specify the lattice vector for each frame via ``box.npy``, of which the shape is **[nframe, 9]**. 
-If the prepared structures share the same lattice vector, then users may specify it as a keyword in input files. See xxx for details. 
+If the prepared structures share the same lattice vector, then users may specify it as a keyword in input files. See :ref:`scf_abacus.yaml` for details. 
 
 Property labels
 ----------------
