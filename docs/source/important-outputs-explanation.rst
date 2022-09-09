@@ -104,8 +104,8 @@ For example, if we want to restart the training process for iter.00, then the co
   1 0 2
   1 0
   
-  .. Note::
+.. Note::
   
-    To re-run the whole procedure, make sure that all ``iter.xx`` folder, ``share`` folder and ``RECORD`` file are deleted!
+  To re-run the whole procedure, make sure that all ``iter.xx`` folder, ``share`` folder and ``RECORD`` file are deleted!
     
 
