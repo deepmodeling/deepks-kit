@@ -93,6 +93,12 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
     group_size: 125        # number of SCF jobs that are grouped and submitted together; these jobs will be run sequentially
     resources:
       cpus_per_task: 1     # number of CPUs for one SCF job
+      numb_node: 1         # number of nodes required; required only if running with slurm/PBS
+      time_limit: '2:00:00'# time limit of the SCF job; required only if running with slurm/PBS
+      partition: normal    # partition/queue name; required only if running with slurm/PBS
+      source_list: [/opt/intel/oneapi/setvars.sh] # source file; required only if running with slurm/PBS
+      mem_limit: 12        # mem_limit in GB; required only if running with slurm/PBS
+      
     sub_size: 1            # keyword for PySCF; set to 1 for ABACUS SCF jobs
     dispatcher: 
       context: local       # "local" to run on local machine, or "ssh" to run on a remote machine
@@ -103,8 +109,16 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
       context: local       # "local" to run on local machine, or "ssh" to run on a remote machine
       batch: shell         # set to shell to run on local machine, you can also use `slurm` or `pbs`
       remote_profile: null # use lazy local
+    # resources are no longer needed, and the task will use gpu automatically if there is one. However
+    # if you run the jobs via slurm/PBS, you may still include the resources part as below
+    resources:
+      numb_node: 1
+      time_limit: '12:00:00'
+      cpus_per_task: 16
+      partition: large
+      mem_limit: 12 #GB
     python: "python"       # use python in path
-    # resources are no longer needed, and the task will use gpu automatically if there is one
+
 
   # other settings (these are default; can be omitted)
   cleanup: false           # whether to delete slurm and err files
