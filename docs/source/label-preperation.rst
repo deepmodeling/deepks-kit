@@ -6,7 +6,7 @@ Label preperation
 System structure file
 ---------------------
 
-To train a DeePKS model, users must provide the structures of the interested system(s). Structures can be obtained either from a short AIMD run or by adding structural pertubations on top of an optimized geometry.
+To train a DeePKS model, users must provide the structures of the interested system(s). Structures can be obtained either from a short AIMD run or by adding structural perturbations on top of an optimized geometry.
 The structures of the system can be provided via three formats as follows
 
 - **(recommended) grouped into** ``atom.npy``
@@ -22,7 +22,7 @@ The structures of the system can be provided via three formats as follows
 
 - **grouped into** ``coord.npy`` **and** ``type.raw``
 
-  ``coord.npy`` is very similar to ``atom.npy`` with the shape **[nframes, natoms, 3]**. The only difference is that the nuclear charge is not included in the last dimension. **Note that this format has not been fully tested for periodic systems.**
+  ``coord.npy`` is very similar to ``atom.npy`` with the shape **[nframes, natoms, 3]**. The only difference is that the nuclear charge is not included in the last dimension, which is included in ``type.raw`` instead. **Note that this format has not been fully tested for periodic systems.**
   
 - **single xyz**
   
