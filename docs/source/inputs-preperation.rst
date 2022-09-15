@@ -3,7 +3,7 @@ Input files preperation
 
 To run DeePKS-kit in connection with ABACUS, a bunch of input files are required so as to iteratively perform the SCF jobs on ABACUS and the training jobs on DeePKS-kit. Here we will use **single water molecule** as an example to show the required input files for the training of an **LDA**-based DeePKS model that provides **PBE** target energies and forces. 
 
-As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` and be found under the folder ``systems``: ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
+As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` can be found under the folder ``systems``. ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
 The prepared file structure of a ready-to-run DeePKS iterative traning process should basically look like
 
 .. _filestructure:
@@ -17,7 +17,7 @@ The prepared file structure of a ready-to-run DeePKS iterative traning process s
 scf_abacus.yaml
 ----------------
 
-This file controls the SCF jobs performed in ABACUS. The ``scf_abacus`` block controls the SCF jobs after the init iteration, i.e., with DeePKS model loaded, while the ``init_scf_abacus`` controls the initial SCF jobs, i.e., bare LDA or PBE SCF calculaiton. The reason to divide this file into two blocks is that after the init iteration, the SCF calculaitons with DeePKS model loaded are sometimes found hard to converge to a tight threshold, e.g., ``scf_thr = 1e-7``. Therefore we might want to slightly loose that threshold after the init iteration.
+This file controls the SCF jobs performed in ABACUS. The ``scf_abacus`` block controls the SCF jobs after the init iteration, i.e., with DeePKS model loaded, while the ``init_scf_abacus`` controls the initial SCF jobs, i.e., bare LDA or PBE SCF calculaiton. The reason to divide this file into two blocks is that after the init iteration, the SCF calculaitons with DeePKS model loaded are sometimes found hard to converge to a tight threshold, e.g., ``scf_thr = 1e-7``. Therefore we might want to slightly loose that threshold after the init iteration. Also, even users need to train the model with force label, there is no need to calculate force during the init SCF cycle, since the init training will include the energy label only. 
 
 Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the explanation of each keyword. Please refer to `ABACUS input file documentation <https://github.com/deepmodeling/abacus-develop/blob/develop/docs/input-main.md>`_ for a more detailed explanation of the input parameters in ABACUS.
 
@@ -135,7 +135,7 @@ machine_bohrium.yaml
 
 .. note::
 
-   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to DPDispatcher documentation for more details on slurm/PBS job submission. 
+   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm/PBS job submission. 
 
 To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher and prepare ``machine_bohrium.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. 
 
