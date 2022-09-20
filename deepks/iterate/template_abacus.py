@@ -52,7 +52,8 @@ DEFAULT_SCF_ARGS_ABACUS={
     "dft_functional": "pbe", 
     "basis_type": "lcao",
     "gamma_only": 1,
-    "k_points": [1, 1, 1, 0, 0, 0],
+    "k_points": None,
+    "kspacing": 0.1,
     "smearing_method":"gaussian",
     "smearing_sigma":0.02,
     "mixing_type": "pulay",
@@ -61,7 +62,6 @@ DEFAULT_SCF_ARGS_ABACUS={
     "cal_stress": 0,
     "deepks_bandgap": 0,
     "deepks_out_labels":1,
-    "deepks_descriptor_lmax":0,
     "deepks_scf":0,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
@@ -204,9 +204,10 @@ def convert_data(systems_train, systems_test=None, *,
             #write INPUT file
             with open(f"{sys_paths[i]}/ABACUS/{f}/INPUT", "w") as input_file:
                 input_file.write(make_abacus_scf_input(pre_args))
-            #write KPT file (gamma_only)
-            with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
-                kpt_file.write(make_abacus_scf_kpt(pre_args))
+            #write KPT file if k_points is explicitly specified or for gamma_only case
+            if pre_args["k_points"] is not None or pre_args["gamma_only"] is True:
+                with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
+                    kpt_file.write(make_abacus_scf_kpt(pre_args))
 
 
 def make_convert_scf_abacus(systems_train, systems_test=None,

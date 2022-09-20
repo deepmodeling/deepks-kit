@@ -64,6 +64,9 @@ def make_abacus_scf_input(fp_params):
     if "smearing_sigma" in fp_params:
         assert(fp_params["smearing_sigma"] >= 0), "'smearing_sigma' should be non-negative."
         ret += "smearing_sigma %f\n" % fp_params["smearing_sigma"]
+    if "kspacing" in fp_params:
+        assert(fp_params["kspacing"] > 0), "'kspacing' should be positive."
+        ret += "kspacing %f\n" % fp_params["kspacing"]
     if "cal_force" in fp_params:
         assert(fp_params["cal_force"] == 0  or fp_params["cal_force"] == 1), "'cal_force' should be either 0 or 1."
         ret += "cal_force %d\n" % fp_params["cal_force"]
@@ -74,9 +77,6 @@ def make_abacus_scf_input(fp_params):
     if "deepks_out_labels" in fp_params:
         assert(fp_params["deepks_out_labels"] == 0 or fp_params["deepks_out_labels"] == 1), "'deepks_out_labels' should be either 0 or 1."
         ret += "deepks_out_labels %d\n" % fp_params["deepks_out_labels"]
-    if "deepks_descriptor_lmax" in fp_params:
-        assert(fp_params["deepks_descriptor_lmax"] >= 0),  "'deepks_descriptor_lmax' should be  a positive integer."
-        ret += "deepks_descriptor_lmax %d\n" % fp_params["deepks_descriptor_lmax"]
     if "deepks_scf" in fp_params:
         assert(fp_params["deepks_scf"] == 0  or fp_params["deepks_scf"] == 1), "'deepks_scf' should be either 0 or 1."
         ret += "deepks_scf %d\n" % fp_params["deepks_scf"]
