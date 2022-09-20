@@ -286,22 +286,17 @@ This file controls the init and iterative training processes performed in DeePKS
 projector file
 --------------
 
-The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/H2O-deepks-pw>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in :ref:`scf_abacus.yaml` are recommeded, respectively. 
+The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/deepks/pw_H2O>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in :ref:`scf_abacus.yaml` are recommeded, respectively. 
 
-**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. Related parameters can be set in ``INPUTs``:
+**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Basically, users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. The angular part is controled via the keyword ``bessel_lmax`` and the value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. 
 
 .. code-block:: c++
 
-  INPUT_ORBITAL_INFORMATION
-  <SPHERICAL_BESSEL>
-  1           // smooth or not; use the default
-  0.1         // smearing_sigma; use the default
-  100          // energy cutoff for spherical bessel functions(Ry)
-  5           // cutoff of wavefunctions(a.u.); 5-6 Bohr is recommended
-  1.0e-12     // tolerence; use the default
-  </SPHERICAL_BESSEL>
+  bessel_lmax 2   # maximum angular momentum for projectors; 2 is recommended
+  bessel_rcut 5   # radial cutoff in unit Bohr; 5 or 6 is recommended
+  ecutwfc   100   # kinetic energy cutoff in unit Ry; should be consistent with that set for ABACUS SCF calculation
 
-The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``INPUT`` (**not INPUTs**) and the default value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder.
+After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder.
 
 orbital files and pseudopotential files
 ---------------------------------------
