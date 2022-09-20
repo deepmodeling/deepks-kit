@@ -62,7 +62,6 @@ DEFAULT_SCF_ARGS_ABACUS={
     "cal_stress": 0,
     "deepks_bandgap": 0,
     "deepks_out_labels":1,
-    "deepks_descriptor_lmax":0,
     "deepks_scf":0,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
