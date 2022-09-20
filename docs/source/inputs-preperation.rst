@@ -34,8 +34,6 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     gamma_only: 1               # bool; 1 for gamma-only calculation
     cal_force: 1                # bool; 1 for force calculation
     cal_stress: 0               # bool; 1 for stress calculation
-    deepks_descriptor_lmax: 2   # int; maximum angular momentum of the descriptor basis; 
-                                # should be consistent with the one applied in generating descriptors; 2 is recommended
     
     # STRU args; keywords that related to INPUT file in ABACUS
     # below are default STRU args, users can also set them for each group in  
@@ -67,7 +65,6 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     dft_functional: "lda"
     gamma_only: 1
     cal_force: 0
-    deepks_descriptor_lmax: 2
     lattice_constant: 1
     lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
     #cmd args
