@@ -3,7 +3,7 @@ Input files preperation
 
 To run DeePKS-kit in connection with ABACUS, a bunch of input files are required so as to iteratively perform the SCF jobs on ABACUS and the training jobs on DeePKS-kit. Here we will use **single water molecule** as an example to show the required input files for the training of an **LDA**-based DeePKS model that provides **PBE** target energies and forces. 
 
-As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` and be found under the folder ``systems``: ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
+As can be seen in this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` can be found under the folder ``systems``. ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
 The prepared file structure of a ready-to-run DeePKS iterative traning process should basically look like
 
 .. _filestructure:
@@ -17,7 +17,7 @@ The prepared file structure of a ready-to-run DeePKS iterative traning process s
 scf_abacus.yaml
 ----------------
 
-This file controls the SCF jobs performed in ABACUS. The ``scf_abacus`` block controls the SCF jobs after the init iteration, i.e., with DeePKS model loaded, while the ``init_scf_abacus`` controls the initial SCF jobs, i.e., bare LDA or PBE SCF calculaiton. The reason to divide this file into two blocks is that after the init iteration, the SCF calculaitons with DeePKS model loaded are sometimes found hard to converge to a tight threshold, e.g., ``scf_thr = 1e-7``. Therefore we might want to slightly loose that threshold after the init iteration.
+This file controls the SCF jobs performed in ABACUS. The ``scf_abacus`` block controls the SCF jobs after the init iteration, i.e., with DeePKS model loaded, while the ``init_scf_abacus`` controls the initial SCF jobs, i.e., bare LDA or PBE SCF calculaiton. The reason to divide this file into two blocks is that after the init iteration, the SCF calculaitons with DeePKS model loaded are sometimes found hard to converge to a tight threshold, e.g., ``scf_thr = 1e-7``. Therefore we might want to slightly loose that threshold after the init iteration. Also, even users need to train the model with force label, there is no need to calculate force during the init SCF cycle, since the init training will include the energy label only. 
 
 Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the explanation of each keyword. Please refer to `ABACUS input file documentation <https://github.com/deepmodeling/abacus-develop/blob/develop/docs/input-main.md>`_ for a more detailed explanation of the input parameters in ABACUS.
 
@@ -132,7 +132,7 @@ machine_bohrium.yaml
 
 .. note::
 
-   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to DPDispatcher documentation for more details on slurm/PBS job submission. 
+   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm/PBS job submission. 
 
 To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher and prepare ``machine_bohrium.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. 
 
@@ -286,22 +286,17 @@ This file controls the init and iterative training processes performed in DeePKS
 projector file
 --------------
 
-The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/H2O-deepks-pw>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in :ref:`scf_abacus.yaml` are recommeded, respectively. 
+The descriptors applied in DeePKS model is generated from the projected density matrix, therefore a set of projectors are required in advance. To obtain these projectors for periodic system, users need to run a `specific sample job in ABACUS <https://github.com/deepmodeling/abacus-develop/tree/develop/examples/deepks/pw_H2O>`_. These projectors are products of spherical Bessel functions (radial part) and spherical harmonic functions (angular part), which are similar to numerical atomic orbitals. The number of Bessel functions are controled by the radial and wavefunction cutoff, for which 5 or 6 Bohr and ``ecutwfc`` set in :ref:`scf_abacus.yaml` are recommeded, respectively. 
 
-**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. Related parameters can be set in ``INPUTs``:
+**Note that it is not necessary to change the STRU file of this sample job, since all elements share the same descriptor.** Basically, users *only* need to adjust the energy cutoff and the radial cutoff of the wavefunctions. The angular part is controled via the keyword ``bessel_lmax`` and the value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. 
 
 .. code-block:: c++
 
-  INPUT_ORBITAL_INFORMATION
-  <SPHERICAL_BESSEL>
-  1           // smooth or not; use the default
-  0.1         // smearing_sigma; use the default
-  100          // energy cutoff for spherical bessel functions(Ry)
-  5           // cutoff of wavefunctions(a.u.); 5-6 Bohr is recommended
-  1.0e-12     // tolerence; use the default
-  </SPHERICAL_BESSEL>
+  bessel_lmax 2   # maximum angular momentum for projectors; 2 is recommended
+  bessel_rcut 5   # radial cutoff in unit Bohr; 5 or 6 is recommended
+  ecutwfc   100   # kinetic energy cutoff in unit Ry; should be consistent with that set for ABACUS SCF calculation
 
-The angular part is controled via the keyword ``deepks_descriptor_lmax`` in file ``INPUT`` (**not INPUTs**) and the default value 2 (including *s*, *p*, and *d* orbitals) is strongly recommended. After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder.
+After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacus`` and will need to copy this file to the ``iter`` folder.
 
 orbital files and pseudopotential files
 ---------------------------------------
