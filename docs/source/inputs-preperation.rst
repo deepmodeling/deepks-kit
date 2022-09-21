@@ -45,6 +45,7 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     proj_file: ["jle.orb"]                                              # projector file; generated in ABACUS; see file desriptions for more details
     lattice_constant: 1                                                 # real; lattice constant
     lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]                # [3, 3] matrix; lattice vectors
+    coord_type: "Cartesian"                                             # "Cartesian" or "Direct"; the latter is for fractional coordinates
     
     # cmd args; keywords that related to running ABACUS
     run_cmd : "mpirun"                                                  # run command
@@ -67,9 +68,32 @@ Below is a sample ``scf_abacus.yaml`` file for single water molecule, with the e
     cal_force: 0
     lattice_constant: 1
     lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+    coord_type: "Cartesian"                                            
     #cmd args
     run_cmd : "mpirun"
     abacus_path: "/usr/local/bin/abacus"
+
+For multi k-points systems, the number of k-points can either be set explicitly as:
+
+.. code-block:: yaml
+
+  scf_abacus:
+    <...other keywords>
+    k_points: [4,4,4,0,0,0]
+  init_scf_abacus:
+    <...other keywords>
+    k_points: [4,4,4,0,0,0]
+
+or via ``kspacing`` as:
+
+.. code-block:: yaml
+
+  scf_abacus:
+    <...other keywords>
+    kspacing: 0.1
+  init_scf_abacus:
+    <...other keywords>
+    kspacing: 0.1
 
 .. _machine.yaml:
 
