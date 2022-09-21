@@ -7,7 +7,7 @@ scf_machine:
   dpdispatcher_resources:
     number_node: 1
     cpu_per_node: 8
-    group_size: 100
+    group_size: 125
     source_list: [/opt/intel/oneapi/setvars.sh]
   sub_size: 1 
   dpdispatcher_machine: 

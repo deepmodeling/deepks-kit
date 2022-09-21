@@ -65,6 +65,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "deepks_scf":0,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
+    "coord_type": "Cartesian",
     "run_cmd": "mpirun",
     "sub_size": 1,
     "abacus_path": "/usr/local/bin/ABACUS.mpi",
@@ -204,6 +205,8 @@ def convert_data(systems_train, systems_test=None, *,
             #write INPUT file
             with open(f"{sys_paths[i]}/ABACUS/{f}/INPUT", "w") as input_file:
                 input_file.write(make_abacus_scf_input(pre_args))
+
+
             #write KPT file if k_points is explicitly specified or for gamma_only case
             if pre_args["k_points"] is not None or pre_args["gamma_only"] is True:
                 with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
