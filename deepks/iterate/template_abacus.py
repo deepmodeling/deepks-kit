@@ -65,6 +65,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "deepks_scf":0,
     "lattice_constant": 1,
     "lattice_vector": np.eye(3,dtype=int),
+    "coord_type": "Cartesian",
     "run_cmd": "mpirun",
     "sub_size": 1,
     "abacus_path": "/usr/local/bin/ABACUS.mpi",

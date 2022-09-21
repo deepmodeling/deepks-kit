@@ -113,8 +113,8 @@ def make_abacus_scf_stru(sys_data, fp_pp_files, fp_params):
         ret += "\n"
     ret += "\n"
     ret += "ATOMIC_POSITIONS\n"
-    ret += "Cartesian    # Cartesian(Unit is LATTICE_CONSTANT)\n"
-    ret += "\n"
+    ret += fp_params["coord_type"]
+    ret += "\n\n"
     natom_tot = 0
     for iele in range(len(atom_names)):
         ret += atom_names[iele] + "\n"
