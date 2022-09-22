@@ -68,9 +68,9 @@ class Slurm(Batch) :
         ret = ''
         ret += "#!/bin/bash -l\n"
         ret += "#SBATCH -N %d\n" % res['numb_node']
-        ret += "#SBATCH --ntasks-per-node=%d\n" % res['task_per_node']
+        ret += "#SBATCH --ntasks-per-node=%d\n" % res['cpus_per_task']
         if res['cpus_per_task'] > 0 :            
-            ret += "#SBATCH --cpus-per-task=%d\n" % res['cpus_per_task']
+            ret += "#SBATCH --cpus-per-task=%d\n" % res['task_per_node']
         ret += "#SBATCH -t %s\n" % res['time_limit']
         if res['mem_limit'] > 0 :
             ret += "#SBATCH --mem=%dG \n" % res['mem_limit']
@@ -120,10 +120,10 @@ class Slurm(Batch) :
         params = ""
         if "numb_node" in step_res:
             params += f" -N {step_res['numb_node']} "
-        if "task_per_node" in step_res:
-            params += f" -n {step_res['task_per_node'] * step_res.get('numb_node', 1)} "
         if "cpus_per_task" in step_res:
-            params += f" -c {step_res['cpus_per_task']} "
+            params += f" -n {step_res['cpus_per_task'] * step_res.get('numb_node', 1)} "
+        if "task_per_node" in step_res:
+            params += f" -c {step_res['task_per_node']} "
         if step_res.get("exclusive", False):
             params += " --exclusive "
         if step_res.get('numb_gpu', 0) > 0 :
