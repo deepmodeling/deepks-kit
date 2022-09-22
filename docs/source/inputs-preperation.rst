@@ -102,9 +102,9 @@ machine.yaml
 
 .. note::
 
-   This file is *not* required when running jobs on Bohrium via DPDispachter or on a cluster via slurm. In such case, users need to prepare `machine_dpdispatcher.yaml`_ instead.
+   This file is *not* required when running jobs on Bohrium via DPDispachter. In such case, users need to prepare `machine_dpdispatcher.yaml`_ instead.
 
-To run ABACUS-DeePKS training process on a local machine or on a cluster via PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
+To run ABACUS-DeePKS training process on a local machine or on a cluster via slurm or PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
 
 .. code-block:: yaml
 
@@ -136,7 +136,7 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via PBS
   #paras for abacus
   use_abacus: true         # use abacus in scf calculation
 
-To run ABACUS-DeePKS via PBS, the following parameters can be specified under ``resources`` block in both ``scf_machine`` and ``train_machine``:
+To run ABACUS-DeePKS via PBS or slurm, the following parameters can be specified under ``resources`` block in both ``scf_machine`` and ``train_machine``:
 
 .. code-block:: yaml
 
@@ -146,8 +146,8 @@ To run ABACUS-DeePKS via PBS, the following parameters can be specified under ``
     <...other kerwords>
     resources:
       numb_node:          # int; number of nodes; default value is 1
-      task_per_node:      # int; ppn required; default value is 1
-      cpus_per_task:      # int; cpus-per-node for parallel run; default value is 1
+      task_per_node:      # int; ppn required; default value is 1; SET TO 1 FOR slurm SUBMISSION
+      cpus_per_task:      # int; number of processors for mpirun; default value is 1
       numb_gpu:           # int; number of GPUs; default value is 1
       time_limit:         # time limit; default value is 1:0:0
       mem_limit:          # int; memeory limit in GB
@@ -169,7 +169,7 @@ machine_dpdispatcher.yaml
 
 .. note::
 
-   This file is *not* required when running jobs on a local machine or on a cluster via PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm job submission. 
+   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users may prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm/PBS job submission. 
 
 To run ABACUS-DeePKS on Bohrium or via slurm, users need to use DPDispatcher and prepare ``machine_dpdispatcher.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. Below is an example for running jobs in Bohrium: 
 
