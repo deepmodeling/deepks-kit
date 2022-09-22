@@ -102,9 +102,9 @@ machine.yaml
 
 .. note::
 
-   This file is *not* required when running jobs on Bohrium via DPDispachter. In such case, users need to prepare `machine_bohrium.yaml`_ instead.
+   This file is *not* required when running jobs on Bohrium via DPDispachter or on a cluster via slurm. In such case, users need to prepare `machine_dpdispatcher.yaml`_ instead.
 
-To run ABACUS-DeePKS training process on a local machine or on a cluster via slurm or PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
+To run ABACUS-DeePKS training process on a local machine or on a cluster via PBS, it is recommended to use the DeePKS built-in dispatcher and prepare ``machine.yaml`` file as follows. 
 
 .. code-block:: yaml
 
@@ -114,11 +114,6 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
     group_size: 125        # number of SCF jobs that are grouped and submitted together; these jobs will be run sequentially
     resources:
       cpus_per_task: 1     # number of CPUs for one SCF job
-      numb_node: 1         # number of nodes required; required only if running with slurm/PBS
-      time_limit: '2:00:00'# time limit of the SCF job; required only if running with slurm/PBS
-      partition: normal    # partition/queue name; required only if running with slurm/PBS
-      source_list: [/opt/intel/oneapi/setvars.sh] # source file; required only if running with slurm/PBS
-      mem_limit: 12        # mem_limit in GB; required only if running with slurm/PBS
       
     sub_size: 1            # keyword for PySCF; set to 1 for ABACUS SCF jobs
     dispatcher: 
@@ -130,14 +125,7 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
       context: local       # "local" to run on local machine, or "ssh" to run on a remote machine
       batch: shell         # set to shell to run on local machine, you can also use `slurm` or `pbs`
       remote_profile: null # use lazy local
-    # resources are no longer needed, and the task will use gpu automatically if there is one. However
-    # if you run the jobs via slurm/PBS, you may still include the resources part as below
-    resources:
-      numb_node: 1
-      time_limit: '12:00:00'
-      cpus_per_task: 16
-      partition: large
-      mem_limit: 12 #GB
+    # resources are no longer needed, and the task will use gpu automatically if there is one. 
     python: "python"       # use python in path
 
 
@@ -148,17 +136,42 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
   #paras for abacus
   use_abacus: true         # use abacus in scf calculation
 
+To run ABACUS-DeePKS via PBS, the following parameters can be specified under ``resources`` block in both ``scf_machine`` and ``train_machine``:
 
-.. _machine_bohrium.yaml:
+.. code-block:: yaml
 
-machine_bohrium.yaml
+  # this is only part of input settings. 
+  # should be used together with systems.yaml and params.yaml
+  scf_machine:
+    <...other kerwords>
+    resources:
+      numb_node:          # int; number of nodes; default value is 1
+      task_per_node:      # int; ppn required; default value is 1
+      cpus_per_task:      # int; cpus-per-node for parallel run; default value is 1
+      numb_gpu:           # int; number of GPUs; default value is 1
+      time_limit:         # time limit; default value is 1:0:0
+      mem_limit:          # int; memeory limit in GB
+      partition:          # string; queue name
+      account:            # string; account info
+      qos:                # string;
+      module_list:        # e.g., [abacus]
+      source_list:        # e.g., [/opt/intel/oneapi/setvars.sh; conda activate deepks]
+      <... other keywords>   
+   train_machine: 
+     <...other kerwords>
+     resources:
+       <... same as above>
+
+.. _machine_dpdispatcher.yaml:
+
+machine_dpdispatcher.yaml
 -------------------------
 
 .. note::
 
-   This file is *not* required when running jobs on a local machine or on a cluster via slurm or PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm/PBS job submission. 
+   This file is *not* required when running jobs on a local machine or on a cluster via PBS *with the built-in dispatcher*. In such case, users need to prepare `machine.yaml`_ instead. That being said, users may also modify keywords in this file to submit jobs to a cluster via slurm or PBS. Please refer to `DPDispatcher documentation <https://docs.deepmodeling.com/projects/dpdispatcher/en/latest/>`_ for more details on slurm job submission. 
 
-To run ABACUS-DeePKS training process on Bohrium, users need to use DPDispatcher and prepare ``machine_bohrium.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. 
+To run ABACUS-DeePKS on Bohrium or via slurm, users need to use DPDispatcher and prepare ``machine_dpdispatcher.yaml`` file as follows. Most of the keyword in this file share the same meaning as those in ``machine.yaml``. The unique part here is to specify keywords in ``dpdispatcher_resources:`` block. Below is an example for running jobs in Bohrium: 
 
 .. code-block:: yaml
 
