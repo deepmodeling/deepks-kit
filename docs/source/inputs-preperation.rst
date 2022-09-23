@@ -1,3 +1,5 @@
+.. _inputs-preparation:
+
 Input files preperation
 =======================
 
