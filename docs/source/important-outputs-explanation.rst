@@ -1,3 +1,5 @@
+.. _important-outputs-explanation:
+
 Important outputs explanation
 =============================
 
