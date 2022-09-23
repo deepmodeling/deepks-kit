@@ -11,12 +11,15 @@ This sample job can either be run on a local machine or on Bohrium. Users may mo
 To run this job on a local machine, simply issue:
 
 .. code-block:: bash
+
   cd deepks-kit/examples/water_single_lda2pbe_abacus/iter
   bash run.sh
 
 To run this job on Bohrium (which uses DPDispacther for job submission and data gathering), simply issue:
 
+.. code-block:: bash
+
   cd deepks-kit/examples/water_single_lda2pbe_abacus/iter
   bash run_dpdispatcher.sh
 
-  Outputs are introduced in :ref:`important-outputs-explanation`.
+Outputs generated during the process are introduced in :ref:`important-outputs-explanation`.
