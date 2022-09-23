@@ -1,3 +1,5 @@
+.. _label-preperation:
+
 Label preperation
 =================
 
