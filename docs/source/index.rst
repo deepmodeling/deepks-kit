@@ -18,6 +18,7 @@ Contents
 .. toctree::
 
    installation
+   getting-started
    label-preperation
    inputs-preperation
    important-outputs-explanation

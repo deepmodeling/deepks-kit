@@ -1,23 +1,22 @@
 Getting Started
 ================
 
-Label preperation
------------------
-To train a DeePKS model, users must provide the structure and the corresponding target energy of the interested system(s). 
-The structure of the system can be provided via three formats as follows
+To give it a shot on a DeePKS-ABACUS sample run, users may try the 
+single water example provided `here <https://github.com/ouqi0711/deepks-kit/tree/abacus/examples/water_single_lda2pbe_abacus>`_.
 
-- **(recommended) grouped into** *atom.npy*
+In this example, 1000 structures of the single water molecules with corresponding PBE property labels (including energy and force) have been prepared in advance. Four subfolders, i.e., ``group.00-03`` can be found under the folder ``systems``. ``group.00-group.02`` contain 300 frames each and can be applied as training sets, while ``group.03`` contains 100 frames and can be applied as testing set.
+More details about the file structures and preparation are introduced at.
 
-  The shape of *atom.npy* file is *nframes x natoms x 4*:
-    - *nframes* refers to the number of frames (structures) of the interested system; 
-    - *natoms* refers to the number of atoms of the interested system, e.g., for single water system, *natoms = 3*; 
-    - the last dimension *4* corresponds to the nuclear charge of the given atom and its *xyz* coordinates.
+This sample job can either be run on a local machine or on Bohrium. Users may modify the input files to make it run on various environment following the instruction in. 
+To run this job on a local machine, simply issue:
 
-- **grouped into** *coord.npy* **and** *type.raw*
+.. code-block:: bash
+  cd deepks-kit/examples/water_single_lda2pbe_abacus/iter
+  bash run.sh
 
-  - *coord.npy* is very similar to *atom.npy* with the shape *nframes x natoms x 3*. The only difference is that the nuclear charge is not included in the last dimension.
-  
-- **single xyz**
+To run this job on Bohrium (which uses DPDispacther for job submission and data gathering), simply issue:
 
-Input file preperation
-----------------------
+  cd deepks-kit/examples/water_single_lda2pbe_abacus/iter
+  bash run_dpdispatcher.sh
+
+  Outputs are introduced in.
