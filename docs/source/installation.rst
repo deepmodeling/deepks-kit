@@ -6,7 +6,7 @@ Installation
 DeePKS-kit
 ------------
 
-DeePKS-kit is a pure python library so it can be installed following the standard `git clone` then `pip install` procedure. Note that the main requirements `pytorch` will not be installed automatically so you will need to install them manually in advance. Below is a more detailed instruction that includes installing the required libraries in the environment.
+DeePKS-kit is a pure python library so it can be installed following the standard `git clone` then `pip install` procedure. Note that the two main requirements `pytorch` and `ABACUS` will not be installed automatically so you will need to install them manually in advance. Below is a more detailed instruction that includes installing the required libraries in the environment.
 
 We use `conda` here as an example. So first you may need to install `Anaconda <https://docs.anaconda.com/anaconda/install/>`_ or `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_.
 
