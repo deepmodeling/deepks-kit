@@ -115,7 +115,7 @@ To run ABACUS-DeePKS training process on a local machine or on a cluster via slu
   scf_machine:
     group_size: 125        # number of SCF jobs that are grouped and submitted together; these jobs will be run sequentially
     resources:
-      cpus_per_task: 1     # number of CPUs for one SCF job
+      task_per_node: 1     # number of CPUs for one SCF job
       
     sub_size: 1            # keyword for PySCF; set to 1 for ABACUS SCF jobs
     dispatcher: 
@@ -148,8 +148,7 @@ To run ABACUS-DeePKS via PBS or slurm, the following parameters can be specified
     <...other kerwords>
     resources:
       numb_node:          # int; number of nodes; default value is 1
-      task_per_node:      # int; ppn required; default value is 1; SET TO 1 FOR slurm SUBMISSION
-      cpus_per_task:      # int; number of processors for mpirun; default value is 1
+      task_per_node:      # int; ppn required; default value is 1; 
       numb_gpu:           # int; number of GPUs; default value is 1
       time_limit:         # time limit; default value is 1:0:0
       mem_limit:          # int; memeory limit in GB
@@ -181,7 +180,7 @@ To run ABACUS-DeePKS on Bohrium or via slurm, users need to use DPDispatcher and
   # should be used together with systems.yaml and params.yaml
   scf_machine: 
     resources: 
-      cpus_per_task: 4
+      task_per_node: 4
     dispatcher: dpdispatcher 
     dpdispatcher_resources:
       number_node: 1

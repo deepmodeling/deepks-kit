@@ -3,7 +3,7 @@
 scf_machine:
   group_size: 125 
   resources:
-    cpus_per_task: 1 
+    task_per_node: 1 
   sub_size: 4
   dispatcher: 
     context: local

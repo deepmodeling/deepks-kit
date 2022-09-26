@@ -51,21 +51,22 @@ ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be di
     - `proj_file`: path of orbital file for descripor basis
     - `lattice_constant`: spacial period, in Bohr
     - `lattice_vector`: spacial period of x,y and z, in Bohr
+    - `coord_type`: type of the coordinates, Cartesian or Direct
 tips: you can set different STRU parasmeters for each data group, by adding a `stru_abacus.yaml`in systems/group.xx.
 
 There are some other important parameters for using ABACUS in `params.yaml ` and `machines.yaml`:
 - `use_abacus`: set `true` to calculate SCF by ABACUS, `false` for using PySCF
-- `cpus_per_task`: how many cpu cores are used for calculating each frame in using ABACUS
+- `task_per_node`: how many cpu cores are used for calculating each frame in using ABACUS
 - `sub_size`: how many frames are calculated simultaneously
 
-**Caution**: The meanings of `cpus_per_task` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an "ABACUS task" with a unique workdir. 
+**Caution**: The meanings of `task_per_node` and `sub_size` when using ABACUS are kind of different to using PySCF, because ABACUS supports parallel calculation in **each single frame (configuration)**  while PySCF not. Each frame's calculation is an "ABACUS task" with a unique workdir. 
 
 
 ## Data units
 `deepks` accept `.npy` data in following units: 
 Property | Unit
 ---	     | :---:
-Length	 | Bohr (Å if from xyz)
+Length	 | Bohr, Å, or fractional coordinates
 Energy	 | $E_h$ (Hartree)
 Force	   | $E_h$/Bohr ($E_h$/Å if from xyz)
 

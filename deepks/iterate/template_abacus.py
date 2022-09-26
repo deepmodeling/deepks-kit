@@ -230,14 +230,14 @@ def make_convert_scf_abacus(systems_train, systems_test=None,
     if not no_model:
         assert model_file is not None
         link_prev.append((model_file, "model.pth"))
-    if resources is not None and "cpus_per_task" in resources:
-        cpus_per_task = resources["cpus_per_task"]
+    if resources is not None and "task_per_node" in resources:
+        task_per_node = resources["task_per_node"]
     pre_args.update(
         systems_train=systems_train, 
         systems_test=systems_test,
         model_file=model_file,
         no_model=no_model, 
-        cpus_per_task = cpus_per_task, 
+        task_per_node = task_per_node, 
         **pre_args)
     return PythonTask(
         convert_data, 
@@ -289,8 +289,8 @@ def make_run_scf_abacus(systems_train, systems_test=None,
             dst = os.path.join(target_dir, os.path.basename(fl))
             link_abs.append((fl, dst)) 
     #set parameters
-    if resources is not None and "cpus_per_task" in resources:
-        cpus_per_task = resources["cpus_per_task"]
+    if resources is not None and "task_per_node" in resources:
+        task_per_node = resources["task_per_node"]
     run_cmd = task_args.pop("run_cmd", "mpirun")
     abacus_path = task_args.pop("abacus_path", None)
     assert abacus_path is not None
@@ -298,7 +298,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,
     task_list=[]
     if dispatcher=="dpdispatcher":
         if dpdispatcher_resources is not None and "cpu_per_node" in dpdispatcher_resources:
-            assert cpus_per_task <= dpdispatcher_resources["cpu_per_node"]
+            assert task_per_node <= dpdispatcher_resources["cpu_per_node"]
         #make task_list
         from dpdispatcher import Task
         singletask={
@@ -314,7 +314,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,
             nframes = atom_data.shape[0]
             for f in range(nframes):
                 singletask["command"]=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
-                    {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
+                    {run_cmd} -n {task_per_node} {abacus_path} > {outlog} 2>{errlog}  &&  \
                     echo {f}`grep convergence ./OUT.ABACUS/running_scf.log` > conv  &&  \
                     echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`")
                 singletask["task_work_path"]="."
@@ -342,7 +342,7 @@ def make_run_scf_abacus(systems_train, systems_test=None,
             for f in range(nframes):
                 batch_tasks.append(BatchTask(
                     cmds=str(f"cd {sys_name[i]}/ABACUS/{f}/ &&  \
-                    {run_cmd} -n {cpus_per_task} {abacus_path} > {outlog} 2>{errlog}  &&  \
+                    {run_cmd} -n {task_per_node} {abacus_path} > {outlog} 2>{errlog}  &&  \
                     echo {f}`grep convergence ./OUT.ABACUS/running_scf.log` > conv  &&  \
                     echo {f}`grep convergence ./OUT.ABACUS/running_scf.log`"),
                     workdir="systems",
