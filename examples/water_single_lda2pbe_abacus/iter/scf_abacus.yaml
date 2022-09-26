@@ -14,6 +14,7 @@ scf_abacus:
   proj_file: ["jle.orb"]
   lattice_constant: 1
   lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+  coord_type: "Cartesian"
   #cmd args
   run_cmd : "mpirun"
   abacus_path: "/root/abacus-develop/build/abacus"
@@ -31,6 +32,7 @@ init_scf_abacus:
   cal_force: 0
   lattice_constant: 1
   lattice_vector: [[28, 0, 0], [0, 28, 0], [0, 0, 28]]
+  coord_type: "Cartesian"
   #cmd args
   run_cmd : "mpirun"
   abacus_path: "/root/abacus-develop/build/abacus"

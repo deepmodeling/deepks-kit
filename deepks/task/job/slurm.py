@@ -120,10 +120,10 @@ class Slurm(Batch) :
         params = ""
         if "numb_node" in step_res:
             params += f" -N {step_res['numb_node']} "
-        if "task_per_node" in step_res:
-            params += f" -n {step_res['task_per_node'] * step_res.get('numb_node', 1)} "
         if "cpus_per_task" in step_res:
-            params += f" -c {step_res['cpus_per_task']} "
+            params += f" -n {step_res['cpus_per_task'] * step_res.get('numb_node', 1)} "
+        if "task_per_node" in step_res:
+            params += f" -c {step_res['task_per_node']} "
         if step_res.get("exclusive", False):
             params += " --exclusive "
         if step_res.get('numb_gpu', 0) > 0 :

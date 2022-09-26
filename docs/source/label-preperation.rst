@@ -1,3 +1,5 @@
+.. _label-preperation:
+
 Label preperation
 =================
 
@@ -14,11 +16,11 @@ The structures of the system can be provided via three formats as follows
   The shape of ``atom.npy`` file is **[nframes, natoms, 4]**:
     - **nframes** refers to the number of frames (structures) of the interested system; 
     - **natoms** refers to the number of atoms of the interested system, e.g., for single water system, **natoms = 3**; 
-    - the last dimension **4** corresponds to the nuclear charge of the given atom and its *xyz* coordinates.
+    - the last dimension **4** corresponds to the nuclear charge of the given atom and its *xyz* coordinates (either in Cartesian form or in fractional form, which needs to be specified with keyword ``coord_type`` in :ref:`scf_abacus.yaml`). 
     
 .. Note::
 
-  If coordinates saved in ``atom.npy`` are in unit of *Bohr*, then ``lattice_constant`` should be set to 1 in :ref:`scf_abacus.yaml`. If coordinates saved in ``atom.npy`` are in unit of *Angstrom*, then ``lattice_constant`` should be set to 1.8897259886 in :ref:`scf_abacus.yaml`. 
+  If coordinates saved in ``atom.npy`` are in unit of *Bohr*, then ``lattice_constant`` should be set to 1 in :ref:`scf_abacus.yaml`. If coordinates saved in ``atom.npy`` are in unit of *Angstrom*, then ``lattice_constant`` should be set to 1.8897259886 in :ref:`scf_abacus.yaml`. If fractional coordinates are used, ``lattice_constant`` also needs to be set accordingly. See ABACUS documentation for more details.
 
 - **grouped into** ``coord.npy`` **and** ``type.raw``
 
@@ -39,7 +41,7 @@ To train a DeePKS model, the target energy of the interested system is required,
 .. csv-table:: 
    :header: "Filename", "Description", "Shape", "Unit"
 
-   "atom.npy",               "structural file, **required**",      "[nframes, natoms, 4]",  "Bohr or Angstrom"
+   "atom.npy",               "structural file, **required**",      "[nframes, natoms, 4]",  "Bohr or Angstrom or fractional"
    "box.npy",               "lattice vector file, optional",      "[nframes, 9]",       "Bohr or Angstrom"
    "energy.npy",              "energy label, **required**",             "[nframes,1]",      "Hartree"
    "force.npy",               "force label, optional",         "[nframes, natoms, 3]",  "Hartree/Bohr"
