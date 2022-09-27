@@ -53,7 +53,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "basis_type": "lcao",
     "gamma_only": 1,
     "k_points": None,
-    "kspacing": 0.1,
+    "kspacing": None,
     "smearing_method":"gaussian",
     "smearing_sigma":0.02,
     "mixing_type": "pulay",
