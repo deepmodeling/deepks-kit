@@ -338,7 +338,7 @@ After running this sample job, users will find ``jle.orb`` in folder ``OUT.abacu
 
 .. Note::
 
-  Note that the ``jle.orb`` file provided in the example is with extremely low cutoff for efficient job running and therefore is not indended for any practical production projects. Users need to generate a more practical projector file based on the recommended cutoffs provided above.
+  Note that the ``jle.orb`` file provided in the example is with extremely low cutoff for efficient job running and therefore is not indended for any practical production-level projects. Users need to generate a more practical projector file based on the recommended cutoffs provided above.
 
 orbital files and pseudopotential files
 ---------------------------------------
