@@ -108,6 +108,6 @@ For example, if we want to restart the training process for iter.00, then the co
   
 .. Note::
   
-  To re-run the whole procedure, make sure that all ``iter.xx`` folder, ``share`` folder and ``RECORD`` file are deleted!
+  To re-run the whole procedure, make sure that all ``iter.xx`` folder, ``share`` folder and ``RECORD`` file are deleted! In addition, if previous jobs were submiited via DPDsipatcher and resubmission is desired for some reason, maks sure the .json file located at ``~/.dpdispatcher/dp_cloud_server/`` is removed. 
     
 
