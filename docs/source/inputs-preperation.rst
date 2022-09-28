@@ -330,6 +330,7 @@ The descriptors applied in DeePKS model is generated from the projected density 
 
 .. code-block:: c++
 
+  calculation gen_bessel # calculation type should be gen_bessel
   bessel_lmax 2   # maximum angular momentum for projectors; 2 is recommended
   bessel_rcut 5   # radial cutoff in unit Bohr; 5 or 6 is recommended
   ecutwfc   100   # kinetic energy cutoff in unit Ry; should be consistent with that set for ABACUS SCF calculation
