@@ -45,6 +45,8 @@ DEFAULT_SCF_ARGS_ABACUS={
     "pp_files": ["upf"],  #atomic number order
     "proj_file": ["orb"], 
     "ntype": 1,
+    "nspin": 1,
+    "symmetry": 0,
     "nbands": None,
     "ecutwfc": 50,
     "scf_thr": 1e-7,
