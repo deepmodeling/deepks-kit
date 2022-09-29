@@ -93,6 +93,8 @@ def make_abacus_scf_stru(sys_data, fp_pp_files, fp_params):
     assert(len(atom_names) == len(fp_pp_files)), "the number of pp_files must be equal to the number of atom types. "
     assert(len(atom_names) == len(atom_numbs)), "Please check the name of atoms. "
     cell = sys_data["cells"][0].reshape([3, 3])
+    if "lattice_vector" in fp_params:
+        cell = fp_params["lattice_vector"]
     coord = sys_data['coords'][0]
     #volume = np.linalg.det(cell)
     #lattice_const = np.power(volume, 1/3)
