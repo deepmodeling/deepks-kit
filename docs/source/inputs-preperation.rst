@@ -319,6 +319,23 @@ This file controls the init and iterative training processes performed in DeePKS
       display_epoch: 100
       n_epoch: 5000
       start_lr: 0.0003
+      
+Even though the DeePKS training scheme is relativley robust, there might be a chance that the SCF procedure fails to converge after loading the DeePKS model. Such convergence failure might be caused by insufficient variety of the training data, and/or the discontinuities issue due to the sorting of the eigenvalues in eigenvalue decomposition step when constructing the descriptors. One thing that worths trying is to add more training data with sufficient variety in structure, and if the convergence failure remains or the training data is indeed sufficient, users may further symmetrize the descriptors by modifing the ``init_train`` block in ``params.yaml`` as follows:
+
+.. code-block:: yaml
+  
+  init_train:                 # parameters for init nn training; basically the same as those listed in train_input
+    proj_basis: [[0,[0,...,0]],
+                [1, [0,...,0]],
+                [2, [0,...,0]]] # projected basis for thermal embedding, 0, 1, and 2 in the first column correspond to s, p, and d orbitals, 
+                                # and the number of zeros afterwards should equal the number of Bessel functions in jle.orb.
+    model_args:
+      hidden_sizes: [100, 100, 100] # neurons in hidden layers
+      output_scale: 100             # the output will be divided by 100 before compare with label
+      use_resnet: true              # skip connection
+      actv_fn: mygelu               # same as gelu, support force calculation
+      embedding: {embd_sizes: null, init_beta: 5, type: thermal} # apply thermal averaging to further symmetrize the descriptors
+    <...other keywords>
 
 
 projector file
