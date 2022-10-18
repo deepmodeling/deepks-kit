@@ -64,7 +64,7 @@ def make_abacus_scf_input(fp_params):
     if "smearing_sigma" in fp_params:
         assert(fp_params["smearing_sigma"] >= 0), "'smearing_sigma' should be non-negative."
         ret += "smearing_sigma %f\n" % fp_params["smearing_sigma"]
-    if (("kspacing" in fp_params) and ("k_points" not in fp_params)):
+    if (("kspacing" in fp_params) and (fp_params["k_points"] is None)):
         assert(fp_params["kspacing"] > 0), "'kspacing' should be positive."
         ret += "kspacing %f\n" % fp_params["kspacing"]
     if "cal_force" in fp_params:
