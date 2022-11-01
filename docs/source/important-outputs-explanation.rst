@@ -110,4 +110,23 @@ For example, if we want to restart the training process for iter.00, then the co
   
   To re-run the whole procedure, make sure that all ``iter.xx`` folder, ``share`` folder and ``RECORD`` file are deleted! In addition, if previous jobs were submiited via DPDsipatcher and resubmission is desired for some reason, maks sure the .json file located at ``~/.dpdispatcher/dp_cloud_server/`` is removed. 
     
+Model file
+----------
+
+path: ``iter/iter.xx/01.train/model.pth``; this is the model file generated directly by the neural network in DeePKS-kit
+
+path: ``iter/iter.{xx+1}/00.scf/model.ptg``; this is the adjusted format of ``model.pth`` which will be loaed in ABACUS
+
+To manually convert ``model.pth`` to ``model.ptg``, one needs to run the following script:
+
+.. code-block:: python
+
+  import torch
+  import torch.nn as nn
+  from torch.nn import functional as F
+  from deepks.model import CorrNet
+  mp = CorrNet.load("model.pth")
+  mp.compile_save("model.ptg")
+
+
 
