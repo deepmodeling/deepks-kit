@@ -212,7 +212,7 @@ def convert_data(systems_train, systems_test=None, *,
             #write KPT file if k_points is explicitly specified or for gamma_only case
             if pre_args["k_points"] is not None or pre_args["gamma_only"] is True:
                 with open(f"{sys_paths[i]}/ABACUS/{f}/KPT","w") as kpt_file:
-                    kpt_file.write(make_abacus_scf_kpt(pre_args))
+                    kpt_file.write(make_abacus_scf_kpt(pre_args_new))
 
 
 def make_convert_scf_abacus(systems_train, systems_test=None,
