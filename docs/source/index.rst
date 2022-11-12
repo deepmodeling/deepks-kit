@@ -22,4 +22,5 @@ Contents
    label-preperation
    inputs-preperation
    important-outputs-explanation
+   running-abacus-with-deepks
    
