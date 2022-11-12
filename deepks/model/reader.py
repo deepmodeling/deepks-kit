@@ -195,7 +195,7 @@ class GroupReader(object) :
         # init system readers
         Reader_class = (Reader if extra_label 
             and isinstance(kwargs.get('d_name', "dm_eig"), str) 
-            else SimpleReader)
+            else Reader)
         self.readers = []
         self.nframes = []
         for ipath in self.path_list :
@@ -439,3 +439,35 @@ class SimpleReader(object):
 
     def get_nframes(self) :
         return self.nframes
+    
+    def collect_elems(self, elem_list):
+        if "elem_list" in self.atom_info:
+            assert list(elem_list) == list(self.atom_info["elem_list"])
+            return self.atom_info["nelem"]
+        elem_to_idx = np.zeros(200, dtype=int) + 200
+        for ii, ee in enumerate(elem_list):
+            elem_to_idx[ee] = ii
+        idxs = elem_to_idx[self.atom_info["elems"]]
+        nelem = np.zeros((self.nframes, len(elem_list)), int)
+        np.add.at(nelem, (np.arange(nelem.shape[0]).reshape(-1,1), idxs), 1)
+        self.atom_info["nelem"] = nelem
+        self.atom_info["elem_list"] = elem_list
+        return nelem
+    
+    def subtract_elem_const(self, elem_const):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec -= econst
+        self.t_data["lb_e"] -= econst
+        self.atom_info["elem_const"] = elem_const
+    
+    def revert_elem_const(self):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        if "elem_const" not in self.atom_info:
+            return
+        elem_const = self.atom_info.pop("elem_const")
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec += econst
+        self.t_data["lb_e"] += econst
