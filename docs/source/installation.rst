@@ -30,7 +30,7 @@ Once the environment has been setup properly, using `pip` to install DeePKS-kit:
 
 .. code-block:: console
 
-  $ pip install git+https://github.com/deepmodeling/deepks-kit/
+  $ pip install git+https://github.com/deepmodeling/deepks-kit@abacus
 
 
 
@@ -38,7 +38,7 @@ ABACUS with DeePKS enabled
 ------------
 
 To run DeePKS-kit in connection with ABACUS, users first need to install ABACUS with DeePKS enabled. 
-Details of such installation guide can be found at `installation with DeePKS <https://github.com/deepmodeling/abacus-develop/blob/develop/docs/install.md#installation-with-deepks>`_. 
+Details of such installation guide can be found at `installation with DeePKS <https://abacus.deepmodeling.com/en/latest/advanced/install.html#build-with-deepks>`_. 
 
 
 
