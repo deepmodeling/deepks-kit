@@ -44,7 +44,7 @@ DEFAULT_SCF_ARGS_ABACUS={
     "orb_files": ["orb"],  #atomic number order
     "pp_files": ["upf"],  #atomic number order
     "proj_file": ["orb"], 
-    "ntype": 1,
+    "ntype": 0,
     "nspin": 1,
     "symmetry": 0,
     "nbands": None,
@@ -56,8 +56,8 @@ DEFAULT_SCF_ARGS_ABACUS={
     "gamma_only": 1,
     "k_points": None,
     "kspacing": None,
-    "smearing_method":"gaussian",
-    "smearing_sigma":0.02,
+    "smearing_method":"fixed",
+    "smearing_sigma":0.001,
     "mixing_type": "pulay",
     "mixing_beta": 0.4,
     "cal_force": 0,
