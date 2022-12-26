@@ -36,7 +36,7 @@ If the prepared structures share the same lattice vector, then users may specify
 Property labels
 ----------------
 
-To train a DeePKS model, the target energy of the interested system is required, and its format should follow the format of the structure file. Additional properties can also be trained, including *force*, *stress*, and *bandgap*. The formats of structure files (taking *atom.npy* as an example) and the corresponding formats of various property labels are summarized as follows:
+To train a DeePKS model, the target energy of the interested system is required, and its format should follow the format of the structure file. Additional properties can also be trained, including *force*, *stress*, and *bandgap*. Note that the *bandgap* label corresponds to the energy difference between the valence band and the conduction band *for each k-point*, and currently this label only works for semiconductors with even numbers of electrons. The formats of structure files (taking *atom.npy* as an example) and the corresponding formats of various property labels are summarized as follows:
 
 .. csv-table:: 
    :header: "Filename", "Description", "Shape", "Unit"
@@ -46,5 +46,5 @@ To train a DeePKS model, the target energy of the interested system is required,
    "energy.npy",              "energy label, **required**",             "[nframes,1]",      "Hartree"
    "force.npy",               "force label, optional",         "[nframes, natoms, 3]",  "Hartree/Bohr"
    "stress.npy",            "virial vector file, optional",      "[nframes, 9]",        "Hartree"
-   "orbital.npy",              "bandgap label, optional",             "[nframes,1]",    "Hartree"
+   "orbital.npy",              "bandgap label, optional",             "[nframes,nkpt,1]",    "Hartree"
 
