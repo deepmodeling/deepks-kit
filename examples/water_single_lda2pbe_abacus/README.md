@@ -19,13 +19,13 @@ or directly
 
 ## Running this example with DPDispatcher
 
-If you want the jobs submitted to supercomputer platforms by **[DPDispatcher](https://github.com/deepmodeling/dpdispatcher)** , you need to set `dispatcher` as `"dpdispatcher"`and set `dpdispatcher_machine` and `dpdispatcher_resources` according to [DPDispatcher docs](https://dpdispatcher.readthedocs.io/) (see `machines_bohrium.yaml`). Remember to set the remote `abacus_path` (see `scf_abacus_bohrium.yaml`). Taking **[Bohrium](https://bohrium.dp.tech/)** as an example, `cd iter` and run:
+If you want the jobs submitted to supercomputer platforms by **[DPDispatcher](https://github.com/deepmodeling/dpdispatcher)** , you need to set `dispatcher` as `"dpdispatcher"`and set `dpdispatcher_machine` and `dpdispatcher_resources` according to [DPDispatcher docs](https://dpdispatcher.readthedocs.io/) (see `machines_dpdispatcher.yaml`). Remember to set the remote `abacus_path` (see `scf_abacus.yaml`). Taking **[Bohrium](https://bohrium.dp.tech/)** as an example, `cd iter` and run:
 
-`python -u -m deepks iterate machines_bohrium.yaml params.yaml systems.yaml scf_abacus_bohrium.yaml >> log.iter 2> err.iter`
+`python -u -m deepks iterate machines_dpdispatcher.yaml params.yaml systems.yaml scf_abacus.yaml >> log.iter 2> err.iter`
 
 or directly
 
-`cd iter && bash run.sh`
+`cd iter && bash run_dpdispatcher.sh`
 
 ## Prameters for ABACUS 
 ABACUS parameters are specified in `scf_abacus.yaml`. These parameters can be divided into 3 categories:
