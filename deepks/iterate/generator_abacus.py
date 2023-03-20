@@ -45,7 +45,7 @@ def make_abacus_scf_input(fp_params):
         assert(fp_params["mixing_beta"] >= 0 and fp_params["mixing_beta"] < 1), "'mixing_beta' should between 0 and 1."
         ret += "mixing_beta %f\n" % fp_params["mixing_beta"]
     if "symmetry" in fp_params:
-        assert(fp_params["symmetry"] == 0 or fp_params["symmetry"] == 1), "'symmetry' should be either 0 or 1."
+        #assert(fp_params["symmetry"] == 0 or fp_params["symmetry"] == 1), "'symmetry' should be either 0 or 1."
         ret += "symmetry %d\n" % fp_params["symmetry"]
     if "nbands" in fp_params:
         if(type(fp_params["nbands"]) == int and fp_params["nbands"] > 0):
@@ -85,6 +85,13 @@ def make_abacus_scf_input(fp_params):
         ret += "deepks_bandgap %d\n" % fp_params["deepks_bandgap"]
     if "model_file" in fp_params:
         ret += "deepks_model %s\n" % fp_params["model_file"]
+    if fp_params["dft_functional"] == "hse":
+        ret += "exx_pca_threshold 1e-4\n"
+        ret += "exx_c_threshold 1e-4\n"
+        ret += "exx_dm_threshold 1e-4\n"
+        ret += "exx_schwarz_threshold 1e-5\n"
+        ret += "exx_cauchy_threshold 1e-7\n"
+        ret += "exx_ccp_rmesh_times 1\n"
     return ret
 
 def make_abacus_scf_stru(sys_data, fp_pp_files, fp_params):

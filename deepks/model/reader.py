@@ -114,11 +114,9 @@ class Reader(object):
                   .reshape(raw_nframes, 6, self.natm, self.ndesc)[conv])
         if self.o_path is not None and self.op_path is not None:
             self.t_data["lb_o"] = torch.tensor(
-                np.load(self.o_path)\
-                  .reshape(raw_nframes, -1)[conv])
+                np.load(self.o_path)[conv])
             self.t_data["op"] = torch.tensor(
-                np.load(self.op_path)\
-                    .reshape(raw_nframes, -1, self.natm, self.ndesc)[conv])
+                np.load(self.op_path)[conv])
         if self.eg_path is not None and self.gveg_path is not None:
             self.t_data['eg0'] = torch.tensor(
                 np.load(self.eg_path)\
