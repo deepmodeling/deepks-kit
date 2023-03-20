@@ -142,9 +142,9 @@ def load_stat(systems, dump_dir,
                 print("Warning! stress file not found:", e, file=sys.stderr)
         if with_o:
             try:
-                ro = load_array(get_with_prefix(o_name, rbase, ".npy")).reshape(-1,1)
-                lo = load_array(get_with_prefix("orbital", lbase, ".npy")).reshape(-1,1)
-                o_err.append(lo - ro)
+                ro = load_array(get_with_prefix(o_name, rbase, ".npy"))
+                lo = load_array(get_with_prefix("orbital", lbase, ".npy")).reshape(ro.shape)
+                o_err.append(np.abs(lo - ro))
             except FileNotFoundError as e:
                 print("Warning! orbital file not found:", e, file=sys.stderr)
     return np.concatenate(c_res, 0) if c_res else None, \
