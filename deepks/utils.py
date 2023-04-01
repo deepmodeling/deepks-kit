@@ -172,6 +172,16 @@ def parse_xyz(filename):
     return natom, comments, elements, coords
 
 
+def load_elem_table(filename):
+    elem_list, elem_const = np.loadtxt(filename).T
+    elem_list = elem_list.round().astype(int)
+    return elem_list, elem_const
+
+
+def save_elem_table(filename, elem_table):
+    np.savetxt(filename, np.stack(elem_table).T, fmt=["%i", "%.16f"])
+    
+
 # below are path related utils
 
 def get_abs_path(p):

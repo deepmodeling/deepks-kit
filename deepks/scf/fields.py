@@ -1,3 +1,4 @@
+import numpy as np
 from typing import List, Callable
 from dataclasses import dataclass, field
 
@@ -31,8 +32,20 @@ def isinbohr(mol):
 def _Lunit(mol):
     return (1. if isinbohr(mol) else BOHR)
 
+def atom_data(mol):
+    raw_data = np.concatenate(
+        [mol.atom_charges().reshape(-1,1), mol.atom_coords(unit='Bohr')], 
+        axis=1)
+    non_ghost = [ii for ii in range(mol.natm) 
+        if not mol.elements[ii].startswith("X")]
+    return raw_data[non_ghost]
+
 
 SCF_FIELDS = [
+    Field("atom",
+          ["atoms", "mol", "molecule"],
+          lambda mf: atom_data(mf.mol),
+          "(nframe, natom, 4)"),
     Field("e_base", 
           ["ebase", "ene_base", "e0",
            "e_hf", "ehf", "ene_hf", 
@@ -107,34 +120,34 @@ GRAD_FIELDS = [
            "f_hf", "fhf", "force_hf", 
            "f_ks", "fks", "force_ks"], 
           lambda grad: - grad.get_base() / _Lunit(grad.mol),
-          "(nframe, natom, 3)"),
+          "(nframe, natom_raw, 3)"),
     Field("f_tot", 
           ["f_cf", "fcf", "force_cf", "ftot", "force", "f"], 
           lambda grad: - grad.de / _Lunit(grad.mol),
-          "(nframe, natom, 3)"),
+          "(nframe, natom_raw, 3)"),
     Field("grad_dmx",
           ["grad_dm_x", "grad_pdm_x"],
           lambda grad: grad.make_grad_pdm_x(flatten=True) / _Lunit(grad.mol),
-          "(nframe, natom, 3, natom, -1)"),
+          "(nframe, natom_raw, 3, natom, -1)"),
     Field("grad_vx",
           ["grad_eig_x", "geigx", "gvx"],
           lambda grad: grad.make_grad_eig_x()  / _Lunit(grad.mol),
-          "(nframe, natom, 3, natom, nproj)"),
+          "(nframe, natom_raw, 3, natom, nproj)"),
     # below are fields that requires labels
     Field("l_f_ref", 
           ["f_ref", "lbl_f_ref", "label_f_ref", "lf_ref"],
           lambda grad, **lbl: lbl["force"],
-          "(nframe, natom, 3)",
+          "(nframe, natom_raw, 3)",
           ["force"]),
     Field("l_f_delta", 
           ["lf_delta", "lbl_f_delta", "label_f_delta", "lbl_fd"],
           lambda grad, **lbl: lbl["force"] - (-grad.get_base() / _Lunit(grad.mol)),
-          "(nframe, natom, 3)",
+          "(nframe, natom_raw, 3)",
           ["force"]),
     Field("err_f", 
           ["f_err", "err_f_tot", "err_f_cf"],
           lambda grad, **lbl: lbl["force"] - (-grad.de / _Lunit(grad.mol)),
-          "(nframe, natom, 3)",
+          "(nframe, natom_raw, 3)",
           ["force"]),
 ]
 
