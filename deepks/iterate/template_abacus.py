@@ -469,6 +469,7 @@ def gather_stats_abacus(systems_train, systems_test,
         np.save(f"{train_dump}/{sys_train_names[i]}/e_base.npy", e_base)    #Ry to Hartree
         e_ref=np.load(f"{sys_train_paths[i]}/energy.npy")
         np.save(f"{train_dump}/{sys_train_names[i]}/energy.npy", e_ref)
+        np.save(f"{train_dump}/{sys_train_names[i]}/atom.npy", atom_data)
         np.save(f"{train_dump}/{sys_train_names[i]}/l_e_delta.npy", e_ref-e_base)
         np.save(f"{train_dump}/{sys_train_names[i]}/e_tot.npy", np.array(e_list))
         if(cal_force): 
@@ -564,6 +565,7 @@ def gather_stats_abacus(systems_train, systems_test,
         np.save(f"{test_dump}/{sys_test_names[i]}/e_base.npy", e_base)
         e_ref=np.load(f"{sys_test_paths[i]}/energy.npy")
         np.save(f"{test_dump}/{sys_test_names[i]}/energy.npy", e_ref)
+        np.save(f"{test_dump}/{sys_test_names[i]}/atom.npy", atom_data)
         np.save(f"{test_dump}/{sys_test_names[i]}/l_e_delta.npy", e_ref-e_base)
         np.save(f"{test_dump}/{sys_test_names[i]}/e_tot.npy", np.array(e_list))
         if(cal_force): 
