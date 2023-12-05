@@ -9,9 +9,12 @@ try:
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepks.scf.scf import DSCF, UDSCF
-from deepks.scf.fields import select_fields
+from deepks.scf.enn.scf import DSCF as DSCFEquiv
+from deepks.scf.enn.scf import UDSCF as UDSCFEquiv
+from deepks.scf.fields import select_fields, get_field_names
 from deepks.scf.penalty import select_penalty
 from deepks.model.model import CorrNet
+from deepks.model.model_enn import CorrNet as CorrNetEquiv
 from deepks.utils import check_list, flat_file_list
 from deepks.utils import is_xyz, load_sys_paths
 from deepks.utils import load_yaml, load_array
@@ -33,6 +36,20 @@ DEFAULT_SCF_ARGS = {
 
 MOL_ATTRIBUTE = {"charge", "basis", "unit"} # other molecule properties
 
+
+def make_scf(model, fields, spin):
+
+    names = get_field_names(fields["scf"])
+    if isinstance(model, CorrNetEquiv) or "dm_flat" in names:
+        dscf = DSCFEquiv
+        udscf = UDSCFEquiv
+    else:
+        dscf = DSCF
+        udscf = UDSCF
+
+    return dscf if spin == 0 else udscf
+
+
 def solve_mol(mol, model, fields, labels=None,
               proj_basis=None, penalties=None, device=None,
               chkfile=None, verbose=0,
@@ -40,8 +57,8 @@ def solve_mol(mol, model, fields, labels=None,
     
     tic = time.time()
 
-    SCFcls = DSCF if mol.spin == 0 else UDSCF
-    cf = SCFcls(mol, model, 
+    SCFcls = make_scf(model, fields, mol.spin)
+    cf = SCFcls(mol, model,
                 proj_basis=proj_basis, 
                 penalties=penalties, 
                 device=device)

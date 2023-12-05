@@ -24,6 +24,11 @@ def select_fields(names):
     return {"scf": scfs, "grad": grads}
 
 
+def get_field_names(fields):
+    names = [fd.name for fd in fields]
+    return names
+
+
 BOHR = 0.52917721092
 
 def isinbohr(mol):
@@ -68,6 +73,10 @@ SCF_FIELDS = [
           ["eig"],
           lambda mf: mf.make_eig(),
           "(nframe, natom, nproj)"),
+    Field("dm_flat",
+          ["dmflat"],
+          lambda mf: mf.make_flat_pdm,
+          "(nframe, natom, nproj, nproj)"),
     Field("hcore_eig",
           ["heig"],
           lambda mf: mf.make_eig(mf.get_hcore()),
