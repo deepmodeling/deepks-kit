@@ -156,6 +156,9 @@ init_train:
     use_resnet: true
     # gelu generally performs better than others
     actv_fn: gelu
+    # whether to use layer norm before each dense layer or not
+    # set to 'simple' for non-parametrized version
+    layer_norm: false 
     # whether to use a predefined embedding function 
     # to further symmetrize the eigenvalues as descriptors
     # add embedding can make the energy surface smooth, hence improve convergence

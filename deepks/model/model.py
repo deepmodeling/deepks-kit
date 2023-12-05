@@ -110,10 +110,16 @@ def masked_softmax(input, mask, dim=-1):
 
 class DenseNet(nn.Module):
     
-    def __init__(self, sizes, actv_fn=torch.relu, use_resnet=True, with_dt=False):
+    def __init__(self, sizes, actv_fn=torch.relu, 
+                 use_resnet=True, with_dt=False, layer_norm=False):
         super().__init__()
-        self.layers = nn.ModuleList([nn.Linear(in_f, out_f) 
-                                     for in_f, out_f in zip(sizes, sizes[1:])])
+        self.layers = nn.ModuleList([
+            nn.Linear(in_f, out_f) for in_f, out_f in zip(sizes, sizes[1:])
+        ])
+        self.ln_layers = nn.ModuleList([
+            nn.LayerNorm(in_f, elementwise_affine=(layer_norm!="simple"))
+            for in_f in sizes[:-1]
+        ]) if layer_norm else [None] * (len(sizes)-1)
         self.actv_fn = actv_fn
         self.use_resnet = use_resnet
         if with_dt:
@@ -124,8 +130,11 @@ class DenseNet(nn.Module):
             self.dts = None
     
     def forward(self, x):
-        for i, layer in enumerate(self.layers):
-            tmp = layer(x)
+        for i, (layer, ln_layer) in enumerate(zip(self.layers, self.ln_layers)):
+            tmp = x
+            if ln_layer is not None:
+                tmp = ln_layer(tmp)
+            tmp = layer(tmp)
             if i < len(self.layers) - 1:
                 tmp = self.actv_fn(tmp)
             if self.use_resnet and layer.in_features == layer.out_features:
@@ -214,8 +223,8 @@ class CorrNet(nn.Module):
 
     @log_args('_init_args')
     def __init__(self, input_dim, hidden_sizes=(100,100,100), 
-                 actv_fn='gelu', use_resnet=True, 
-                 embedding=None, proj_basis=None, elem_table=None, 
+                 actv_fn='gelu', use_resnet=True, layer_norm=False,
+                 embedding=None, proj_basis=None, elem_table=None,
                  input_shift=0, input_scale=1, output_scale=1):
         super().__init__()
         actv_fn = parse_actv_fn(actv_fn)
@@ -248,7 +257,11 @@ class CorrNet(nn.Module):
             ndesc = self.embedder.ndesc
         # fitting net
         layer_sizes = [ndesc, *hidden_sizes, 1]
-        self.densenet = DenseNet(layer_sizes, actv_fn, use_resnet).double()
+        self.densenet = DenseNet(
+            sizes=layer_sizes, 
+            actv_fn=actv_fn, 
+            use_resnet=use_resnet,
+            layer_norm=layer_norm).double()
         # scaling part
         self.input_shift = nn.Parameter(
             torch.tensor(input_shift, dtype=torch.float64).expand(input_dim).clone(), 

@@ -38,6 +38,7 @@ init_train: # parameters for nn training
     output_scale: 100 # the output will be divided by 100 before compare with label
     use_resnet: true # skip connection
     actv_fn: mygelu # same as gelu, support force calculation
+    layer_norm: false # whether to use layer norm before each dense layer, or 'simple'
   data_args: 
     batch_size: 16
     group_batch: 1 # can collect multiple system in one batch
