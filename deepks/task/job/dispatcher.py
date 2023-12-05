@@ -8,6 +8,7 @@ from .lazy_local_context import LazyLocalContext
 from .ssh_context import SSHSession
 from .ssh_context import SSHContext
 from .slurm import Slurm
+from .pbs import PBS
 from .shell import Shell
 from .job_status import JobStatus
 
@@ -59,6 +60,8 @@ class Dispatcher(object):
             raise RuntimeError('unknown context')
         if batch == 'slurm':
             self.batch_fn = Slurm            
+        elif batch == 'pbs':
+            self.batch_fn = PBS            
         elif batch == 'shell':
             self.batch_fn = Shell
         else :

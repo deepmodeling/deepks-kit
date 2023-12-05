@@ -241,6 +241,7 @@ class CorrNet(nn.Module):
         self.elem_dict = None if elem_table is None else dict(zip(*elem_table))
         # linear fitting
         self.linear = nn.Linear(input_dim, 1).double()
+        self.elem_table=elem_table
         # embedding net
         ndesc = input_dim
         self.embedder = None

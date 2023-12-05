@@ -25,6 +25,8 @@ class Reader(object):
     def __init__(self, data_path, batch_size, 
                  e_name="l_e_delta", d_name="dm_eig", 
                  f_name="l_f_delta", gvx_name="grad_vx", 
+                 s_name="l_s_delta", gvepsl_name="grad_vepsl", 
+                 o_name="l_o_delta", op_name="orbital_precalc",
                  eg_name="eg_base", gveg_name="grad_veg", 
                  gldv_name="grad_ldv", conv_name="conv", 
                  atom_name="atom", **kwargs):
@@ -32,8 +34,12 @@ class Reader(object):
         self.batch_size = batch_size
         self.e_path = self.check_exist(e_name+".npy")
         self.f_path = self.check_exist(f_name+".npy")
+        self.s_path = self.check_exist(s_name+".npy")
+        self.o_path = self.check_exist(o_name+".npy")
         self.d_path = self.check_exist(d_name+".npy")
         self.gvx_path = self.check_exist(gvx_name+".npy")
+        self.gvepsl_path = self.check_exist(gvepsl_name+".npy")
+        self.op_path = self.check_exist(op_name+".npy")
         self.eg_path = self.check_exist(eg_name+".npy")
         self.gveg_path = self.check_exist(gveg_name+".npy")
         self.gldv_path = self.check_exist(gldv_name+".npy")
@@ -98,7 +104,19 @@ class Reader(object):
                   .reshape(raw_nframes, -1, 3)[conv])
             self.t_data["gvx"] = torch.tensor(
                 np.load(self.gvx_path)\
-                  .reshape(raw_nframes, -1, 3, self.natm, self.ndesc)[conv])
+                  .reshape(raw_nframes, self.natm, 3, self.natm, self.ndesc)[conv])
+        if self.s_path is not None and self.gvepsl_path is not None:
+            self.t_data["lb_s"] = torch.tensor(
+                np.load(self.s_path)\
+                  .reshape(raw_nframes, 6)[conv])
+            self.t_data["gvepsl"] = torch.tensor(
+                np.load(self.gvepsl_path)\
+                  .reshape(raw_nframes, 6, self.natm, self.ndesc)[conv])
+        if self.o_path is not None and self.op_path is not None:
+            self.t_data["lb_o"] = torch.tensor(
+                np.load(self.o_path)[conv])
+            self.t_data["op"] = torch.tensor(
+                np.load(self.op_path)[conv])
         if self.eg_path is not None and self.gveg_path is not None:
             self.t_data['eg0'] = torch.tensor(
                 np.load(self.eg_path)\
@@ -175,7 +193,7 @@ class GroupReader(object) :
         # init system readers
         Reader_class = (Reader if extra_label 
             and isinstance(kwargs.get('d_name', "dm_eig"), str) 
-            else SimpleReader)
+            else Reader)
         self.readers = []
         self.nframes = []
         for ipath in self.path_list :
@@ -419,3 +437,35 @@ class SimpleReader(object):
 
     def get_nframes(self) :
         return self.nframes
+    
+    def collect_elems(self, elem_list):
+        if "elem_list" in self.atom_info:
+            assert list(elem_list) == list(self.atom_info["elem_list"])
+            return self.atom_info["nelem"]
+        elem_to_idx = np.zeros(200, dtype=int) + 200
+        for ii, ee in enumerate(elem_list):
+            elem_to_idx[ee] = ii
+        idxs = elem_to_idx[self.atom_info["elems"]]
+        nelem = np.zeros((self.nframes, len(elem_list)), int)
+        np.add.at(nelem, (np.arange(nelem.shape[0]).reshape(-1,1), idxs), 1)
+        self.atom_info["nelem"] = nelem
+        self.atom_info["elem_list"] = elem_list
+        return nelem
+    
+    def subtract_elem_const(self, elem_const):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec -= econst
+        self.t_data["lb_e"] -= econst
+        self.atom_info["elem_const"] = elem_const
+    
+    def revert_elem_const(self):
+        # assert "elem_const" not in self.atom_info, \
+        #     "subtract_elem_const has been done. The method should not be executed twice."
+        if "elem_const" not in self.atom_info:
+            return
+        elem_const = self.atom_info.pop("elem_const")
+        econst = (self.atom_info["nelem"] @ elem_const).reshape(self.nframes, 1)
+        self.data_ec += econst
+        self.t_data["lb_e"] += econst

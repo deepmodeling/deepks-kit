@@ -239,3 +239,35 @@ class GroupBatchTask(AbstructTask):
         super().set_prev_folder(path)
         for t in self.batch_tasks:
             t.set_prev_folder(path)
+            
+class DPDispatcherTask(AbstructTask):
+    # after grouping up, the following individual setting would be ignored:
+    # dispatcher, outlog, errlog
+    # only grouped one setting in this task would be effective
+    def __init__(self, task_list, work_base, 
+                 group_size=1, 
+                 resources=None, machine=None,
+                 outlog='log', errlog='err', 
+                 forward_files=None, backward_files=None,
+                 **task_args):
+        super().__init__(**task_args)            
+        self.group_size = group_size
+        self.task_list = task_list
+        self.machine = machine
+        self.resources = resources
+        self.work_base = work_base
+        self.outlog = outlog
+        self.errlog = errlog
+        self.forward_files = check_list(forward_files)
+        self.backward_files = check_list(backward_files)
+
+    def execute(self):
+        from dpdispatcher import Machine, Resources, Submission
+        submission=Submission(
+            work_base=self.work_base,
+            machine=Machine.load_from_dict(self.machine),
+            resources=Resources.load_from_dict(self.resources),
+            task_list=self.task_list,
+            forward_common_files=self.forward_files,
+            backward_common_files=self.backward_files)
+        submission.run_submission()

@@ -83,12 +83,15 @@ def check_array(arr, nullable=True):
         return np.array(arr)
 
 
-def flat_file_list(file_list, filter_func=lambda p: True):
+def flat_file_list(file_list, filter_func=lambda p: True, sort=True):
     # make sure file list contains desired files
     # flat all wildcards and files contains other files (once)
     # if no satisfied files, return empty list
     file_list = check_list(file_list)
-    file_list = sorted(sum([glob(p) for p in file_list], []))
+    if sort:
+        file_list = sorted(sum([glob(p) for p in file_list], []))
+    else:
+        file_list = sum([glob(p) for p in file_list], [])
     new_list = []
     for p in file_list:
         if filter_func(p):
@@ -96,7 +99,10 @@ def flat_file_list(file_list, filter_func=lambda p: True):
         else:
             with open(p) as f:
                 sub_list = f.read().splitlines()
-                sub_list = sorted(sum([glob(p) for p in sub_list], []))
+                if sort:
+                    sub_list = sorted(sum([glob(p) for p in sub_list], []))
+                else: 
+                    sub_list = sum([glob(p) for p in sub_list], [])
                 new_list.extend(sub_list)
     return new_list
 

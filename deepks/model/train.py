@@ -84,8 +84,10 @@ L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
 class Evaluator:
     def __init__(self,
                  energy_factor=1., force_factor=0., 
+                 stress_factor=0., orbital_factor=0.,
                  density_factor=0., grad_penalty=0., 
-                 energy_lossfn=None, force_lossfn=None):
+                 energy_lossfn=None, force_lossfn=None, 
+                 stress_lossfn=None, orbital_lossfn=None):
         # energy term
         if energy_lossfn is None:
             energy_lossfn = {}
@@ -100,6 +102,20 @@ class Evaluator:
             force_lossfn = make_loss(**force_lossfn)
         self.f_factor = force_factor
         self.f_lossfn = force_lossfn
+        # stress term
+        if stress_lossfn is None:
+            stress_lossfn = {}
+        if isinstance(stress_lossfn, dict):
+            stress_lossfn = make_loss(**stress_lossfn)
+        self.s_factor = stress_factor
+        self.s_lossfn = stress_lossfn
+         # orbital(bandgap) term
+        if orbital_lossfn is None:
+            orbital_lossfn = {}
+        if isinstance(orbital_lossfn, dict):
+            orbital_lossfn = make_loss(**orbital_lossfn)
+        self.o_factor = orbital_factor
+        self.o_lossfn = orbital_lossfn
         # coulomb term of dm; requires head gradient
         self.d_factor = density_factor
         # gradient penalty, not very useful
@@ -112,6 +128,8 @@ class Evaluator:
         e_label, eig = sample["lb_e"], sample["eig"]
         nframe = e_label.shape[0]
         requires_grad =  ( (self.f_factor > 0 and "lb_f" in sample) 
+                        or (self.s_factor > 0 and "lb_s" in sample) 
+                        or (self.o_factor > 0 and "lb_o" in sample)
                         or (self.d_factor > 0 and "gldv" in sample)
                         or self.g_penalty > 0)
         eig.requires_grad_(requires_grad)
@@ -132,6 +150,16 @@ class Evaluator:
                 f_label, gvx = sample["lb_f"], sample["gvx"]
                 f_pred = - torch.einsum("...bxap,...ap->...bx", gvx, gev)
                 tot_loss = tot_loss + self.f_factor * self.f_lossfn(f_pred, f_label)
+            # optional stress calculation
+            if self.s_factor > 0 and "lb_s" in sample:
+                s_label, gvepsl = sample["lb_s"], sample["gvepsl"]
+                s_pred = torch.einsum("...iap,...ap->...i", gvepsl, gev)
+                tot_loss = tot_loss + self.s_factor * self.s_lossfn(s_pred, s_label)
+            # optional orbital(bandgap) calculation
+            if self.o_factor > 0 and "lb_o" in sample:
+                o_label, op = sample["lb_o"], sample["op"]
+                o_pred = torch.einsum("...kiap,...ap->...ki", op, gev)
+                tot_loss = tot_loss + self.o_factor * self.o_lossfn(o_pred, o_label)
             # density loss with fix head grad
             if self.d_factor > 0 and "gldv" in sample:
                 gldv = sample["gldv"]
@@ -140,8 +168,8 @@ class Evaluator:
 
 
 def train(model, g_reader, n_epoch=1000, test_reader=None, *,
-          energy_factor=1., force_factor=0., density_factor=0.,
-          energy_loss=None, force_loss=None, grad_penalty=0.,
+          energy_factor=1., force_factor=0., stress_factor=0., orbital_factor=0., density_factor=0.,
+          energy_loss=None, force_loss=None, stress_loss=None, orbital_loss=None, grad_penalty=0.,
           start_lr=0.001, decay_steps=100, decay_rate=0.96, stop_lr=None,
           weight_decay=0.,  fix_embedding=False,
           display_epoch=100, ckpt_file="model.pth",
@@ -164,7 +192,9 @@ def train(model, g_reader, n_epoch=1000, test_reader=None, *,
     scheduler = optim.lr_scheduler.StepLR(optimizer, decay_steps, decay_rate)
     # make evaluators for training
     evaluator = Evaluator(energy_factor=energy_factor, force_factor=force_factor, 
+                          stress_factor=stress_factor, orbital_factor=orbital_factor,
                           energy_lossfn=energy_loss, force_lossfn=force_loss,
+                          stress_lossfn=stress_loss, orbital_lossfn=orbital_loss,
                           density_factor=density_factor, grad_penalty=grad_penalty)
     # make test evaluator that only returns l2loss of energy
     test_eval = Evaluator(energy_factor=1., energy_lossfn=L2LOSS, 
