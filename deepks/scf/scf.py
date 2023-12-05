@@ -28,10 +28,11 @@ DEVICE = 'cpu'#torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def t_make_pdm(dm, ovlp_shells):
     """return projected density matrix by shell"""
-    # (D^I_rl)_mm' = \sum_i < alpha^I_rlm | phi_i >< phi_i | aplha^I_rlm' >
+    # (D^I_nl)_mm' = \sum_i < alpha^I_nlm | phi_i >< phi_i | aplha^I_nlm' >
     pdm_shells = [torch.einsum('rap,...rs,saq->...apq', po, dm, po)
                     for po in ovlp_shells]
     return pdm_shells
+
 
 def t_make_orbital_precalc(dm, ovlp_shells, mo_coeff):
     """return projected density matrix by shell"""
@@ -42,6 +43,7 @@ def t_make_orbital_precalc(dm, ovlp_shells, mo_coeff):
     ips = [torch.einsum('iapq,avpq->iav', orbital_pdm, gvdm)
                     for orbital_pdm, gvdm in zip(orbital_pdm_shells, gvdm_shells)]
     return torch.cat(ips, dim=-1)
+
 
 if hasattr(torch, "linalg"):
     def t_shell_eig(pdm):
