@@ -3,6 +3,8 @@ __all__ = [
     "reader",
     "train",
     "test",
+    "model_enn",
+    "preprocess"
 ]
 
 def __getattr__(name):

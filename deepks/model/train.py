@@ -13,6 +13,7 @@ except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepks.model.model import CorrNet
 from deepks.model.reader import GroupReader
+from deepks.model.preprocess import preprocess
 from deepks.utils import load_dirs, load_elem_table
 
 
@@ -29,31 +30,6 @@ def fit_elem_const(g_reader, test_reader=None, elem_table=None, ridge_alpha=0.):
         test_reader.collect_elems(elem_list)
         test_reader.subtract_elem_const(elem_const)
     return elem_table
-
-
-def preprocess(model, g_reader, 
-                preshift=True, prescale=False, prescale_sqrt=False, prescale_clip=0,
-                prefit=True, prefit_ridge=10, prefit_trainable=False):
-    shift = model.input_shift.cpu().detach().numpy()
-    scale = model.input_scale.cpu().detach().numpy()
-    symm_sec = model.shell_sec # will be None if no embedding
-    prefit_trainable = prefit_trainable and symm_sec is None # no embedding
-    if preshift or prescale:
-        davg, dstd = g_reader.compute_data_stat(symm_sec)
-        if preshift: 
-            shift = davg
-        if prescale: 
-            scale = dstd
-            if prescale_sqrt: 
-                scale = np.sqrt(scale)
-            if prescale_clip: 
-                scale = scale.clip(prescale_clip)
-        model.set_normalization(shift, scale)
-    if prefit:
-        weight, bias = g_reader.compute_prefitting(
-            shift=shift, scale=scale, 
-            ridge_alpha=prefit_ridge, symm_sections=symm_sec)
-        model.set_prefitting(weight, bias, trainable=prefit_trainable)
 
 
 def make_loss(cap=None, shrink=None, reduction="mean"):
@@ -76,6 +52,7 @@ def make_loss(cap=None, shrink=None, reduction="mean"):
         else:
             raise ValueError(f"{reduction} is not a valid reduction type")
     return loss_fn
+
 
 # equiv to nn.MSELoss()
 L2LOSS = make_loss(cap=None, shrink=None, reduction="mean")
