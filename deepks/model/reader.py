@@ -51,6 +51,8 @@ class Reader(object):
         # initialize sample index queue
         self.idx_queue = []
 
+        self.desc_type = "flat" if d_name == "dm_flat" else "eig"
+
     def check_exist(self, fname):
         if fname is None:
             return None
@@ -71,6 +73,15 @@ class Reader(object):
             self.natm = sys_shape[1]
             self.nproj = sys_shape[2]
         self.ndesc = self.nproj
+
+        # -- enn related
+        try:
+            with open('irreps.raw') as f:
+                self.irreps_str = f.readline().strip('\n')
+        except:
+            if self.desc_type == "flat":
+                raise RuntimeError("need irrep string file to work with dm_flat descriptor")
+            self.irreps_str = f"{self.ndesc}x0e"
 
     def prepare(self):
         # load energy and check nframes
@@ -97,7 +108,7 @@ class Reader(object):
         # load data in torch
         self.t_data = {}
         self.t_data["lb_e"] = torch.tensor(self.data_ec)
-        self.t_data["eig"] = torch.tensor(self.data_dm)
+        self.t_data["desc"] = torch.tensor(self.data_dm)
         if self.f_path is not None and self.gvx_path is not None:
             self.t_data["lb_f"] = torch.tensor(
                 np.load(self.f_path)\

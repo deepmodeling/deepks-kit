@@ -11,25 +11,12 @@ try:
     import deepks
 except ImportError as e:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
-from deepks.model.model import CorrNet
 from deepks.model.reader import GroupReader
-from deepks.model.preprocess import preprocess
-from deepks.utils import load_dirs, load_elem_table
+from deepks.model.preprocess import make_model
+from deepks.utils import load_dirs
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-def fit_elem_const(g_reader, test_reader=None, elem_table=None, ridge_alpha=0.):
-    if elem_table is None:
-        elem_table = g_reader.compute_elem_const(ridge_alpha)
-    elem_list, elem_const = elem_table
-    g_reader.collect_elems(elem_list)
-    g_reader.subtract_elem_const(elem_const)
-    if test_reader is not None:
-        test_reader.collect_elems(elem_list)
-        test_reader.subtract_elem_const(elem_const)
-    return elem_table
 
 
 def make_loss(cap=None, shrink=None, reduction="mean"):
@@ -102,19 +89,19 @@ class Evaluator:
         _dref = next(model.parameters())
         tot_loss = 0.
         sample = {k: v.to(_dref, non_blocking=True) for k, v in sample.items()}
-        e_label, eig = sample["lb_e"], sample["eig"]
+        e_label, desc = sample["lb_e"], sample["desc"]
         nframe = e_label.shape[0]
         requires_grad =  ( (self.f_factor > 0 and "lb_f" in sample) 
                         or (self.s_factor > 0 and "lb_s" in sample) 
                         or (self.o_factor > 0 and "lb_o" in sample)
                         or (self.d_factor > 0 and "gldv" in sample)
                         or self.g_penalty > 0)
-        eig.requires_grad_(requires_grad)
+        desc.requires_grad_(requires_grad)
         # begin the calculation
-        e_pred = model(eig)
+        e_pred = model(desc)
         tot_loss = tot_loss + self.e_factor * self.e_lossfn(e_pred, e_label)
         if requires_grad:
-            [gev] = torch.autograd.grad(e_pred, eig, 
+            [gev] = torch.autograd.grad(e_pred, desc,
                         grad_outputs=torch.ones_like(e_pred),
                         retain_graph=True, create_graph=True, only_inputs=True)
             # for now always use pure l2 loss for gradient penalty
@@ -253,25 +240,7 @@ def main(train_paths, test_paths=None,
         print('# testing with training set')
         test_reader = None
 
-    if restart is not None:
-        model = CorrNet.load(restart)
-        if model.elem_table is not None:
-            fit_elem_const(g_reader, test_reader, model.elem_table)
-    else:
-        input_dim = g_reader.ndesc
-        if model_args.get("input_dim", input_dim) != input_dim:
-            print(f"# `input_dim` in `model_args` does not match data",
-                  f"({input_dim}).", "Use the one in data.", file=sys.stderr)
-        model_args["input_dim"] = input_dim
-        if fit_elem:
-            elem_table = model_args.get("elem_table", None)
-            if isinstance(elem_table, str):
-                elem_table = load_elem_table(elem_table)
-            elem_table = fit_elem_const(g_reader, test_reader, elem_table)
-            model_args["elem_table"] = elem_table
-        model = CorrNet(**model_args).double()
-        
-    preprocess(model, g_reader, **preprocess_args)
+    model = make_model(g_reader, test_reader, restart, model_args, preprocess_args, fit_elem=fit_elem)
     train(model, g_reader, test_reader=test_reader, **train_args)
 
 
