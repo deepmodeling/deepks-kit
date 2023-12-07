@@ -83,7 +83,7 @@ def compute_data_stat_enn(g_reader, irreps_str):
     Ndesc = irreps.count(e3nn.o3.Irrep('0e'))
 
     all_dm = np.concatenate([r.data_dm[..., :Ndesc].reshape(-1, Ndesc) for r in g_reader.readers])
-    mean = np.mean(all_dm, dim=0)
+    mean = np.mean(all_dm, axis=0)
 
     return mean
 
@@ -129,13 +129,13 @@ def set_desc_lmax(g_reader, lmax=-1):
     g_reader.ndesc = ndesc
 
 
-def preprocess_enn(model, g_reader, ridge_alpha=10, prefit=True, prefit_trainable=False, preshift=True):
+def preprocess_enn(model, g_reader, prefit_ridge=10, prefit=True, prefit_trainable=False, preshift=True):
 
     if not (prefit or preshift): return
 
     irreps = g_reader.readers[0].irreps_str  # for now assume all configurations share the same irreps
     if prefit:
-        weight, bias = compute_prefitting_enn(g_reader, irreps_str=irreps, ridge_alpha=ridge_alpha, preshift=preshift)
+        weight, bias = compute_prefitting_enn(g_reader, irreps_str=irreps, ridge_alpha=prefit_ridge, preshift=preshift)
         model.set_prefitting(weight, bias, trainable=prefit_trainable)
     if preshift:
         mean = compute_data_stat_enn(g_reader, irreps)
@@ -158,8 +158,11 @@ def fit_elem_const(g_reader, test_reader=None, elem_table=None, ridge_alpha=0.):
 
 def make_model(g_reader, test_reader, restart, model_args, preprocess_args, fit_elem=False):
 
-    model_type = model_args["model_type"]
-    del model_args["model_type"]
+    if "model_type" in model_args.keys():
+        model_type = model_args["model_type"]
+        del model_args["model_type"]
+    else:
+        model_type = "invariant"
 
     if model_type == "invariant":
         prep = preprocess

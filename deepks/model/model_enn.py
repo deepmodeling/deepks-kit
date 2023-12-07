@@ -91,7 +91,7 @@ class CorrNet(nn.Module):
         if self.prefit:
             y += y_fit
 
-        return y
+        return y.sum(-2)
 
     def save(self, filename):
         torch.save(

@@ -45,13 +45,12 @@ class Reader(object):
         self.gldv_path = self.check_exist(gldv_name+".npy")
         self.c_path = self.check_exist(conv_name+".npy")
         self.a_path = self.check_exist(atom_name+".npy")
+        self.desc_type = "flat" if d_name == "dm_flat" else "eig"
         # load data
         self.load_meta()
         self.prepare()
         # initialize sample index queue
         self.idx_queue = []
-
-        self.desc_type = "flat" if d_name == "dm_flat" else "eig"
 
     def check_exist(self, fname):
         if fname is None:
@@ -77,7 +76,7 @@ class Reader(object):
 
         # -- enn related
         try:
-            with open('irreps.raw') as f:
+            with open(self.check_exist('irreps.raw')) as f:
                 self.irreps_str = f.readline().strip('\n')
         except:
             if self.desc_type == "flat":
