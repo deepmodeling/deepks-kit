@@ -73,6 +73,7 @@ def solve_mol(mol, model, fields, labels=None,
     nao = mol.nao
     nproj = cf.nproj
     meta = np.array([natom, natom_raw, nao, nproj])
+    irrep_str = cf.basis_info.basis_irreps if hasattr(cf, "basis_info") else None
 
     res = {}
     if labels is None:
@@ -90,7 +91,7 @@ def solve_mol(mol, model, fields, labels=None,
     if verbose:
         print(f"time of scf: {tac - tic:6.2f}s, converged:   {cf.converged}")
 
-    return meta, res
+    return meta, res, irrep_str
 
 
 def get_required_labels(fields=None, penalty_dicts=None):
@@ -211,6 +212,11 @@ def dump_data(dir_name, **data_dict):
         np.save(os.path.join(dir_name, f'{name}.npy'), value)
 
 
+def dump_irreps(dir_name, irrep_str):
+    os.makedirs(dir_name, exist_ok=True)
+    print(irrep_str, file=open(os.path.join(dir_name, 'irreps.raw'), "w"))
+
+
 def main(systems, model_file="model.pth", basis='ccpvdz', 
          proj_basis=None, penalty_terms=None, device=None,
          dump_dir=".", dump_fields=DEFAULT_FNAMES, group=False, 
@@ -219,7 +225,10 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
         model = None
         default_scf_args = DEFAULT_HF_ARGS
     else:
-        model = CorrNet.load(model_file).double()
+        if "dm_flat" in dump_fields:
+            model = CorrNetEquiv.load(model_file).double()
+        else:
+            model = CorrNet.load(model_file).double()
         default_scf_args = DEFAULT_SCF_ARGS
 
     # check arguments
@@ -239,6 +248,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             print(f"specified scf args:\n  {scf_args}")
 
     meta = old_meta = None
+    irrep_str = None
     res_list = []
     systems = load_sys_paths(systems)
 
@@ -250,9 +260,9 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             mol = build_mol(**mol_input)
             penalties = [build_penalty(pd, labels) for pd in penalty_terms]
             try:
-                meta, result = solve_mol(mol, model, fields, labels,
-                                         proj_basis=proj_basis, penalties=penalties,
-                                         device=device, verbose=verbose, **scf_args)
+                meta, result, irrep_str = solve_mol(mol, model, fields, labels,
+                                                    proj_basis=proj_basis, penalties=penalties,
+                                                    device=device, verbose=verbose, **scf_args)
             except Exception as e:
                 print(fl, 'failed! error:', e, file=sys.stderr)
                 # continue
@@ -265,6 +275,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             sub_dir = os.path.join(dump_dir, get_sys_name(os.path.basename(fl)))
             dump_meta(sub_dir, meta)
             dump_data(sub_dir, **collect_fields(fields, meta, res_list))
+            if irrep_str is not None:
+                dump_irreps(sub_dir, irrep_str)
             res_list = []
         elif old_meta is not None and np.any(meta != old_meta):
             print(fl, 'meta does not match! saving previous results only.', file=sys.stderr)
@@ -276,6 +288,8 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
     if group:
         dump_meta(dump_dir, meta)
         dump_data(dump_dir, **collect_fields(fields, meta, res_list))
+        if irrep_str is not None:
+            dump_irreps(dump_dir, irrep_str)
         if verbose:
             print('group finished')
 
