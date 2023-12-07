@@ -6,7 +6,7 @@ from pyscf import gto
 from pyscf import scf, dft
 
 from deepks.utils import load_basis
-from deepks.model.model import CorrNet  # TODO:change this to new model
+from deepks.model.model_enn import CorrNet 
 from deepks.scf.scf import CorrMixin, PenaltyMixin, gen_proj_mol
 from deepks.scf.enn.basis_info import BasisInfo
 from deepks.scf.enn.clebsch_gordan import ClebschGordan
@@ -14,19 +14,17 @@ from deepks.scf.enn.clebsch_gordan import ClebschGordan
 DEVICE = 'cpu'
 
 
-def t_make_pdm(dm, projector, dtype=torch.double, device=torch.device("cpu")):
+def t_make_pdm(t_dm: torch.Tensor, t_proj: torch.Tensor):
 
-    t_dms = torch.tensor(dm, dtype=dtype, device=device)  # (., nao, nao)
-    t_projs = torch.tensor(projector, dtype=dtype, device=device)  # (., nao, natom, nproj)
-    t_pdm = torch.einsum('...rap,...rs,...saq->...apq', t_projs, t_dms, t_projs)  # (., natom, nproj, nproj)
+    t_pdm = torch.einsum('...rap,...rs,...saq->...apq', t_proj, t_dm, t_proj)  # (., natom, nproj, nproj)
 
     return t_pdm
 
 
-def t_flat_pdms_parity(dm: torch.Tensor, projectors: torch.Tensor,
+def t_flat_pdms_parity(t_dm: torch.Tensor, t_proj: torch.Tensor,
                        basis_info: BasisInfo, cg_coeffs: ClebschGordan) -> torch.Tensor:
 
-    t_pdm = t_make_pdm(dm, projectors)
+    t_pdm = t_make_pdm(t_dm, t_proj)
     t_ls = basis_info.basis_ls
     t_nls = basis_info.basis_nls
     t_mat_idx = basis_info.basis_mat_idx
@@ -44,7 +42,7 @@ def t_flat_pdms_parity(dm: torch.Tensor, projectors: torch.Tensor,
                 cg = cg_coeffs(l1, l2, l3)
                 t_trans_mat = torch.einsum('...aibj,ijk->...abk', t_mat, cg)  # (nframe, n_atoms, nl1, nl2, 2*l3+1)
                 l3_idx = 2 * l3 + parity
-                t_tmp_l_list[l3_idx].append(t_trans_mat.reshape((*t_trans_mat.shape[:-2], nl1*nl2, 2*l3+1)))
+                t_tmp_l_list[l3_idx].append(t_trans_mat.reshape((*t_trans_mat.shape[:-3], nl1*nl2, 2*l3+1)))
     t_l_list = []
     for a in range(2*(2*max_l+1)):
         if len(t_tmp_l_list[a]) > 0:
@@ -55,15 +53,15 @@ def t_flat_pdms_parity(dm: torch.Tensor, projectors: torch.Tensor,
     return t_pdms_flatten
 
 
-def t_get_corr(model, dm, projectors, basis_info, cg_coeffs, with_vc=True):
+def t_get_corr(model, t_dm, t_proj, basis_info, cg_coeffs, with_vc=True):
     """return the "correction" energy (and potential) given by a NN model"""
-    dm.requires_grad_(True)
-    ceig = t_flat_pdms_parity(dm, projectors, basis_info, cg_coeffs)  # natoms x nproj
+    t_dm.requires_grad_(True)
+    ceig = t_flat_pdms_parity(t_dm, t_proj, basis_info, cg_coeffs)  # natoms x nproj
     _dref = next(model.parameters()) if isinstance(model, torch.nn.Module) else DEVICE
     ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
     if not with_vc:
         return ec.to(ceig)
-    [vc] = torch.autograd.grad(ec, dm, torch.ones_like(ec))
+    [vc] = torch.autograd.grad(ec, t_dm, torch.ones_like(ec))
 
     return ec.to(ceig), vc
 
@@ -121,7 +119,8 @@ class NetMixin(CorrMixin):
         if dm is None:
             dm = self.make_rdm1()
         t_dm = torch.from_numpy(dm).double()
-        return t_flat_pdms_parity(t_dm, self.t_proj_ovlp, self.basis_info, self.cg)
+        t_dm_flat = t_flat_pdms_parity(t_dm, self.t_proj_ovlp, self.basis_info, self.cg)
+        return t_dm_flat.detach().cpu().numpy()
 
     # -- below are exactly the same as scf/scf.py
 
