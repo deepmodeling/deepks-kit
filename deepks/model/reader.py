@@ -65,14 +65,15 @@ class Reader(object):
             sys_meta = np.loadtxt(self.check_exist('system.raw'), dtype = int).reshape([-1])
             self.natm = sys_meta[0]
             self.nproj = sys_meta[-1]
+            self.ndesc = self.nproj if self.desc_type == "eig" else self.nproj**2
         except:
             print('#', self.data_path, f"no system.raw, infer meta from data", file=sys.stderr)
             sys_shape = np.load(self.d_path).shape
             assert len(sys_shape) == 3, \
-                f"descriptor has to be an order-3 array with shape [nframes, natom, nproj]"
+                f"descriptor has to be an order-3 array with shape [nframes, natom, ndesc]"
             self.natm = sys_shape[1]
-            self.nproj = sys_shape[2]
-        self.ndesc = self.nproj
+            self.ndesc = sys_shape[2]
+            self.nproj = self.ndesc if self.desc_type == "eig" else int(np.sqrt(self.ndesc))
 
         # -- enn related
         try:
