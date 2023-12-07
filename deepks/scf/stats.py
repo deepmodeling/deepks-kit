@@ -23,6 +23,8 @@ def concat_data(systems=None, sys_dir=".", dump_dir=".", pattern="*"):
         np.save(f"{dump_dir}/{nm}", tmp_array)
     if os.path.exists(f'{systems[0]}/system.raw'):
         shutil.copy(f'{systems[0]}/system.raw', dump_dir)
+    if os.path.exists(f'{systems[0]}/irreps.raw'):
+        shutil.copy(f'{systems[0]}/irreps.raw', dump_dir)
 
 
 def print_stats(systems=None, test_sys=None, 
@@ -291,6 +293,8 @@ def collect_data_grouped(train_idx, test_idx=None,
         np.save(f"{sys_dir}/test/{d}", np.load(f'{sys_dir}/{d}')[test_idx])
     shutil.copy(f'{sys_dir}/system.raw', f'{sys_dir}/train')
     shutil.copy(f'{sys_dir}/system.raw', f'{sys_dir}/test')
+    if os.path.exists(f'{sys_dir}/irreps.raw'):
+        shutil.copy(f'{sys_dir}/irreps.raw', dump_dir)
     # np.savetxt(f'{dump_dir}/train_paths.raw', [os.path.abspath(f'{dump_dir}/train')], fmt='%s')
     # np.savetxt(f'{dump_dir}/test_paths.raw', [os.path.abspath(f'{dump_dir}/test')], fmt='%s')
     # Path(f'{dump_dir}/train_paths.raw').write_text(str(Path(f'{dump_dir}/train').absolute()))
