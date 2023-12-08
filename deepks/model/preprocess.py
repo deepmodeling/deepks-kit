@@ -129,7 +129,9 @@ def set_desc_lmax(g_reader, lmax=-1):
     g_reader.ndesc = ndesc
 
 
-def preprocess_enn(model, g_reader, prefit_ridge=10, prefit=True, prefit_trainable=False, preshift=True):
+def preprocess_enn(model, g_reader, prefit_ridge=10, prefit=True, prefit_trainable=False, preshift=True, desc_lmax=-1):
+
+    set_desc_lmax(g_reader, desc_lmax)  # TODO: probably need to move this to a better place
 
     if not (prefit or preshift): return
 
