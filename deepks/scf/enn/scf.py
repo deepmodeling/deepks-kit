@@ -112,8 +112,15 @@ class NetMixin(CorrMixin):
         t_ec, t_vc = t_get_corr(self.net, t_dm, self.t_proj_ovlp, self.basis_info, self.cg, with_vc=True)
         ec = t_ec.item() if t_ec.nelement() == 1 else t_ec.detach().cpu().numpy()
         vc = t_vc.detach().cpu().numpy()
-        ec = ec + self.net.get_elem_const(filter(None, self.mol.atom_charges()))
+        #ec = ec + self.net.get_elem_const(filter(None, self.mol.atom_charges()))
         return ec, vc
+
+    def make_pdm(self, dm=None):
+        if dm is None:
+            dm = self.make_rdm1()
+        t_dm = torch.from_numpy(dm).double()
+        t_pdm = t_make_pdm(t_dm, self.t_proj_ovlp)
+        return t_pdm.detach().cpu().numpy()
 
     def make_flat_pdm(self, dm=None):
         if dm is None:
