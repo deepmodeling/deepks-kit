@@ -8,6 +8,7 @@ except ImportError as e:
     import sys
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../../")
 from deepks.model.model import CorrNet
+from deepks.model.model_enn import CorrNet as CorrNetEquiv
 from deepks.model.reader import GroupReader
 from deepks.utils import load_yaml, load_dirs, check_list
 
@@ -25,7 +26,7 @@ def test(model, g_reader, dump_prefix="test", group=False):
         sample = g_reader.sample_all(i)
         nframes = sample["lb_e"].shape[0]
         sample = {k: v.to(DEVICE, non_blocking=True) for k, v in sample.items()}
-        label, data = sample["lb_e"], sample["eig"]
+        label, data = sample["lb_e"], sample["desc"]
         pred = model(data)
         error = torch.sqrt(loss_fn(pred, label))
 
@@ -60,6 +61,7 @@ def main(data_paths, model_file="model.pth",
          output_prefix='test', group=False,
          e_name='l_e_delta', d_name=['dm_eig']):
     data_paths = load_dirs(data_paths)
+    Net = CorrNetEquiv if 'dm_flat' in d_name else CorrNet
     if len(d_name) == 1:
         d_name = d_name[0]
     g_reader = GroupReader(data_paths, e_name=e_name, d_name=d_name, 
@@ -68,12 +70,12 @@ def main(data_paths, model_file="model.pth",
     for f in model_file:
         print(f)
         p = os.path.dirname(f)
-        model = CorrNet.load(f).double().to(DEVICE)
+        model = Net.load(f).double().to(DEVICE)
         dump = os.path.join(p, output_prefix)
         dir_name = os.path.dirname(dump)
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
-        if model.elem_table is not None:
+        if isinstance(model, CorrNet) and model.elem_table is not None:
             elist, econst = model.elem_table
             g_reader.collect_elems(elist)
             g_reader.subtract_elem_const(econst)
