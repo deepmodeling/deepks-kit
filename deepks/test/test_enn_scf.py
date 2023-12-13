@@ -6,7 +6,8 @@ import e3nn.o3
 
 from pyscf import gto, scf
 
-from deepks.scf.enn.scf import DSCF, BasisInfo, load_basis
+from deepks.scf.enn.scf import DSCF, BasisInfo, load_basis, t_get_corr, t_flat_pdms_parity
+from deepks.model.model_enn import CorrNet
 
 
 def make_molecule(atoms, basis, unit='A', verbose=0):
@@ -89,6 +90,51 @@ def test_desc_equiv():
     torch.testing.assert_close(desc_rot, desc @ D_mat.T)
 
 
+def finite_difference(f, x, delta=1e-6):
+    in_shape = x.shape
+    y0 = f(x)
+    out_shape = y0.shape
+    res = np.empty(in_shape + out_shape)
+    for idx in np.ndindex(*in_shape):
+        diff = np.zeros(in_shape)
+        diff[idx] += delta
+        y1 = f(x+diff)
+        res[idx] = (y1-y0) / delta
+    return res
+
+
+def test_finite_diff():
+
+    torch.manual_seed(0)
+    torch.set_default_dtype(torch.float64)
+    proj_basis = load_basis(None)
+    basis_info = BasisInfo(proj_basis)
+    model = CorrNet(irreps_in=basis_info.basis_irreps)  # no prefit or preshift
+
+    atom_file = '../../examples/water_single/systems/group.03/atom.npy'
+    atoms = np.load(atom_file)
+    atoms = atoms[0]
+    basis = 'ccpvdz'
+    mol = make_molecule(atoms, basis, unit='bohr')
+    dscf = DSCF(mol, model)
+    dm = make_dm(mol)
+
+    def get_energy(x):
+        t_dm = torch.from_numpy(x).double()
+        ceig = t_flat_pdms_parity(t_dm, dscf.t_proj_ovlp, basis_info, dscf.cg)
+        ec = model(ceig).cpu().detach().numpy()
+        return ec
+
+    v_finite = finite_difference(get_energy, dm)
+    #print(v_finite.shape)
+    #print(np.linalg.norm(v_finite - np.swapaxes(v_finite, 0, 1)))
+
+    ec, vc = t_get_corr(model, torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+    #print(vc.shape)
+    assert torch.linalg.norm(vc - v_finite[..., 0]) < 1e-6
+
+
 if __name__ == '__main__':
 
     test_desc_equiv()
+    test_finite_diff()
