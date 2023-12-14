@@ -25,18 +25,19 @@ def t_flat_pdms_parity(t_dm: torch.Tensor, t_proj: torch.Tensor,
                        basis_info: BasisInfo, cg_coeffs: ClebschGordan) -> torch.Tensor:
 
     t_pdm = t_make_pdm(t_dm, t_proj)
-    t_ls = basis_info.basis_ls
-    t_nls = basis_info.basis_nls
-    t_mat_idx = basis_info.basis_mat_idx
-    max_l = max(t_ls)
+    t_pdm = 0.5 * (t_pdm + torch.swapaxes(t_pdm, -1, -2))
+    ls = basis_info.basis_ls
+    nls = basis_info.basis_nls
+    mat_idx = basis_info.basis_mat_idx
+    max_l = max(ls)
 
     t_tmp_l_list = [[] for _ in range(2*(2*max_l+1))]
-    for idx1, l1 in enumerate(t_ls):
-        nl1 = t_nls[idx1]
-        for idx2, l2 in enumerate(t_ls):
-            nl2 = t_nls[idx2]
+    for idx1, l1 in enumerate(ls):
+        nl1 = nls[idx1]
+        for idx2, l2 in enumerate(ls[:idx1+1]):
+            nl2 = nls[idx2]
             parity = int((-1)**(l1+l2) < 0)
-            t_mat = t_pdm[..., t_mat_idx[l1]:t_mat_idx[l1+1], t_mat_idx[l2]:t_mat_idx[l2+1]]
+            t_mat = t_pdm[..., mat_idx[idx1]:mat_idx[idx1+1], mat_idx[idx2]:mat_idx[idx2+1]]
             t_mat = t_mat.reshape((*t_mat.shape[:-2], nl1, 2*l1+1, nl2, 2*l2+1))
             for l3 in range(abs(l1-l2), l1+l2+1):
                 cg = cg_coeffs(l1, l2, l3)
@@ -56,6 +57,7 @@ def t_flat_pdms_parity(t_dm: torch.Tensor, t_proj: torch.Tensor,
 def t_get_corr(model, t_dm, t_proj, basis_info, cg_coeffs, with_vc=True):
     """return the "correction" energy (and potential) given by a NN model"""
     t_dm.requires_grad_(True)
+    t_dm = 0.5*(t_dm + torch.swapaxes(t_dm, -1, -2))
     ceig = t_flat_pdms_parity(t_dm, t_proj, basis_info, cg_coeffs)  # natoms x nproj
     _dref = next(model.parameters()) if isinstance(model, torch.nn.Module) else DEVICE
     ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
@@ -89,7 +91,7 @@ class NetMixin(CorrMixin):
         self.nproj = self.t_proj_ovlp.shape[-1]
 
         # -- equivariant set up related
-        self.basis_info = BasisInfo(self._pbas)
+        self.basis_info = BasisInfo(self._pbas, symm=True)
         # TODO: this might be different for different conventions
         self.cg = ClebschGordan(reorder_p=True, change_l3_basis=False)
 

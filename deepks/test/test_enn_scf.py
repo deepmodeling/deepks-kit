@@ -134,7 +134,30 @@ def test_finite_diff():
     assert torch.linalg.norm(vc - v_finite[..., 0]) < 1e-6
 
 
+def test_vc_symm():
+
+    torch.manual_seed(0)
+    torch.set_default_dtype(torch.float64)
+    proj_basis = load_basis(None)
+    basis_info = BasisInfo(proj_basis, symm=True)
+    #print(basis_info.basis_irreps)
+    model = CorrNet(irreps_in=basis_info.basis_irreps, actv_type='norm')  # no prefit or preshift
+
+    atom_file = '../../examples/water_single/systems/group.03/atom.npy'
+    atoms = np.load(atom_file)
+    atoms = atoms[0]
+    basis = 'ccpvdz'
+    mol = make_molecule(atoms, basis, unit='bohr')
+    dscf = DSCF(mol, model)
+    dm = make_dm(mol)
+
+    ec, vc = t_get_corr(model, torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+    #print(torch.linalg.norm(vc - torch.swapaxes(vc, -1, -2)))
+    assert torch.linalg.norm(vc - torch.swapaxes(vc, -1, -2)) < 1e-12
+
+
 if __name__ == '__main__':
 
     test_desc_equiv()
     test_finite_diff()
+    test_vc_symm()
