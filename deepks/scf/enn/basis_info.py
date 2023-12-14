@@ -16,6 +16,7 @@ class BasisInfo(object):
 
         self.basis_ls, self.basis_nls, self.basis_mat_idx = self.__extract_basis_nl_info()
         self.basis_l3s, self.basis_nl3s, self.basis_irreps = self.__compute_basis_l3_info(symm)
+        self.l3_dim = sum([self.basis_nl3s[i]*(2*self.basis_l3s[i]+1) for i in range(len(self.basis_nl3s))])
 
     def __extract_basis_nl_info(self):
 

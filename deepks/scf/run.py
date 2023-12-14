@@ -72,7 +72,8 @@ def solve_mol(mol, model, fields, labels=None,
     natom = cf._pmol.natm
     nao = mol.nao
     nproj = cf.nproj
-    meta = np.array([natom, natom_raw, nao, nproj])
+    ndesc = cf.ndesc if hasattr(cf, 'ndesc') else nproj
+    meta = np.array([natom, natom_raw, nao, ndesc, nproj])
     irrep_str = cf.basis_info.basis_irreps if hasattr(cf, "basis_info") else None
 
     res = {}
@@ -188,7 +189,7 @@ def collect_fields(fields, meta, res_list):
     if isinstance(res_list, dict):
         res_list = [res_list]
     nframe = len(res_list)
-    natom, natom_raw, nao, nproj = meta
+    natom, natom_raw, nao, ndesc, nproj = meta
     res_dict = {}
     for fd in fields:
         fd_res = np.array([res[fd.name] for res in res_list])
@@ -203,7 +204,7 @@ def dump_meta(dir_name, meta):
     os.makedirs(dir_name, exist_ok = True)
     np.savetxt(os.path.join(dir_name, 'system.raw'), 
                np.reshape(meta, (1,-1)), 
-               fmt = '%d', header = 'natom natom_raw nao nproj')
+               fmt = '%d', header = 'natom natom_raw nao ndesc nproj')
 
 
 def dump_data(dir_name, **data_dict):

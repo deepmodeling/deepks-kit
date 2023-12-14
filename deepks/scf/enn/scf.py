@@ -94,6 +94,7 @@ class NetMixin(CorrMixin):
         self.basis_info = BasisInfo(self._pbas, symm=True)
         # TODO: this might be different for different conventions
         self.cg = ClebschGordan(reorder_p=True, change_l3_basis=False)
+        self.ndesc = self.basis_info.l3_dim
 
     def prepare_integrals(self):
         # a virtual molecule to be projected on

@@ -141,7 +141,8 @@ def test_vc_symm():
     proj_basis = load_basis(None)
     basis_info = BasisInfo(proj_basis, symm=True)
     #print(basis_info.basis_irreps)
-    model = CorrNet(irreps_in=basis_info.basis_irreps, actv_type='norm')  # no prefit or preshift
+    assert e3nn.o3.Irreps(basis_info.basis_irreps).dim == basis_info.l3_dim
+    model = CorrNet(irreps_in=basis_info.basis_irreps, actv_type='gate')  # no prefit or preshift
 
     atom_file = '../../examples/water_single/systems/group.03/atom.npy'
     atoms = np.load(atom_file)
