@@ -37,31 +37,34 @@ DEFAULT_SCF_ARGS = {
 MOL_ATTRIBUTE = {"charge", "basis", "unit"} # other molecule properties
 
 
-def make_scf(model, fields, spin):
+def make_scf(mol, model, triu, fields, **extra_args):
 
     names = get_field_names(fields["scf"])
     if isinstance(model, CorrNetEquiv) or "dm_flat" in names:
-        dscf = DSCFEquiv
-        udscf = UDSCFEquiv
+        if mol.spin == 0:
+            SCFcls = DSCFEquiv(mol, model, triu=triu, **extra_args)
+        else:
+            SCFcls = UDSCFEquiv(mol, model, triu=triu, **extra_args)
     else:
-        dscf = DSCF
-        udscf = UDSCF
+        if mol.spin == 0:
+            SCFcls = DSCF(mol, model, **extra_args)
+        else:
+            SCFcls = UDSCF(mol, model, **extra_args)
 
-    return dscf if spin == 0 else udscf
+    return SCFcls
 
 
 def solve_mol(mol, model, fields, labels=None,
               proj_basis=None, penalties=None, device=None,
-              chkfile=None, verbose=0,
+              chkfile=None, verbose=0, triu=False,
               **scf_args):
     
     tic = time.time()
 
-    SCFcls = make_scf(model, fields, mol.spin)
-    cf = SCFcls(mol, model,
-                proj_basis=proj_basis, 
-                penalties=penalties, 
-                device=device)
+    cf = make_scf(mol, model, triu, fields,
+                  proj_basis=proj_basis,
+                  penalties=penalties,
+                  device=device)
     cf.set(chkfile=chkfile, verbose=verbose)
     grid_args = scf_args.pop("grids", {})
     cf.set(**scf_args)
@@ -219,7 +222,7 @@ def dump_irreps(dir_name, irrep_str):
 
 
 def main(systems, model_file="model.pth", basis='ccpvdz', 
-         proj_basis=None, penalty_terms=None, device=None,
+         proj_basis=None, penalty_terms=None, device=None, triu=False,
          dump_dir=".", dump_fields=DEFAULT_FNAMES, group=False, 
          mol_args=None, scf_args=None, verbose=0):
     if model_file is None or model_file.upper() == "NONE":
@@ -263,7 +266,7 @@ def main(systems, model_file="model.pth", basis='ccpvdz',
             try:
                 meta, result, irrep_str = solve_mol(mol, model, fields, labels,
                                                     proj_basis=proj_basis, penalties=penalties,
-                                                    device=device, verbose=verbose, **scf_args)
+                                                    device=device, verbose=verbose, triu=triu, **scf_args)
             except Exception as e:
                 print(fl, 'failed! error:', e, file=sys.stderr)
                 # continue

@@ -6,7 +6,8 @@ import e3nn.o3
 
 from pyscf import gto, scf
 
-from deepks.scf.enn.scf import DSCF, BasisInfo, load_basis, t_get_corr, t_flat_pdms_parity
+from deepks.scf.enn.scf import DSCF, BasisInfo, load_basis, t_get_corr, \
+    t_flat_pdms_parity_tiru, t_flat_pdms_parity_full
 from deepks.model.model_enn import CorrNet
 
 
@@ -121,7 +122,7 @@ def test_finite_diff():
 
     def get_energy(x):
         t_dm = torch.from_numpy(x).double()
-        ceig = t_flat_pdms_parity(t_dm, dscf.t_proj_ovlp, basis_info, dscf.cg)
+        ceig = t_flat_pdms_parity_full(t_dm, dscf.t_proj_ovlp, basis_info, dscf.cg)
         ec = model(ceig).cpu().detach().numpy()
         return ec
 
@@ -139,7 +140,78 @@ def test_vc_symm():
     torch.manual_seed(0)
     torch.set_default_dtype(torch.float64)
     proj_basis = load_basis(None)
-    basis_info = BasisInfo(proj_basis, symm=True)
+    basis_info = BasisInfo(proj_basis)
+    #print(basis_info.basis_irreps)
+    assert e3nn.o3.Irreps(basis_info.basis_irreps).dim == basis_info.l3_dim
+    model = CorrNet(irreps_in=basis_info.basis_irreps, actv_type='gate')  # no prefit or preshift
+
+    atom_file = '../../examples/water_single/systems/group.03/atom.npy'
+    atoms = np.load(atom_file)
+    atoms = atoms[0]
+    basis = 'ccpvdz'
+    mol = make_molecule(atoms, basis, unit='bohr')
+    dscf = DSCF(mol, model)
+    dm = make_dm(mol)
+
+    ec, vc = t_get_corr(model, torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+    #print(torch.linalg.norm(vc - torch.swapaxes(vc, -1, -2)))
+    assert torch.linalg.norm(vc - torch.swapaxes(vc, -1, -2)) < 1e-12
+
+
+def test_desc_equiv_triu():
+
+    atom_file = '../../examples/water_single/systems/group.03/atom.npy'
+
+    nframe = 5
+    atoms = np.load(atom_file)
+    atoms = atoms[:nframe]
+    basis = 'ccpvdz'
+    proj_basis = load_basis(None)
+
+    torch.set_default_dtype(torch.float64)
+
+    # this specifies the change of basis yzx -> xyz
+    change_of_coord = torch.tensor([
+        [0., 0., 1.],
+        [1., 0., 0.],
+        [0., 1., 0.]
+    ])
+    rot_yzx = e3nn.o3.rand_matrix()  # YXY convention, rotate yzx
+    rot_xyz = torch.einsum("ac,cd,db->ab", change_of_coord, rot_yzx, change_of_coord.T)
+
+    basis_info = BasisInfo(proj_basis, triu=True)
+
+    atoms_rot = atoms[:, :, 1:] @ rot_xyz.numpy().T
+    atoms_rot = np.concatenate((atoms[:, :, :1], atoms_rot), axis=-1)
+    D_mat = e3nn.o3.Irreps(basis_info.basis_irreps).D_from_matrix(rot_yzx)
+
+    desc = []
+    for i in range(nframe):
+        mol = make_molecule(atoms[i], basis, 'bohr')
+        dm = make_dm(mol)
+        dscf = DSCF(mol, None)
+        t_flat_dm = t_flat_pdms_parity_tiru(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+        desc.append(t_flat_dm)
+    desc = torch.stack(desc, dim=0)
+
+    desc_rot = []
+    for i in range(nframe):
+        mol = make_molecule(atoms_rot[i], basis, 'bohr')
+        dm = make_dm(mol)
+        dscf = DSCF(mol, None)
+        t_flat_dm = t_flat_pdms_parity_tiru(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+        desc_rot.append(t_flat_dm)
+    desc_rot = torch.stack(desc_rot, dim=0)
+
+    torch.testing.assert_close(desc_rot, desc @ D_mat.T)
+
+
+def test_vc_triu_symm():
+
+    torch.manual_seed(0)
+    torch.set_default_dtype(torch.float64)
+    proj_basis = load_basis(None)
+    basis_info = BasisInfo(proj_basis, triu=True)
     #print(basis_info.basis_irreps)
     assert e3nn.o3.Irreps(basis_info.basis_irreps).dim == basis_info.l3_dim
     model = CorrNet(irreps_in=basis_info.basis_irreps, actv_type='gate')  # no prefit or preshift
@@ -162,3 +234,6 @@ if __name__ == '__main__':
     test_desc_equiv()
     test_finite_diff()
     test_vc_symm()
+
+    test_desc_equiv_triu()
+    test_vc_triu_symm()
