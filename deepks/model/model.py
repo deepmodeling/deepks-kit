@@ -313,7 +313,8 @@ class CorrNet(nn.Module):
         dump_dict = {
             "state_dict": self.state_dict(),
             "init_args": self._init_args,
-            "extra_info": extra_info
+            "extra_info": extra_info,
+            "model_type": "invariant"
         }
         return dump_dict
 

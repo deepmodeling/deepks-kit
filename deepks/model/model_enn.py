@@ -96,7 +96,8 @@ class CorrNet(nn.Module):
     def save(self, filename):
         torch.save(
             {"state_dict": self.state_dict(),
-             "init_args": self._init_args},
+             "init_args": self._init_args,
+             "model_type": "equivariant"},
             filename
         )
 

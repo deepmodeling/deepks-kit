@@ -57,10 +57,20 @@ def test(model, g_reader, dump_prefix="test", group=False):
     return all_err_l1, all_err_l2
 
 
+def infer_dname_from_model(model_file):
+
+    checkpoint = torch.load(model_file, map_location="cpu")
+    d_name = "dm_eig"
+    if "model_type" in checkpoint.keys() and checkpoint["model_type"] == "equivariant":
+        d_name = "dm_flat"
+    return [d_name]
+
+
 def main(data_paths, model_file="model.pth", 
          output_prefix='test', group=False,
-         e_name='l_e_delta', d_name=['dm_eig']):
+         e_name='l_e_delta', d_name=None):
     data_paths = load_dirs(data_paths)
+    d_name = infer_dname_from_model(model_file)
     Net = CorrNetEquiv if 'dm_flat' in d_name else CorrNet
     if len(d_name) == 1:
         d_name = d_name[0]
