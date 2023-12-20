@@ -1,6 +1,7 @@
 
 import sys
 import numpy as np
+import torch
 
 import e3nn.o3
 
@@ -160,16 +161,22 @@ def fit_elem_const(g_reader, test_reader=None, elem_table=None, ridge_alpha=0.):
 
 def make_model(g_reader, test_reader, restart, model_args, preprocess_args, fit_elem=False):
 
+    # init iteration
+    model_type = "invariant"
     if "model_type" in model_args.keys():
         model_type = model_args["model_type"]
         del model_args["model_type"]
-    else:
-        model_type = "invariant"
+    # iterative
+    checkpoint = None
+    if restart is not None:
+        checkpoint = torch.load(restart, map_location="cpu")
+        if "model_type" in checkpoint.keys():
+            model_type = checkpoint["model_type"]
 
     if model_type == "invariant":
         prep = preprocess
         if restart is not None:
-            model = CorrNet.load(restart)
+            model = CorrNet.load_dict(checkpoint).double()
             if model.elem_table is not None:
                 fit_elem_const(g_reader, test_reader, model.elem_table)
         else:
@@ -188,7 +195,7 @@ def make_model(g_reader, test_reader, restart, model_args, preprocess_args, fit_
     elif model_type == "equivariant":
         prep = preprocess_enn
         if restart is not None:
-            model = CorrNetEquiv.load(restart)
+            model = CorrNetEquiv.load_dict(checkpoint).double()
         else:
             irreps_str = g_reader.readers[0].irreps_str
             model_args["irreps_in"] = irreps_str
