@@ -70,7 +70,10 @@ def main(data_paths, model_file="model.pth",
          output_prefix='test', group=False,
          e_name='l_e_delta', d_name=None):
     data_paths = load_dirs(data_paths)
-    d_name = infer_dname_from_model(model_file)
+    f = model_file
+    if isinstance(model_file, list):
+        f = model_file[0]
+    d_name = infer_dname_from_model(f)
     Net = CorrNetEquiv if 'dm_flat' in d_name else CorrNet
     if len(d_name) == 1:
         d_name = d_name[0]
