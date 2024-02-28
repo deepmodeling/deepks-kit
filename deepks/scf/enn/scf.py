@@ -59,7 +59,7 @@ def t_flat_pdms_parity_full(t_dm: torch.Tensor, t_proj: torch.Tensor,
     return (desc + desc_t) / 2
 
 
-def t_flat_pdms_parity_tiru(t_dm: torch.Tensor, t_proj: torch.Tensor,
+def t_flat_pdms_parity_triu(t_dm: torch.Tensor, t_proj: torch.Tensor,
                             basis_info: BasisInfo, cg_coeffs: ClebschGordan) -> torch.Tensor:
 
     t_pdm = t_make_pdm(t_dm, t_proj)
@@ -107,7 +107,7 @@ def t_get_corr(model, t_dm, t_proj, basis_info, cg_coeffs, with_vc=True):
     """return the "correction" energy (and potential) given by a NN model"""
     t_dm.requires_grad_(True)
     t_dm = 0.5*(t_dm + torch.swapaxes(t_dm, -1, -2))
-    desc_gen = t_flat_pdms_parity_tiru if basis_info.triu else t_flat_pdms_parity_full
+    desc_gen = t_flat_pdms_parity_triu if basis_info.triu else t_flat_pdms_parity_full
     ceig = desc_gen(t_dm, t_proj, basis_info, cg_coeffs)  # natoms x ndesc
     _dref = next(model.parameters()) if isinstance(model, torch.nn.Module) else DEVICE
     ec = model(ceig.to(_dref))  # no batch dim here, unsqueeze(0) if needed
@@ -181,7 +181,7 @@ class NetMixin(CorrMixin):
         if dm is None:
             dm = self.make_rdm1()
         t_dm = torch.from_numpy(dm).double()
-        desc_gen = t_flat_pdms_parity_tiru if self.basis_info.triu else t_flat_pdms_parity_full
+        desc_gen = t_flat_pdms_parity_triu if self.basis_info.triu else t_flat_pdms_parity_full
         t_dm_flat = desc_gen(t_dm, self.t_proj_ovlp, self.basis_info, self.cg)
         return t_dm_flat.detach().cpu().numpy()
 

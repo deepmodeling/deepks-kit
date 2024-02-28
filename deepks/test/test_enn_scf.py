@@ -7,7 +7,7 @@ import e3nn.o3
 from pyscf import gto, scf
 
 from deepks.scf.enn.scf import DSCF, BasisInfo, load_basis, t_get_corr, \
-    t_flat_pdms_parity_tiru, t_flat_pdms_parity_full
+    t_flat_pdms_parity_triu, t_flat_pdms_parity_full
 from deepks.model.model_enn import CorrNet
 
 
@@ -190,7 +190,7 @@ def test_desc_equiv_triu():
         mol = make_molecule(atoms[i], basis, 'bohr')
         dm = make_dm(mol)
         dscf = DSCF(mol, None)
-        t_flat_dm = t_flat_pdms_parity_tiru(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+        t_flat_dm = t_flat_pdms_parity_triu(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
         desc.append(t_flat_dm)
     desc = torch.stack(desc, dim=0)
 
@@ -199,7 +199,7 @@ def test_desc_equiv_triu():
         mol = make_molecule(atoms_rot[i], basis, 'bohr')
         dm = make_dm(mol)
         dscf = DSCF(mol, None)
-        t_flat_dm = t_flat_pdms_parity_tiru(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
+        t_flat_dm = t_flat_pdms_parity_triu(torch.from_numpy(dm).double(), dscf.t_proj_ovlp, basis_info, dscf.cg)
         desc_rot.append(t_flat_dm)
     desc_rot = torch.stack(desc_rot, dim=0)
 
