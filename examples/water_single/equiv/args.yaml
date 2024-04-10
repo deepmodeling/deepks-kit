@@ -1,0 +1,116 @@
+# all arguments are flatten into this file
+# they can also be splitted into separate files and referenced here
+n_iter: 5
+
+# training and testing systems
+systems_train: # can also be files that containing system paths
+  - ../systems/group.0[0-2] # support glob
+
+systems_test: # if empty, use the last system of training set
+  - ../systems/group.03
+
+# directory setting
+workdir: "."
+share_folder: "share" # folder that stores all other settings
+
+# scf settings
+scf_input: # can also be specified by a separate file
+  basis: ccpvdz
+  triu: false
+  # this is for force training
+  dump_fields: [e_base, e_tot, dm_flat, conv, l_e_delta]
+  verbose: 1
+  mol_args:
+    incore_anyway: True
+  scf_args:
+    conv_tol: 1e-6
+    conv_tol_grad: 1e-2
+    level_shift: 0.1
+    diis_space: 20
+    conv_check: false # pyscf conv_check has a bug
+
+scf_machine:
+  # every system will be run as a separate command (a task)
+  sub_size: 1
+  # 4 tasks will be gathered into one group and submitted together as a shell script
+  group_size: 10
+  dispatcher:
+    context: local
+    batch: shell # set to shell to run on local machine
+    remote_profile: null # not needed in local case
+  # resources are no longer needed, other than the envs can still be set here
+  resources:
+    envs:
+      OMP_NUM_THREADS: 4
+      PYSCF_MAX_MEMORY: 8000 # increase from 4G to 8G
+  python: "python" # use python in path
+
+# train settings
+train_input:
+  # model_args is ignored, since this is used as restart
+  data_args:
+    batch_size: 16
+    group_batch: 1
+    extra_label: false
+    conv_filter: true
+    conv_name: conv
+    d_name: dm_flat
+  preprocess_args:
+    preshift: false # restarting model already shifted. Will not recompute shift value
+    prefit_ridge: 1e1
+    prefit_trainable: false
+  train_args:
+    decay_rate: 0.5
+    decay_steps: 1000
+    display_epoch: 100
+    force_factor: 1
+    n_epoch: 5000
+    start_lr: 0.0001
+
+train_machine:
+  dispatcher:
+    context: local
+    batch: shell # same as above, use shell to run on local machine
+    remote_profile: null # use lazy local
+  python: "python" # use python in path
+  # resources are no longer needed, and the task will use gpu automatically if there is one
+
+# init settings
+init_model: false # do not use existing model in share_folder/init/model.pth
+
+init_scf:
+  basis: ccpvdz
+  triu: false
+  # this is for pure energy training
+  dump_fields: [e_base, e_tot, dm_flat, conv, l_e_delta]
+  verbose: 1
+  mol_args:
+    incore_anyway: True
+  scf_args:
+    conv_tol: 1e-8
+    conv_check: false # pyscf conv_check has a bug
+
+init_train:
+  model_args: # necessary as this is init training
+    output_scale: 1
+    use_resnet: true
+    model_type: equivariant
+    prefit: true
+  data_args:
+    batch_size: 16
+    group_batch: 1
+    d_name: dm_flat
+  preprocess_args:
+    preshift: true
+    prefit_ridge: 1e1
+    prefit_trainable: false
+  train_args:
+    decay_rate: 0.95
+    decay_steps: 300
+    display_epoch: 100
+    n_epoch: 10000
+    start_lr: 0.0003
+
+# other settings
+cleanup: false
+strict: true

@@ -82,3 +82,10 @@ deepks iterate base.yaml penalty.yaml && deepks iterate base.yaml relax.yaml
 The `iterate` command can take multiple input files and the latter ones would overwrite the former ones.
 
 Again, running `./run.sh` in the `withdens` folder would run the commands in the background. You can check the results in `iter.*` folders like above.
+
+
+## Train an equivariant model
+
+We provide in `equiv` folder an example input file for training deepks model with equivariant descriptors (`dm_flat`).
+
+This is a feature under development, so it is potentially not bug free. 
