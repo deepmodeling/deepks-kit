@@ -19,7 +19,7 @@ class CorrNet(nn.Module):
                  actv_scalars={"e": "silu", "o": "tanh"},
                  actv_gates={"e": "relu", "o": "tanh"},
                  mlp_layers=3, use_resnet=True,
-                 prefit=False, output_scale=1., input_shift=0.
+                 prefit=True, output_scale=1., input_shift=0.
                  ):
 
         if actv_type not in ("gate", "norm"):
